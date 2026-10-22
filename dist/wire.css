@@ -63,12 +63,20 @@ p, li{text-wrap:pretty}
 .card.highlight{border:2px solid #1d1d1d;background:#fff;box-shadow:0 6px 20px rgba(0,0,0,0.06);position:relative}
 .card-badge{position:absolute;top:-11px;right:16px;background:#1d1d1d;color:#fff;font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:3px 10px;border-radius:99px;font-weight:600}
 
-/* hot card clickable */
-a.card{text-decoration:none;color:inherit}
-.hot{border:2px solid #1d1d1d;box-shadow:0 6px 18px rgba(0,0,0,.1);position:relative;transition:transform .18s,box-shadow .18s;display:flex;flex-direction:column;min-height:100%}
-.hot:hover{transform:translateY(-4px);box-shadow:0 12px 28px rgba(0,0,0,.16)}
-.hot .badge{position:absolute;top:-11px;right:14px;background:#1d1d1d;color:#fff;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:4px 12px;border-radius:99px;font-weight:600}
-.case-body{display:flex;flex-direction:column;flex:1;gap:8px}
+/* case card structured grid / flex */
+.case-card{display:flex;flex-direction:column;min-height:100%;height:100%}
+.case-card .ph{height:140px;min-height:140px;flex-shrink:0}
+.case-title{min-height:30px;display:flex;align-items:center;margin-top:12px;margin-bottom:8px}
+.case-desc{display:flex;flex-direction:column;gap:8px;flex:1;justify-content:flex-start}
+.case-row{min-height:46px;display:flex;flex-direction:column;justify-content:flex-start}
+.case-res{min-height:36px;display:flex;align-items:center;border-top:1px dashed #eee;padding-top:10px;margin-top:8px;font-size:13.5px;font-weight:700}
+.case-action{margin-top:auto;padding-top:14px}
+
+/* stack comparison cards */
+.stack-card{display:flex;flex-direction:column;min-height:100%;height:100%}
+.stack-card .chk-list{margin:12px 0;flex:1}
+.stack-card .chk-list li{min-height:38px;display:flex;align-items:flex-start}
+.stack-card .ph{height:110px;min-height:110px;margin-top:auto}
 
 /* comparison & lists */
 .chk-list{list-style:none;margin:8px 0;display:flex;flex-direction:column;gap:8px}

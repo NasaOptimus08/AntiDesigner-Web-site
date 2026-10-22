@@ -82,12 +82,20 @@ p, li{text-wrap:pretty}
 .card.highlight{border:2px solid #1d1d1d;background:#fff;box-shadow:0 6px 20px rgba(0,0,0,0.06);position:relative}
 .card-badge{position:absolute;top:-11px;right:16px;background:#1d1d1d;color:#fff;font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:3px 10px;border-radius:99px;font-weight:600}
 
-/* hot card clickable */
-a.card{text-decoration:none;color:inherit}
-.hot{border:2px solid #1d1d1d;box-shadow:0 6px 18px rgba(0,0,0,.1);position:relative;transition:transform .18s,box-shadow .18s;display:flex;flex-direction:column;min-height:100%}
-.hot:hover{transform:translateY(-4px);box-shadow:0 12px 28px rgba(0,0,0,.16)}
-.hot .badge{position:absolute;top:-11px;right:14px;background:#1d1d1d;color:#fff;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:4px 12px;border-radius:99px;font-weight:600}
-.case-body{display:flex;flex-direction:column;flex:1;gap:8px}
+/* case card structured grid / flex */
+.case-card{display:flex;flex-direction:column;min-height:100%;height:100%}
+.case-card .ph{height:140px;min-height:140px;flex-shrink:0}
+.case-title{min-height:30px;display:flex;align-items:center;margin-top:12px;margin-bottom:8px}
+.case-desc{display:flex;flex-direction:column;gap:8px;flex:1;justify-content:flex-start}
+.case-row{min-height:46px;display:flex;flex-direction:column;justify-content:flex-start}
+.case-res{min-height:36px;display:flex;align-items:center;border-top:1px dashed #eee;padding-top:10px;margin-top:8px;font-size:13.5px;font-weight:700}
+.case-action{margin-top:auto;padding-top:14px}
+
+/* stack comparison cards */
+.stack-card{display:flex;flex-direction:column;min-height:100%;height:100%}
+.stack-card .chk-list{margin:12px 0;flex:1}
+.stack-card .chk-list li{min-height:38px;display:flex;align-items:flex-start}
+.stack-card .ph{height:110px;min-height:110px;margin-top:auto}
 
 /* comparison & lists */
 .chk-list{list-style:none;margin:8px 0;display:flex;flex-direction:column;gap:8px}
@@ -227,29 +235,31 @@ def generate_index_html():
     <h2>Сайт под ваши задачи, а&nbsp;не&nbsp;под ограничения платформ</h2>
     <p class="lead">Без принудительных подписок и&nbsp;костылей. Подбираем технологическую основу под сценарий использования: чистый автономный код или Tilda</p>
     <div class="grid g2">
-      <div class="card highlight">
+      <div class="card highlight stack-card">
         <span class="card-badge">Собственная CRM и автономия</span>
         <h3>Вариант 1: Автономный сайт (Чистый код)</h3>
-        <p class="muted">Идеально для контекстной рекламы, рекламного трафика и&nbsp;бизнеса, которому нужны точные индивидуальные решения без ограничений конструкторов</p>
+        <p class="muted" style="min-height:44px">Для контекстной рекламы, трафика и&nbsp;бизнеса, которому нужны индивидуальные решения без ограничений конструкторов</p>
         <ul class="chk-list">
-          <li><strong>0&nbsp;₽ абонентской платы</strong> за&nbsp;конструкторы (навсегда)</li>
-          <li><strong>Собственная удобная CRM-система</strong>: приём, учет и&nbsp;обработка заявок под вашу воронку без костылей</li>
-          <li><strong>Любые индивидуальные задачи</strong>: нестандартные калькуляторы, квизы, сложные интеграции и&nbsp;логика</li>
-          <li><strong>Скорость загрузки 0.4-0.8&nbsp;с</strong> (100/100 PageSpeed Insights)</li>
-          <li><strong>Готов к&nbsp;ИИ-поиску (GEO)</strong>: разметка для YandexGPT, Алисы и&nbsp;ChatGPT</li>
-          <li><strong>Свой сервер</strong>: проект защищён от&nbsp;блокировок, санкций и&nbsp;сбоев внешних сервисов</li>
+          <li><strong>0&nbsp;₽ абонентской платы</strong>&nbsp;за&nbsp;платформу навсегда</li>
+          <li><strong>Собственная удобная CRM-система</strong>&nbsp;под вашу воронку</li>
+          <li><strong>Индивидуальные решения</strong>: калькуляторы, квизы, нестандартная логика</li>
+          <li><strong>Скорость 0.4-0.8&nbsp;с</strong>&nbsp;(100/100 PageSpeed Insights)</li>
+          <li><strong>Готов к&nbsp;ИИ-поиску (GEO)</strong>: разметка под нейросети</li>
+          <li><strong>Свой сервер</strong>: защита от&nbsp;блокировок и&nbsp;сторонних сбоев</li>
         </ul>
         {ph("Интерактив: Индивидуальная CRM-панель + виджет PageSpeed 100/100", "Демонстрация чистого кода, мгновенного отклика и собственной системы учета заявок", 120)}
       </div>
-      <div class="card">
+      <div class="card stack-card">
         <span class="kicker" style="color:#777">Привычная экосистема</span>
         <h3>Вариант 2: Сборка на&nbsp;Tilda</h3>
-        <p class="muted">Отлично подходит, если в&nbsp;команде уже умеют работать с&nbsp;Tilda или требуется базовый каталог с&nbsp;корзиной на&nbsp;этой платформе</p>
+        <p class="muted" style="min-height:44px">Для команд, которые уже привыкли к&nbsp;Tilda или которым требуется стандартный типовой каталог с&nbsp;корзиной</p>
         <ul class="chk-list">
-          <li>Индивидуальный дизайн на&nbsp;Zero-блоках без шаблонных рамок</li>
-          <li>Привычное управление и&nbsp;настройка для вашей команды</li>
-          <li>Быстрое подключение CRM, эквайринга и&nbsp;сервисов доставки</li>
-          <li>Стандартный тариф Tilda оплачивается отдельно клиентом</li>
+          <li><strong>Индивидуальный дизайн</strong>&nbsp;на&nbsp;Zero-блоках без шаблонов</li>
+          <li><strong>Привычное управление</strong>&nbsp;контентом для вашей команды</li>
+          <li><strong>Быстрое подключение</strong>&nbsp;стандартных модулей и&nbsp;плагинов</li>
+          <li><strong>Быстрый запуск</strong>&nbsp;типовых интернет-магазинов и&nbsp;каталогов</li>
+          <li><strong>Интеграция CRM</strong>, эквайринга и&nbsp;сервисов доставки из&nbsp;коробки</li>
+          <li><strong>Стандартный тариф Tilda</strong>&nbsp;оплачивается отдельно клиентом</li>
         </ul>
         {ph("Интерактив: Zero-блок сетка + адаптив под смартфоны", "Показ структуры блоков с адаптацией под все разрешения экранов", 120)}
       </div>
@@ -341,46 +351,70 @@ def generate_index_html():
     <p class="lead">Примеры реализованных проектов. За&nbsp;счёт ИИ-пайплайна и&nbsp;современных платформ удаётся сократить сроки запуска и&nbsp;бюджеты в&nbsp;раза без потери качества</p>
     <div class="grid g3">
       <!-- Кейс 1 -->
-      <div class="card hot">
+      <div class="card hot case-card">
         <span class="badge">Чистый код · 5 дней</span>
         {ph("Превью: Поездка на Байкал", "Скриншот первого экрана: авторский тур, чистота, горы", 140)}
-        <div class="case-body">
+        <div class="case-title">
           <h3>01 · Поездка на&nbsp;Байкал</h3>
-          <p class="muted" style="font-size:13px"><strong>Задача:</strong> упаковать авторский зимний тур и&nbsp;запустить приём бронирований за&nbsp;5 дней</p>
-          <p class="muted" style="font-size:13px"><strong>Решение:</strong> автономный сайт на&nbsp;чистом коде, молниеносная загрузка на&nbsp;слабом мобильном интернете</p>
-          <div style="font-size:13.5px;font-weight:700;margin-top:auto">Результат: конверсия в&nbsp;заявку 21%</div>
         </div>
-        <div style="margin-top:auto;padding-top:14px">
+        <div class="case-desc">
+          <div class="case-row">
+            <p class="muted" style="font-size:13px"><strong>Задача:</strong> упаковать авторский тур и&nbsp;запустить приём бронирований за&nbsp;5 дней</p>
+          </div>
+          <div class="case-row">
+            <p class="muted" style="font-size:13px"><strong>Решение:</strong> автономный сайт на&nbsp;чистом коде с&nbsp;мгновенной загрузкой на&nbsp;смартфонах</p>
+          </div>
+        </div>
+        <div class="case-res">
+          <span>Результат: конверсия в&nbsp;заявку 21%</span>
+        </div>
+        <div class="case-action">
           <a class="btn btn-outline w100" href="http://79.174.90.149/baikal/" target="_blank">Открыть сайт</a>
         </div>
       </div>
 
       <!-- Кейс 2 -->
-      <div class="card hot">
+      <div class="card hot case-card">
         <span class="badge">EdTech / Tilda</span>
         {ph("Превью: Онлайн-школа «Квазар»", "Скриншот платформы: астрологическая школа со сложной структурой", 140)}
-        <div class="case-body">
+        <div class="case-title">
           <h3>02 · Онлайн-школа «Квазар»</h3>
-          <p class="muted" style="font-size:13px"><strong>Задача:</strong> создать современный образовательный сайт для школы со&nbsp;сложной структурой курсов</p>
-          <p class="muted" style="font-size:13px"><strong>Решение:</strong> глубокая смысловая проработка модулей, удобная навигация и&nbsp;бесшовный мобильный адаптив</p>
-          <div style="font-size:13.5px;font-weight:700;margin-top:auto">Результат: рост заявок на&nbsp;курсы +45%</div>
         </div>
-        <div style="margin-top:auto;padding-top:14px">
+        <div class="case-desc">
+          <div class="case-row">
+            <p class="muted" style="font-size:13px"><strong>Задача:</strong> создать современный образовательный сайт со&nbsp;сложной структурой курсов</p>
+          </div>
+          <div class="case-row">
+            <p class="muted" style="font-size:13px"><strong>Решение:</strong> глубокая проработка смыслов, удобная навигация и&nbsp;мобильный адаптив</p>
+          </div>
+        </div>
+        <div class="case-res">
+          <span>Результат: рост заявок на&nbsp;курсы +45%</span>
+        </div>
+        <div class="case-action">
           <a class="btn btn-outline w100" href="https://astroschool-kvasar.ru/" target="_blank">Открыть сайт</a>
         </div>
       </div>
 
       <!-- Кейс 3 -->
-      <div class="card hot">
+      <div class="card hot case-card">
         <span class="badge">Tilda Zero-блоки</span>
         {ph("Превью: devdeev.ru", "Скриншот портфолио: тёмная тема, интерактивные Zero-блоки", 140)}
-        <div class="case-body">
+        <div class="case-title">
           <h3>03 · Портфолио devdeev.ru</h3>
-          <p class="muted" style="font-size:13px"><strong>Задача:</strong> разработать технологичный сайт-портфолио с&nbsp;простым самостоятельным управлением</p>
-          <p class="muted" style="font-size:13px"><strong>Решение:</strong> индивидуальная сборка на&nbsp;Zero-блоках с&nbsp;кастомной анимацией и&nbsp;интеграциями</p>
-          <div style="font-size:13.5px;font-weight:700;margin-top:auto">Результат: удобная админка, запуск за&nbsp;5 дней</div>
         </div>
-        <div style="margin-top:auto;padding-top:14px">
+        <div class="case-desc">
+          <div class="case-row">
+            <p class="muted" style="font-size:13px"><strong>Задача:</strong> разработать технологичный сайт-портфолио с&nbsp;простым самостоятельным управлением</p>
+          </div>
+          <div class="case-row">
+            <p class="muted" style="font-size:13px"><strong>Решение:</strong> сборка на&nbsp;Zero-блоках с&nbsp;кастомной анимацией и&nbsp;интеграциями</p>
+          </div>
+        </div>
+        <div class="case-res">
+          <span>Результат: удобная админка, запуск за&nbsp;5 дней</span>
+        </div>
+        <div class="case-action">
           <a class="btn btn-outline w100" href="https://devdeev.ru/" target="_blank">Открыть сайт</a>
         </div>
       </div>
