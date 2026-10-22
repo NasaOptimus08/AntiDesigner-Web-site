@@ -541,12 +541,10 @@ def generate_index_html():
     with open(os.path.join(BASE_DIR, "prototype.html"), "w", encoding="utf-8") as f:
         f.write(full_html)
 
-    # Также копируем comments.js в dist
-    src_comments = os.path.join(BASE_DIR, ".agents", "skills", "wireframe-prototype", "assets", "comments.js")
+    # Копируем рабочий comments.js в dist
+    src_comments = os.path.join(BASE_DIR, "comments.js")
     if os.path.exists(src_comments):
         with open(src_comments, "r", encoding="utf-8") as src, open(os.path.join(DIST_DIR, "comments.js"), "w", encoding="utf-8") as dst:
-            dst.write(src.read())
-        with open(src_comments, "r", encoding="utf-8") as src, open(os.path.join(BASE_DIR, "comments.js"), "w", encoding="utf-8") as dst:
             dst.write(src.read())
 
     print("Prototype built successfully in dist/ and prototype.html")
