@@ -93,8 +93,7 @@ p, li{text-wrap:pretty}
 
 /* stack comparison cards */
 .stack-card{display:flex;flex-direction:column;min-height:100%;height:100%}
-.stack-card .chk-list{margin:12px 0;flex:1}
-.stack-card .chk-list li{min-height:38px;display:flex;align-items:flex-start}
+.stack-card .chk-list{margin:12px 0 0}
 .stack-card .ph{height:110px;min-height:110px;margin-top:auto}
 
 /* comparison & lists */
@@ -405,14 +404,14 @@ def generate_index_html():
         </div>
         <div class="case-desc">
           <div class="case-row">
-            <p class="muted" style="font-size:13px"><strong>Задача:</strong> разработать технологичный сайт-портфолио с&nbsp;простым самостоятельным управлением</p>
+            <p class="muted" style="font-size:13px"><strong>Задача:</strong> разработать стильное портфолио с&nbsp;простым управлением контентом</p>
           </div>
           <div class="case-row">
-            <p class="muted" style="font-size:13px"><strong>Решение:</strong> сборка на&nbsp;Zero-блоках с&nbsp;кастомной анимацией и&nbsp;интеграциями</p>
+            <p class="muted" style="font-size:13px"><strong>Решение:</strong> сборка на&nbsp;Zero-блоках с&nbsp;кастомной интерактивной анимацией</p>
           </div>
         </div>
         <div class="case-res">
-          <span>Результат: удобная админка, запуск за&nbsp;5 дней</span>
+          <span>Результат: запуск сайта за&nbsp;5 дней</span>
         </div>
         <div class="case-action">
           <a class="btn btn-outline w100" href="https://devdeev.ru/" target="_blank">Открыть сайт</a>
