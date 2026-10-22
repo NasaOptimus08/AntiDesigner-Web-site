@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AntiDesigner</title>
+
+  <!-- Шрифты Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Unbounded:wght@600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Подключение style.css -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main style="padding: var(--space-16) 0;">
+    <div class="container">
+      <div style="margin-bottom: var(--space-12); max-width: 680px;">
+        <span class="badge">Дизайн-система</span>
+        <h1>Демонстрация карточек</h1>
+        <p class="body-caption">Тестирование контурного и&nbsp;залитого вариантов с&nbsp;полным набором наших дизайн-токенов</p>
+      </div>
+
+      <div class="card-grid">
+        <!-- 1. Контурная карточка (Стандарт) -->
+        <div class="card">
+          <div>
+            <span class="badge">Базовый</span>
+            <h3>Старт</h3>
+            <p class="body-caption">Практическая база для старта в&nbsp;дизайне и&nbsp;веб-разработке с&nbsp;нуля</p>
+
+            <ul class="feature-list">
+              <li>Доступ ко&nbsp;всем урокам модуля</li>
+              <li>Домашние задания с&nbsp;разбором</li>
+              <li>Закрытое комьюнити в&nbsp;Telegram</li>
+              <li>Сертификат о&nbsp;прохождении</li>
+            </ul>
+          </div>
+
+          <div>
+            <div style="margin-bottom: var(--space-6);">
+              <span style="font-family: var(--font-heading); font-size: 28px; font-weight: 800;">29&nbsp;900&nbsp;₽</span>
+            </div>
+            <a href="#" class="btn btn-outline" style="width: 100%;">Выбрать тариф</a>
+          </div>
+        </div>
+
+        <!-- 2. Залитая карточка (Хит продаж / Акцент) -->
+        <div class="card-filled">
+          <div>
+            <span class="badge" style="background-color: var(--color-accent); color: #000; font-weight: 800;">Хит продаж</span>
+            <h3>Прорыв</h3>
+            <p class="body-caption" style="color: rgba(220, 230, 242, 0.85);">Интенсивная работа с&nbsp;ментором, реальные кейсы в&nbsp;портфолио и&nbsp;выход на&nbsp;клиентов</p>
+
+            <ul class="feature-list">
+              <li>Все опции тарифа «Старт»</li>
+              <li>Личные созвоны с&nbsp;наставником 1&nbsp;на&nbsp;1</li>
+              <li>3&nbsp;проекта уровня реального продакшена</li>
+              <li>Помощь в&nbsp;оформлении кейсов и&nbsp;упаковке</li>
+              <li>Прямые рекомендации заказчикам</li>
+            </ul>
+          </div>
+
+          <div>
+            <div style="margin-bottom: var(--space-6);">
+              <span style="font-family: var(--font-heading); font-size: 28px; font-weight: 800; color: var(--color-accent);">49&nbsp;900&nbsp;₽</span>
+            </div>
+            <a href="#" class="btn btn-primary" style="width: 100%;">Присоединиться</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</body>
+</html>
