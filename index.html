@@ -14,12 +14,30 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <main style="padding: var(--space-16) 0;">
+  <!-- Плашка быстрого перехода на прототип -->
+  <header style="background: rgba(34, 61, 102, 0.4); border-bottom: 1px solid var(--color-primary-dark); padding: 14px 0; backdrop-filter: blur(10px);">
+    <div class="container" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-family: var(--font-heading); font-weight: 700; font-size: 14px; letter-spacing: 0.05em; color: var(--color-accent);">ANTIDESIGNER</span>
+        <span style="font-size: 13px; color: var(--color-text-muted);">| Дизайн-система & Прототип</span>
+      </div>
+      <a href="prototype.html" class="btn btn-primary" style="padding: 10px 20px; font-size: 13px;">
+        Открыть прототип сайта →
+      </a>
+    </div>
+  </header>
+
+  <main style="padding: var(--space-12) 0 var(--space-16) 0;">
     <div class="container">
-      <div style="margin-bottom: var(--space-12); max-width: 680px;">
+      <div style="margin-bottom: var(--space-8); max-width: 680px;">
         <span class="badge">Дизайн-система</span>
         <h1>Демонстрация карточек</h1>
         <p class="body-caption">Тестирование контурного и&nbsp;залитого вариантов с&nbsp;полным набором наших дизайн-токенов</p>
+        <div style="margin-top: var(--space-4);">
+          <a href="prototype.html" class="btn btn-outline" style="font-size: 13px; padding: 12px 24px;">
+            Смотреть вайрфрейм-прототип (8 блоков) →
+          </a>
+        </div>
       </div>
 
       <div class="card-grid">
@@ -42,7 +60,7 @@
             <div style="margin-bottom: var(--space-6);">
               <span style="font-family: var(--font-heading); font-size: 28px; font-weight: 800;">29&nbsp;900&nbsp;₽</span>
             </div>
-            <a href="#" class="btn btn-outline" style="width: 100%;">Выбрать тариф</a>
+            <a href="prototype.html" class="btn btn-outline" style="width: 100%;">Выбрать в прототипе</a>
           </div>
         </div>
 
@@ -66,7 +84,7 @@
             <div style="margin-bottom: var(--space-6);">
               <span style="font-family: var(--font-heading); font-size: 28px; font-weight: 800; color: var(--color-accent);">49&nbsp;900&nbsp;₽</span>
             </div>
-            <a href="#" class="btn btn-primary" style="width: 100%;">Присоединиться</a>
+            <a href="prototype.html" class="btn btn-primary" style="width: 100%;">Открыть прототип</a>
           </div>
         </div>
       </div>
