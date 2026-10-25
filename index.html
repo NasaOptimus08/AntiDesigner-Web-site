@@ -1,94 +1,928 @@
 <!DOCTYPE html>
 <html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AntiDesigner</title>
 
-  <!-- Шрифты Google Fonts -->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AntiDesigner · Сайты и брендинг под ключ за 7 дней</title>
+  <meta name="description"
+    content="Запуск сайтов под ключ за 7 дней на Tilda или чистом коде с собственной CRM. Тексты, структуру и визуал беру на себя.">
+
+  <!-- Шрифты Google Fonts: Manrope + Unbounded -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Unbounded:wght@600;700;800&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Unbounded:wght@400;600;700;800&display=swap"
+    rel="stylesheet">
 
-  <!-- Подключение style.css -->
+  <!-- Внешний файл стилей дизайн-системы -->
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
-  <!-- Плашка быстрого перехода на прототип -->
-  <header style="background: rgba(34, 61, 102, 0.4); border-bottom: 1px solid var(--color-primary-dark); padding: 14px 0; backdrop-filter: blur(10px);">
-    <div class="container" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
-      <div style="display: flex; align-items: center; gap: 10px;">
-        <span style="font-family: var(--font-heading); font-weight: 700; font-size: 14px; letter-spacing: 0.05em; color: var(--color-accent);">ANTIDESIGNER</span>
-        <span style="font-size: 13px; color: var(--color-text-muted);">| Дизайн-система & Прототип</span>
+  <header class="floating-header">
+    <div class="nav-capsule">
+      <!-- Левый слот: сфера + текст без вложенной карточки -->
+      <div class="nav-slot nav-slot-left">
+        <a href="#hero" class="nav-brand-link" aria-label="AntiDesigner">
+          <div class="nav-sphere">
+            <span class="nav-status-dot"></span>
+          </div>
+          <div class="nav-brand-title">
+            <span class="brand-core">AntiDesigner</span>
+            <span class="brand-extra-wrap">
+              <span class="brand-sep">×</span>
+              <span class="brand-extra">Антипин Евгений</span>
+            </span>
+          </div>
+        </a>
       </div>
-      <a href="prototype.html" class="btn btn-primary" style="padding: 10px 20px; font-size: 13px;">
-        Открыть прототип сайта →
-      </a>
+
+      <!-- Центральный слот: навигация -->
+      <nav class="nav-links">
+        <a href="#hero" class="nav-link active">Главная</a>
+        <a href="#metrics" class="nav-link">Метрики</a>
+        <a href="#approach" class="nav-link">Подход</a>
+        <a href="#stack" class="nav-link">Стек</a>
+      </nav>
+
+      <!-- Правый слот: кнопка действия -->
+      <div class="nav-slot nav-slot-right">
+        <a href="https://t.me/AntiDesigner01" target="_blank" class="nav-cta-btn">
+          <span>Обсудить задачу</span>
+        </a>
+      </div>
     </div>
   </header>
 
-  <main style="padding: var(--space-12) 0 var(--space-16) 0;">
-    <div class="container">
-      <div style="margin-bottom: var(--space-8); max-width: 680px;">
-        <span class="badge">Дизайн-система</span>
-        <h1>Демонстрация карточек</h1>
-        <p class="body-caption">Тестирование контурного и&nbsp;залитого вариантов с&nbsp;полным набором наших дизайн-токенов</p>
-        <div style="margin-top: var(--space-4);">
-          <a href="prototype.html" class="btn btn-outline" style="font-size: 13px; padding: 12px 24px;">
-            Смотреть вайрфрейм-прототип (8 блоков) →
-          </a>
+  <main class="wrap">
+    <section id="hero" class="hero-radial">
+      <div class="wrap hero-wrap">
+        <!-- СЛОЙ 1: Типографика на заднем плане -->
+        <div class="hero-typography">
+          <!-- Возвращаем плашку -->
+          <div class="kicker-wrapper"><span class="kicker">Сайты и брендинг под ключ</span></div>
+          
+          <!-- Жестко фиксируем неразрывные пробелы -->
+          <h1>Запускаю<br>сайты&nbsp;под&nbsp;ключ<br>за&nbsp;7&nbsp;дней</h1>
+        </div>
+
+        <!-- СЛОЙ 2: Центральный портрет с неоновой интеграцией -->
+        <div class="hero-portrait-stage">
+          <!-- Масштабное северное сияние за спиной -->
+          <div class="hero-aurora-glow">
+            <div class="hero-blob hero-blob-1"></div>
+            <div class="hero-blob hero-blob-2"></div>
+            <div class="hero-blob hero-blob-3"></div>
+          </div>
+
+          <!-- Само фото с маской растворения -->
+          <img src="hero-photo.png" alt="Евгений Антипин — AntiDesigner" class="hero-portrait-img" loading="eager" />
+        </div>
+
+        <!-- СЛОЙ 3: Парящие стеклянные модули -->
+        <div class="hero-floating left-bottom">
+          <div class="hero-chips">
+            <span class="chip on">5-7 дней на&nbsp;запуск</span>
+            <span class="chip on">Тексты и&nbsp;визуал</span>
+          </div>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="https://t.me/AntiDesigner01" target="_blank">Обсудить задачу</a>
+          </div>
+        </div>
+
+        <div class="hero-floating right-top">
+          <div class="glass-card">
+            <p class="lead">Погружаюсь в&nbsp;ваш бизнес, формулирую смыслы и&nbsp;создаю графику. Вы&nbsp;получаете
+              готовый сайт на&nbsp;Tilda или чистом коде без поиска копирайтеров и&nbsp;составления ТЗ</p>
+          </div>
+        </div>
+
+        <div class="hero-floating right-bottom">
+          <div class="glass-card compact">
+            <div class="mockup-badge">PageSpeed 100/100</div>
+            <b>Интерактивная сборка</b>
+            <span class="muted">0&nbsp;₽ конструкторам</span>
+          </div>
         </div>
       </div>
+    </section>
 
-      <div class="card-grid">
-        <!-- 1. Контурная карточка (Стандарт) -->
-        <div class="card">
-          <div>
-            <span class="badge">Базовый</span>
-            <h3>Старт</h3>
-            <p class="body-caption">Практическая база для старта в&nbsp;дизайне и&nbsp;веб-разработке с&nbsp;нуля</p>
+    <section id="features" class="features-section">
+      <div class="features-header">
+        <span class="kicker">Преимущества формата</span>
+        <h2>Почему выбирают меня, а&nbsp;не&nbsp;студии и&nbsp;шаблоны</h2>
+      </div>
 
-            <ul class="feature-list">
-              <li>Доступ ко&nbsp;всем урокам модуля</li>
-              <li>Домашние задания с&nbsp;разбором</li>
-              <li>Закрытое комьюнити в&nbsp;Telegram</li>
-              <li>Сертификат о&nbsp;прохождении</li>
-            </ul>
+      <div class="features-bento">
+        <!-- Карточка 1 -->
+        <div class="card bento-card">
+          <div class="card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+            </svg>
           </div>
+          <h3>Запуск за&nbsp;5–7 дней</h3>
+          <p class="muted">Погружаюсь в&nbsp;бизнес, формулирую смыслы и&nbsp;собираю работающий сайт без бесконечных
+            созвонов, проволочек и&nbsp;бюрократии.</p>
+        </div>
 
-          <div>
-            <div style="margin-bottom: var(--space-6);">
-              <span style="font-family: var(--font-heading); font-size: 28px; font-weight: 800;">29&nbsp;900&nbsp;₽</span>
+        <!-- Карточка 2 -->
+        <div class="card bento-card">
+          <div class="card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 00-3-3.87" />
+              <path d="M16 3.13a4 4 0 010 7.75" />
+            </svg>
+          </div>
+          <h3>Работа без посредников</h3>
+          <p class="muted">Прямой диалог в&nbsp;Telegram с&nbsp;экспертом. Никаких аккаунт-менеджеров, джуниоров
+            и&nbsp;потери смыслов на&nbsp;испорченном телефоне.</p>
+        </div>
+
+        <!-- Карточка 3 -->
+        <div class="card bento-card">
+          <div class="card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0110 0v4" />
+            </svg>
+          </div>
+          <h3>0&nbsp;₽ за&nbsp;конструкторы</h3>
+          <p class="muted">Автономный чистый код на&nbsp;вашем сервере с&nbsp;собственной лёгкой CRM. Полная
+            независимость от&nbsp;санкций, блокировок и&nbsp;ежемесячных тарифов.</p>
+        </div>
+
+        <!-- Карточка 4: С визуал-слотом в стиле Arounda -->
+        <div class="card bento-card card-visual">
+          <div class="bento-text">
+            <div class="card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon
+                  points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
             </div>
-            <a href="prototype.html" class="btn btn-outline" style="width: 100%;">Выбрать в прототипе</a>
+            <h3>Скорость 100/100 PageSpeed</h3>
+            <p class="muted">Мгновенный отклик 0.4с, идеальный мобильный адаптив и&nbsp;AI-графика под ключ без аренды
+              фотостудий.</p>
+          </div>
+          <div class="bento-mockup-slot ph">
+            <b>[ Интерактивный слот: Превью CRM / Планшет ]</b>
+            <span class="muted" style="font-size:11px">Аналог 3D-планшета Arounda</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="approach">
+      <div class="approach-header">
+        <span class="kicker">Формат и&nbsp;подход</span>
+        <h2>Почему со&nbsp;мной проще, чем со&nbsp;студией или фрилансером</h2>
+        <p class="lead">Вам не&nbsp;нужно нанимать штат и&nbsp;писать ТЗ. Я&nbsp;объединил скорость одного эксперта
+          и&nbsp;возможности агентства благодаря собственному AI-пайплайну</p>
+      </div>
+
+      <div class="frameblox-grid">
+        <!-- 1. Высокая вертикальная карточка слева (на 2 ряда, как Data-Backed Strategy) -->
+        <div class="card fb-card fb-tall">
+          <div class="fb-content">
+            <span class="fb-tag">01 · ОДНО ОКНО</span>
+            <h3>AI-продакшен, смыслы и&nbsp;код</h3>
+            <p class="muted">Вам не&nbsp;нужно искать копирайтера, дизайнера и&nbsp;верстальщика. Я&nbsp;сам погружаюсь
+              в&nbsp;нишу, формулирую офферы, генерирую графику и&nbsp;пишу чистый код.</p>
+          </div>
+          <div class="ph fb-ph-tall">
+            <b>[ 3D-ассет: Бинокль / AI-ядро ]</b>
           </div>
         </div>
 
-        <!-- 2. Залитая карточка (Хит продаж / Акцент) -->
-        <div class="card-filled">
-          <div>
-            <span class="badge" style="background-color: var(--color-accent); color: #000; font-weight: 800;">Хит продаж</span>
-            <h3>Прорыв</h3>
-            <p class="body-caption" style="color: rgba(220, 230, 242, 0.85);">Интенсивная работа с&nbsp;ментором, реальные кейсы в&nbsp;портфолио и&nbsp;выход на&nbsp;клиентов</p>
-
-            <ul class="feature-list">
-              <li>Все опции тарифа «Старт»</li>
-              <li>Личные созвоны с&nbsp;наставником 1&nbsp;на&nbsp;1</li>
-              <li>3&nbsp;проекта уровня реального продакшена</li>
-              <li>Помощь в&nbsp;оформлении кейсов и&nbsp;упаковке</li>
-              <li>Прямые рекомендации заказчикам</li>
-            </ul>
+        <!-- 2. Широкая горизонтальная карточка вверху (на 2 колонки, как Targeted Campaigns) -->
+        <div class="card fb-card fb-wide-top">
+          <div class="fb-content">
+            <span class="fb-tag">02 · СКОРОСТЬ</span>
+            <h3>Готовый сайт за&nbsp;5–7 рабочих дней</h3>
+            <p class="muted">Спринт от&nbsp;первой идеи до&nbsp;заливки на&nbsp;домен и&nbsp;подключения заявок
+              в&nbsp;Telegram без проволочек и&nbsp;срывов дедлайнов.</p>
           </div>
-
-          <div>
-            <div style="margin-bottom: var(--space-6);">
-              <span style="font-family: var(--font-heading); font-size: 28px; font-weight: 800; color: var(--color-accent);">49&nbsp;900&nbsp;₽</span>
-            </div>
-            <a href="prototype.html" class="btn btn-primary" style="width: 100%;">Открыть прототип</a>
+          <div class="ph fb-ph-wide">
+            <b>[ 3D-ассет: Мишень / Спринт ]</b>
           </div>
         </div>
+
+        <!-- 3. Средняя карточка по центру (как Social Media Management) -->
+        <div class="card fb-card fb-square">
+          <div class="fb-content">
+            <span class="fb-tag">03 · КОММУНИКАЦИЯ</span>
+            <h4>Без брифов на&nbsp;50 страниц</h4>
+            <p class="muted">Диалог прямо в&nbsp;Telegram голосом или текстом. Вы&nbsp;надиктовываете суть — я&nbsp;сам
+              превращаю её в&nbsp;продающую структуру.</p>
+          </div>
+          <div class="ph fb-ph-mini">
+            <b>[ 3D: Аватары / Чат ]</b>
+          </div>
+        </div>
+
+        <!-- 4. Средняя карточка справа (как SEO & Content Marketing) -->
+        <div class="card fb-card fb-square">
+          <div class="fb-content">
+            <span class="fb-tag">04 · ЭКОНОМИЯ</span>
+            <h4>0&nbsp;₽ конструкторам навсегда</h4>
+            <p class="muted">Автономный сайт на&nbsp;чистом коде с&nbsp;собственной CRM. Вы&nbsp;не&nbsp;платите
+              ежемесячную дань зарубежным или закрытым платформам.</p>
+          </div>
+          <div class="ph fb-ph-mini">
+            <b>[ 3D: Лупа / Щит ]</b>
+          </div>
+        </div>
+
+        <!-- 5. Нижняя широкая карточка слева (карточка 05) -->
+        <div class="card fb-card fb-wide-bottom">
+          <div class="fb-content">
+            <span class="fb-tag">05 · СРАВНЕНИЕ С РЫНКОМ</span>
+            <h3 class="card-title">Студии от 150 000 ₽ vs AntiDesigner от 18 000 ₽</h3>
+            <p class="muted">Вы не оплачиваете менеджеров, кофе в офисе и простой команды. Платите только за чистый
+              результат под вашу задачу.</p>
+          </div>
+          <div class="ph fb-ph-bottom">
+            <b>[ 3D: Колокол / Весы ]</b>
+          </div>
+        </div>
+
+        <!-- 6. Нижняя карточка справа (карточка 06: CTA) -->
+        <div class="card fb-card fb-cta-action">
+          <div class="fb-content">
+            <span class="fb-tag">06 · СТАРТ</span>
+            <h3 class="card-title">Обсудить проект</h3>
+            <p class="muted">Напишите в Telegram — отвечу лично в течение 15 минут.</p>
+          </div>
+
+          <div class="cta-btn-wrap">
+            <a href="https://t.me/AntiDesigner01" target="_blank" class="split-pill-btn">
+              <span class="pill-body">Обсудить проект</span>
+              <span class="pill-badge">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                  stroke-linejoin="round">
+                  <line x1="7" y1="17" x2="17" y2="7"></line>
+                  <polyline points="7 7 17 7 17 17"></polyline>
+                </svg>
+              </span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="section stack-section" id="stack">
+      <div class="wrap">
+
+        <div class="section-header">
+          <div class="section-badge">
+            <span class="badge-dot"></span>
+            <span class="badge-text">Технологический стек</span>
+          </div>
+          <h2 class="section-title">
+            САЙТ ПОД ВАШИ ЗАДАЧИ,<br>
+            <span class="text-gradient">А НЕ ПОД ОГРАНИЧЕНИЯ ПЛАТФОРМ</span>
+          </h2>
+          <p class="section-subtitle">
+            Не навязываю одну технологию. Проектирую стек под ваши бизнес-процессы: от полной финансовой автономии до
+            простоты контент-менеджмента.
+          </p>
+        </div>
+
+        <div class="stack-layout-grid">
+
+          <!-- ЛЕВАЯ КОЛОНКА (ЧИСТЫЙ КОД + BENTO-ВИДЖЕТ) -->
+          <div class="stack-left-col">
+
+            <!-- Карточка Чистого Кода (закрывает 3 операционных страха) -->
+            <div class="card fb-card stack-card-item stack-card-code">
+              <div class="code-visual-stage">
+                <div class="ph code-mockup-floating">
+                  <b>[ 3D: Интерактивный код / Чистый стек ]</b>
+                  <span class="muted" style="font-size: 11px;">Автономное ядро без подписок</span>
+                </div>
+              </div>
+
+              <div class="stack-card-inner">
+                <span class="stack-badge">01 · АВТОНОМНЫЙ КОД</span>
+                <h3 class="stack-title">Чистый код & Автономия</h3>
+                <p class="stack-desc">
+                  Сайт на HTML5, CSS3 и чистом JS. Разворачивается на вашем сервере без чужих движков, скрытых скриптов
+                  и риска внезапной остановки работы.
+                </p>
+
+                <div class="stack-feature-list">
+                  <!-- Страх 1: Слив рекламного бюджета из-за медленной загрузки -->
+                  <div class="stack-feature-item">
+                    <span class="feat-check">✓</span>
+                    <div>
+                      <strong>0 потерь платного трафика (0.3–0.5с):</strong>
+                      <p>Мгновенный отклик сохраняет клики из Яндекс.Директа и Telegram Ads, пока сайты конкурентов
+                        грузят тяжелые библиотеки.</p>
+                    </div>
+                  </div>
+
+                  <!-- Страх 2: Потеря лидов при сбое сторонних коннекторов -->
+                  <div class="stack-feature-item">
+                    <span class="feat-check">✓</span>
+                    <div>
+                      <strong>Прямой Telegram API & Отказоустойчивость:</strong>
+                      <p>Заявки пишутся прямо в вашу базу и приходят в личный чат команды без ненадежных
+                        сервисов-посредников.</p>
+                    </div>
+                  </div>
+
+                  <!-- Страх 3: Потолок конструктора и скрытые подписки -->
+                  <div class="stack-feature-item">
+                    <span class="feat-check">✓</span>
+                    <div>
+                      <strong>Архитектурная свобода и масштабируемость:</strong>
+                      <p>Любые сложные калькуляторы, личные кабинеты, нестандартные воронки и API без ограничений чужого
+                        движка.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card fb-card stack-widget-bar">
+              <!-- Иконка замочка в боксе в точности как в блоке преимуществ -->
+              <div class="widget-accent-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" class="widget-ico">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+              </div>
+
+              <div class="widget-bento-content">
+                <span class="widget-kicker-text">ФИНАНСОВАЯ АВТОНОМИЯ</span>
+                <div class="widget-metric-row">
+                  <span class="metric-number">0 ₽</span>
+                  <span class="metric-desc">ежемесячных подписок и платежей за платформу</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ПРАВАЯ КОЛОНКА: TILDA -->
+          <div class="card fb-card stack-card-item stack-card-tilda">
+            <div class="tilda-visual-stage">
+              <div class="ph tilda-mockup-ph">
+                <b>[ 3D: Скорость запуска / Маркетинг ]</b>
+                <span class="muted" style="font-size: 11px;">Zero Block под ключ за 5–7 дней</span>
+              </div>
+            </div>
+
+            <div class="stack-card-inner">
+              <span class="stack-badge">02 · БЫСТРЫЙ ЗАПУСК</span>
+              <h3 class="stack-title">Tilda Publishing</h3>
+              <p class="stack-desc">
+                Если вам привычнее работать в знакомой системе — соберу индивидуальный проект на Tilda с удобной
+                админкой.
+              </p>
+
+              <div class="stack-feature-list">
+                <div class="stack-feature-item">
+                  <span class="feat-check">✓</span>
+                  <div>
+                    <strong>Индивидуальный Zero Block:</strong>
+                    <p>Кастомный дизайн под ваш бренд с плавной анимацией вместо стандартных шаблонов.</p>
+                  </div>
+                </div>
+                <div class="stack-feature-item">
+                  <span class="feat-check">✓</span>
+                  <div>
+                    <strong>Привычное редактирование:</strong>
+                    <p>Вы или ваш помощник сможете легко менять тексты, фото и цены без обращения к разработчику.</p>
+                  </div>
+                </div>
+                <div class="stack-feature-item">
+                  <span class="feat-check">✓</span>
+                  <div>
+                    <strong>Быстрое подключение оплат:</strong>
+                    <p>Банковский эквайринг, корзина, каталог товаров и базовая CRM настраиваются за пару кликов.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+    <section class="section formats-section" id="formats">
+      <div class="wrap">
+
+        <div class="section-header">
+          <div class="section-badge">
+            <span class="badge-dot"></span>
+            <span class="badge-text">Инвестиции и форматы</span>
+          </div>
+          <h2 class="section-title">
+            ФИКСИРОВАННЫЕ ФОРМАТЫ<br>
+            <span class="text-gradient">ПОД ВАШУ ЗАДАЧУ</span>
+          </h2>
+          <p class="section-subtitle">
+            Без почасовой оплаты и раздутых смет. Вы заранее знаете точную стоимость и день запуска.
+          </p>
+        </div>
+
+        <div class="formats-carousel-stage">
+
+          <!-- ТАРИФ 01: БЫСТРЫЙ СТАРТ -->
+          <div class="card fb-card format-card" data-format="start">
+            <div class="format-glow-effect">
+              <div class="aurora-blob blob-1"></div>
+              <div class="aurora-blob blob-2"></div>
+              <div class="aurora-blob blob-3"></div>
+              <div class="aurora-blob blob-4"></div>
+            </div>
+            <div class="format-card-surface">
+
+              <!-- Верхний визуал с заглушкой по референсу #stack -->
+              <div class="format-visual-stage">
+                <div class="ph format-mockup-ph">
+                  <b>[ 3D: Экспресс-запуск / Лендинг ]</b>
+                  <span class="muted" style="font-size: 11px;">Срок сдачи 5–7 дней</span>
+                </div>
+              </div>
+
+              <div class="format-body-content">
+                <div class="format-header-row">
+                  <span class="format-step-tag">ФОРМАТ 01</span>
+                  <span class="format-sla-badge">5–7 РАБОЧИХ ДНЕЙ</span>
+                </div>
+
+                <h3 class="format-title">Быстрый старт<br>проекта</h3>
+                <p class="format-desc">
+                  Экспресс-запуск для проверки гипотезы, тестирования новой ниши или быстрого приёма трафика из рекламы.
+                </p>
+
+                <div class="format-price-slot">
+                  <div class="format-price-row">
+                    <span class="format-price-val">от 18 000 ₽</span>
+                    <span class="format-price-unit">/ проект</span>
+                  </div>
+                  <span class="format-price-hint">фикс за проект под ключ</span>
+                </div>
+
+                <div class="format-feature-list">
+                  <div class="format-feat-item">
+                    <span class="f-check">✓</span>
+                    <span>Продающая структура до 5–6 экранов</span>
+                  </div>
+                  <div class="format-feat-item">
+                    <span class="f-check">✓</span>
+                    <span>Смыслы, копирайтинг и чистая графика</span>
+                  </div>
+                  <div class="format-feat-item">
+                    <span class="f-check">✓</span>
+                    <span>Выбор стека: чистый код или Tilda</span>
+                  </div>
+                  <div class="format-feat-item">
+                    <span class="f-check">✓</span>
+                    <span>Прямая доставка заявок в Telegram / CRM</span>
+                  </div>
+                  <div class="format-feat-item">
+                    <span class="f-check">✓</span>
+                    <span>Идеальный мобильный адаптив</span>
+                  </div>
+                </div>
+
+                <div class="format-action-slot">
+                  <a href="#contact" class="btn btn-format-cta" data-format="Быстрый старт">
+                    <span>Выбрать тариф</span>
+                  </a>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- ТАРИФ 02 (ФЛАГМАН / ХИТ): ПОЛНЫЙ ЦИКЛ -->
+          <div class="card fb-card format-card is-active is-flagship" data-format="system">
+            <div class="format-glow-effect">
+              <div class="aurora-blob blob-1"></div>
+              <div class="aurora-blob blob-2"></div>
+              <div class="aurora-blob blob-3"></div>
+              <div class="aurora-blob blob-4"></div>
+            </div>
+            <div class="format-card-surface">
+
+              <div class="flagship-top-badge">
+                <span>РЕКОМЕНДУЕМЫЙ ВЫБОР</span>
+              </div>
+
+              <!-- Верхний визуал с заглушкой по референсу #stack -->
+              <div class="format-visual-stage">
+                <div class="ph format-mockup-ph format-flagship-ph">
+                  <b>[ 3D: Флагман / Веб-система & Айдентика ]</b>
+                  <span class="muted" style="font-size: 11px;">Полная окупаемость под ключ</span>
+                </div>
+              </div>
+
+              <div class="format-body-content">
+                <div class="format-header-row">
+                  <span class="format-step-tag">ФОРМАТ 02 · ФЛАГМАН</span>
+                  <span class="format-sla-badge">10–14 ДНЕЙ</span>
+                </div>
+
+                <h3 class="format-title">Веб-система под ключ</h3>
+                <p class="format-desc">
+                  Комплексная упаковка бизнеса: премиальный визуальный стиль, высокая конверсия и автоматизация лидов.
+                </p>
+
+                <div class="format-price-slot">
+                  <div class="format-price-row">
+                    <span class="format-price-val">от 35 000 ₽</span>
+                    <span class="format-price-unit">/ проект</span>
+                  </div>
+                  <span class="format-price-hint">полная окупаемость с первых лидов</span>
+                </div>
+
+                <div class="format-feature-list">
+                  <div class="format-feat-item">
+                    <span class="f-check">✓</span>
+                    <span>Многоэкранный лендинг или бренд-система</span>
+                  </div>
+                  <div class="format-feat-item">
+                    <span class="f-check">✓</span>
+                    <span>AI-предметный арт и 3D-графика без фотостудий</span>
+                  </div>
+                  <div class="format-feat-item">
+                    <span class="f-check">✓</span>
+                    <span>Индивидуальные сценарии и анимация</span>
+                  </div>
+                  <div class="format-feat-item">
+                    <span class="f-check">✓</span>
+                    <span>Подключение эквайринга, оплат и CRM</span>
+                  </div>
+                  <div class="format-feat-item">
+                    <span class="f-check">✓</span>
+                    <span>Скорость загрузки 100/100 PageSpeed</span>
+                  </div>
+                </div>
+
+                <div class="format-action-slot">
+                  <a href="#contact" class="btn btn-format-cta" data-format="Веб-система под ключ">
+                    <span>Заказать под ключ</span>
+                  </a>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- ТАРИФ 03: WHITE LABEL / ПАРТНЕРСТВО -->
+          <div class="card fb-card format-card" data-format="agency">
+            <div class="format-glow-effect">
+              <div class="aurora-blob blob-1"></div>
+              <div class="aurora-blob blob-2"></div>
+              <div class="aurora-blob blob-3"></div>
+              <div class="aurora-blob blob-4"></div>
+            </div>
+            <div class="format-card-surface">
+
+              <!-- Верхний визуал с заглушкой по референсу #stack -->
+              <div class="format-visual-stage">
+                <div class="ph format-mockup-ph">
+                  <b>[ 3D: Партнёрский продакшен / B2B ]</b>
+                  <span class="muted" style="font-size: 11px;">SLA и приватная разработка</span>
+                </div>
+              </div>
+
+              <div class="format-body-content">
+                <div class="format-header-row">
+                  <span class="format-step-tag">ФОРМАТ 03</span>
+                  <span class="format-sla-badge">ПО ДОГОВОРУ / SLA</span>
+                </div>
+
+                <h3 class="format-title">White Label продакшен</h3>
+                <p class="format-desc">
+                  Для маркетологов, директологов и агентств, которым нужен надёжный тех-партнёр без срыва сроков.
+                </p>
+
+                <div class="format-price-slot">
+                  <div class="format-price-row">
+                    <span class="format-price-val">от 20 000 ₽</span>
+                    <span class="format-price-unit">/ проект</span>
+                  </div>
+                  <span class="format-price-hint">специальные партнерские условия</span>
+                </div>
+
+                <div class="format-feature-list">
+                  <div class="format-feat-item">
+                    <span class="f-check">✓</span>
+                    <span>Сборка лендингов строго под рекламный трафик</span>
+                  </div>
+                  <div class="format-feat-item">
+                    <span class="f-check">✓</span>
+                    <span>Работа под вашим брендом (без переманивания)</span>
+                  </div>
+                  <div class="format-feat-item">
+                    <span class="f-check">✓</span>
+                    <span>Быстрое клонирование для A/B сплит-тестов</span>
+                  </div>
+                  <div class="format-feat-item">
+                    <span class="f-check">✓</span>
+                    <span>Жёсткий SLA по срокам сдачи этапов</span>
+                  </div>
+                  <div class="format-feat-item">
+                    <span class="f-check">✓</span>
+                    <span>Прямая связь в Telegram с ответом до 15 минут</span>
+                  </div>
+                </div>
+
+                <div class="format-action-slot">
+                  <a href="#contact" class="btn btn-format-cta" data-format="White Label продакшен">
+                    <span>Обсудить партнёрство</span>
+                  </a>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
+        <div class="formats-bottom-caption">
+          <span class="muted">Все кнопки ведут в Telegram для мгновенного согласования задачи и бронирования
+            слота</span>
+        </div>
+
+      </div>
+    </section>
+    <section id="cases">
+      <span class="kicker">Реальные проекты</span>
+      <h2>Кейсы: от&nbsp;концепта до&nbsp;релиза за&nbsp;дни</h2>
+      <p class="lead">Примеры реализованных проектов. За&nbsp;счёт ИИ-пайплайна и&nbsp;современных платформ удаётся
+        сократить сроки запуска и&nbsp;бюджеты в&nbsp;раза без потери качества</p>
+      <div class="grid g3">
+        <!-- Кейс 1 -->
+        <div class="card hot case-card">
+          <span class="badge">Чистый код · 5 дней</span>
+          <div class="ph" style="min-height:140px"><b>Превью: Поездка на Байкал</b><span class="muted"
+              style="font-size:11.5px">Скриншот первого экрана: авторский тур, чистота, горы</span></div>
+          <div class="case-title">
+            <h3>01 · Поездка на&nbsp;Байкал</h3>
+          </div>
+          <div class="case-desc">
+            <div class="case-row">
+              <p class="muted" style="font-size:13px"><strong>Задача:</strong> упаковать авторский тур и&nbsp;запустить
+                приём бронирований за&nbsp;5 дней</p>
+            </div>
+            <div class="case-row">
+              <p class="muted" style="font-size:13px"><strong>Решение:</strong> автономный сайт на&nbsp;чистом коде
+                с&nbsp;мгновенной загрузкой на&nbsp;смартфонах</p>
+            </div>
+          </div>
+          <div class="case-res">
+            <span>Результат: конверсия в&nbsp;заявку 21%</span>
+          </div>
+          <div class="case-action">
+            <a class="btn btn-outline w100" href="http://79.174.90.149/baikal/" target="_blank">Открыть сайт</a>
+          </div>
+        </div>
+
+        <!-- Кейс 2 -->
+        <div class="card hot case-card">
+          <span class="badge">EdTech / Tilda</span>
+          <div class="ph" style="min-height:140px"><b>Превью: Онлайн-школа «Квазар»</b><span class="muted"
+              style="font-size:11.5px">Скриншот платформы: астрологическая школа со сложной структурой</span></div>
+          <div class="case-title">
+            <h3>02 · Онлайн-школа «Квазар»</h3>
+          </div>
+          <div class="case-desc">
+            <div class="case-row">
+              <p class="muted" style="font-size:13px"><strong>Задача:</strong> создать современный образовательный сайт
+                со&nbsp;сложной структурой курсов</p>
+            </div>
+            <div class="case-row">
+              <p class="muted" style="font-size:13px"><strong>Решение:</strong> глубокая проработка смыслов, удобная
+                навигация и&nbsp;мобильный адаптив</p>
+            </div>
+          </div>
+          <div class="case-res">
+            <span>Результат: рост заявок на&nbsp;курсы +45%</span>
+          </div>
+          <div class="case-action">
+            <a class="btn btn-outline w100" href="https://astroschool-kvasar.ru/" target="_blank">Открыть сайт</a>
+          </div>
+        </div>
+
+        <!-- Кейс 3 -->
+        <div class="card hot case-card">
+          <span class="badge">Tilda Zero-блоки</span>
+          <div class="ph" style="min-height:140px"><b>Превью: devdeev.ru</b><span class="muted"
+              style="font-size:11.5px">Скриншот портфолио: тёмная тема, интерактивные Zero-блоки</span></div>
+          <div class="case-title">
+            <h3>03 · Портфолио devdeev.ru</h3>
+          </div>
+          <div class="case-desc">
+            <div class="case-row">
+              <p class="muted" style="font-size:13px"><strong>Задача:</strong> разработать стильное портфолио
+                с&nbsp;простым управлением контентом</p>
+            </div>
+            <div class="case-row">
+              <p class="muted" style="font-size:13px"><strong>Решение:</strong> сборка на&nbsp;Zero-блоках
+                с&nbsp;кастомной интерактивной анимацией</p>
+            </div>
+          </div>
+          <div class="case-res">
+            <span>Результат: запуск сайта за&nbsp;5 дней</span>
+          </div>
+          <div class="case-action">
+            <a class="btn btn-outline w100" href="https://devdeev.ru/" target="_blank">Открыть сайт</a>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:22px;text-align:center">
+        <a class="btn btn-primary" href="https://t.me/AntiDesigner01" target="_blank">Посмотреть больше работ
+          в&nbsp;Telegram</a>
+        <p class="muted" style="font-size:12px;margin-top:6px">Пришлю примеры под вашу нишу в&nbsp;течение 1&nbsp;минуты
+        </p>
+      </div>
+    </section>
+    <section id="process">
+      <span class="kicker">Как строится работа</span>
+      <h2>4&nbsp;шага от&nbsp;первой идеи до&nbsp;готового сайта</h2>
+      <p class="lead">Без созвонов на&nbsp;два часа и&nbsp;брифов на&nbsp;50 страниц. Всё общение: в&nbsp;мессенджере
+      </p>
+      <div class="grid g2">
+        <div class="step">
+          <b class="num">1</b>
+          <div>
+            <span class="step-time">День 1 · Старт</span>
+            <h3>Вводные в&nbsp;Telegram</h3>
+            <p class="muted">Вы надиктовываете задачу голосовым сообщением или скидываете ссылки на&nbsp;конкурентов.
+              Я&nbsp;сам изучаю нишу, конкурентов и&nbsp;собираю продающие смыслы</p>
+          </div>
+        </div>
+        <div class="step">
+          <b class="num">2</b>
+          <div>
+            <span class="step-time">День 2-3 · Смыслы</span>
+            <h3>Смысловой прототип</h3>
+            <p class="muted">Показываю структуру экранов и&nbsp;готовые тексты в&nbsp;вайрфрейме. Согласовываем логику
+              продаж и&nbsp;офферы до&nbsp;начала визуальной вёрстки</p>
+          </div>
+        </div>
+        <div class="step">
+          <b class="num">3</b>
+          <div>
+            <span class="step-time">День 4-6 · Продакшен</span>
+            <h3>Сборка, графика и&nbsp;код</h3>
+            <p class="muted">Генерирую и&nbsp;ретуширую AI-визуал, верстаю сайт на&nbsp;чистом коде или Tilda,
+              настраиваю интерактив, подключаю формы и&nbsp;уведомления заявок в&nbsp;Telegram</p>
+          </div>
+        </div>
+        <div class="step">
+          <b class="num">4</b>
+          <div>
+            <span class="step-time">День 7 · Релиз</span>
+            <h3>Релиз и&nbsp;передача доступов</h3>
+            <p class="muted">Тестируем отправку заявок, привязываем ваш домен, записываю короткую видеоинструкцию
+              по&nbsp;управлению. Сайт готов принимать реальный трафик</p>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:22px;text-align:center">
+        <a class="btn btn-primary" href="https://t.me/AntiDesigner01" target="_blank">Обсудить ваш проект
+          в&nbsp;Telegram</a>
+      </div>
+    </section>
+    <section id="faq">
+      <span class="kicker">Вопросы и&nbsp;ответы</span>
+      <h2>Отвечаю на&nbsp;главные вопросы до&nbsp;старта</h2>
+      <p class="lead">Коротко о&nbsp;договорах, оплате, правах на&nbsp;сайт, CRM и&nbsp;дальнейшей поддержке</p>
+      <div style="max-width:860px">
+        <details>
+          <summary>1. Как мы оформляем сотрудничество?</summary>
+          <p>Работаю официально как самозанятый (НПД). Перед началом работы подписываем договор с&nbsp;зафиксированными
+            сроками, этапами и&nbsp;стоимостью. Предоставляю официальные чеки из&nbsp;приложения «Мой налог»
+            и&nbsp;закрывающие акты для вашей бухгалтерии</p>
+        </details>
+        <details>
+          <summary>2. Кому принадлежат домен и сайт?</summary>
+          <p>Домен регистрируется строго на&nbsp;ваши паспортные данные: вы его единственный полноправный владелец. Для
+            сайтов на&nbsp;чистом коде я размещаю проект на&nbsp;своем быстром сервере (VPS) с&nbsp;бесплатным
+            администрированием: сайт летает, а&nbsp;вы не думаете о технической части. При желании проект легко
+            переносится на любой ваш хостинг</p>
+        </details>
+        <details>
+          <summary>3. Что если мне не понравится прототип?</summary>
+          <p>Мы разделяем работу на этапы: на 2-м шаге вы смотрите смысловой прототип с&nbsp;текстами и структурой. Все
+            правки по смыслам вносятся бесплатно и без ограничений до тех пор, пока логика не станет идеальной. Только
+            после этого мы переходим к визуалу и коду</p>
+        </details>
+        <details>
+          <summary>4. Нужно ли платить за конструктор каждый месяц?</summary>
+          <p>Если мы выбираем автономный сайт на чистом коде, абонентская плата равна 0&nbsp;₽ навсегда. Вы платите
+            только за домен раз в год (~200-300&nbsp;₽). Если мы собираем на Tilda: оплачивается стандартный ежемесячный
+            тариф самой платформы Tilda</p>
+        </details>
+        <details>
+          <summary>5. Как будет реализована CRM и обработка заявок, если собираем не на Tilda, и всё ли будет стабильно
+            работать?</summary>
+          <p>Да, всё работает максимально надёжно и быстро. Заявки с сайта мгновенно дублируются вам в Telegram (в
+            личные сообщения или в закрытую группу вашей команды) и на почту. При необходимости подключается собственная
+            лёгкая CRM-система либо прямая интеграция с любой внешней CRM (AmoCRM, Битрикс24) по API без ежемесячной
+            платы сторонним сервисам-виджетам</p>
+        </details>
+      </div>
+      <div style="margin-top:22px">
+        <a class="btn btn-outline" href="https://t.me/AntiDesigner01" target="_blank">Задать свой вопрос
+          в&nbsp;Telegram</a>
+      </div>
+    </section>
+    <div id="contact" style="position:relative; top:-60px;"></div>
+    <section id="action">
+      <div class="split" style="align-items:center">
+        <div>
+          <span class="kicker">Финальный шаг</span>
+          <h2>Давайте обсудим ваш сайт в&nbsp;Telegram</h2>
+          <p class="lead">Не&nbsp;нужно заполнять длинные брифы. Просто расскажите о&nbsp;задаче своими словами или
+            пришлите ссылку на&nbsp;действующий сайт</p>
+          <div class="card" style="margin-bottom:18px">
+            <div style="font-weight:700;margin-bottom:6px;color:#ffffff;font-family:var(--font-heading)">Как проходит
+              первый контакт:</div>
+            <ul class="chk-list">
+              <li>Вы описываете задачу в&nbsp;свободной форме (можно голосовым)</li>
+              <li>Я&nbsp;изучаю нишу, конкурентов и&nbsp;возвращаюсь с&nbsp;предложенным стеком и&nbsp;структурой</li>
+              <li>Называю точные сроки и&nbsp;стоимость до&nbsp;старта работ</li>
+            </ul>
+          </div>
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+            <a class="btn btn-primary" href="https://t.me/AntiDesigner01" target="_blank"
+              style="padding:14px 28px;font-size:15px">
+              Написать в&nbsp;Telegram @AntiDesigner01
+            </a>
+            <span class="muted" style="font-size:12.5px">Отвечаю лично в&nbsp;течение 15&nbsp;минут</span>
+          </div>
+        </div>
+        <div>
+          <div class="ph" style="min-height:220px"><b>Виджет быстрого старта: Карточка диалога</b><span class="muted"
+              style="font-size:11.5px">Имитация мессенджера Telegram: статус «Онлайн», аватарка, пример короткого
+              сообщения для лёгкого первого шага</span></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap frow">
+      <div>
+        <b>AntiDesigner</b> · Евгений Антипин<br>
+        Запуск сайтов и&nbsp;бренд-систем под ключ<br>
+        © 2026 Все права защищены
+      </div>
+      <div>
+        <b>Контакты:</b><br>
+        Telegram: <a href="https://t.me/AntiDesigner01" target="_blank">@AntiDesigner01</a><br>
+        Email: <a href="mailto:Optimuspptimus@gmail.com">Optimuspptimus@gmail.com</a>
+      </div>
+      <div>
+        <b>Правовая информация:</b><br>
+        Работа по&nbsp;договору самозанятого (НПД)<br>
+        Предоставление чеков и&nbsp;закрывающих актов<br>
+        <a href="#">Публичная оферта</a> · <a href="#">Политика конфиденциальности</a>
+      </div>
+      <div>
+        <a class="btn btn-outline sm" href="#hero">Наверх</a>
       </div>
     </div>
-  </main>
+  </footer>
+
+  <!-- Интерактивность хедера при скролле -->
+  <script>
+    (function () {
+      const header = document.querySelector('.floating-header');
+      if (!header) return;
+
+      let ticking = false;
+      window.addEventListener('scroll', () => {
+        if (!ticking) {
+          window.requestAnimationFrame(() => {
+            if (window.scrollY > 40) {
+              header.classList.add('is-scrolled');
+            } else {
+              header.classList.remove('is-scrolled');
+            }
+            ticking = false;
+          });
+          ticking = true;
+        }
+      }, { passive: true });
+    })();
+  </script>
+
+  <!-- Скрипт интерактивности карточек форматов и приложения -->
+  <script src="main.js"></script>
 </body>
+
 </html>
