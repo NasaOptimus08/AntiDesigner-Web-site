@@ -205,12 +205,12 @@ h3 {
   transition: top 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Капсула хедера: строгая сетка с равными боковинами */
+/* Капсула хедера: строгая сетка 1fr auto 1fr для идеального математического центра */
 .nav-capsule {
   pointer-events: auto;
   display: grid !important;
-  /* Автоматические боковины + гибкий центр */
-  grid-template-columns: auto 1fr auto !important;
+  /* Симметричные боковые колонки 1fr и точный центр auto */
+  grid-template-columns: 1fr auto 1fr !important;
   align-items: center !important;
   gap: 20px !important;
   width: 100%;
@@ -239,7 +239,7 @@ h3 {
 /* При скролле капсула сжимается до 880px, имя автора скрывается */
 .floating-header.is-scrolled .nav-capsule {
   max-width: 880px;
-  grid-template-columns: auto 1fr auto !important;
+  grid-template-columns: 1fr auto 1fr !important;
   gap: 16px !important;
   background: linear-gradient(180deg,
       rgba(255, 255, 255, 0.08) 0%,
@@ -252,11 +252,12 @@ h3 {
   display: none !important;
 }
 
-/* ЛЕВЫЙ СЛОТ: гибкая ширина по контенту */
+/* ЛЕВЫЙ СЛОТ: прижат к левому краю первой колонки */
 .nav-slot-left {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  justify-self: start !important;
   width: auto;
 }
 
@@ -336,8 +337,9 @@ h3 {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
+  justify-self: center !important;
   gap: 28px !important;
-  margin: 0 auto;
+  margin: 0 auto !important;
 }
 
 .nav-link {
@@ -346,7 +348,9 @@ h3 {
   font-weight: 500;
   color: rgba(255, 255, 255, 0.75);
   text-decoration: none;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
   transition: color 0.25s ease, transform 0.25s ease, text-shadow 0.25s ease;
   will-change: transform, color;
 }
@@ -362,11 +366,12 @@ h3 {
   font-weight: 600;
 }
 
-/* ПРАВЫЙ СЛОТ: гибкая ширина */
+/* ПРАВЫЙ СЛОТ: прижат к правому краю третьей колонки */
 .nav-slot-right {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  justify-self: end !important;
   width: auto;
 }
 
@@ -6518,7 +6523,7 @@ header .wrap {
 .header-content,
 .nav-capsule {
   display: grid !important;
-  grid-template-columns: auto 1fr auto !important;
+  grid-template-columns: 1fr auto 1fr !important;
   align-items: center !important;
   gap: 20px !important;
 }
@@ -6624,7 +6629,7 @@ header .wrap {
   }
 
   .nav-capsule {
-    grid-template-columns: auto 1fr auto !important;
+    grid-template-columns: 1fr auto 1fr !important;
     gap: 16px !important;
     padding: 0 16px !important;
   }
