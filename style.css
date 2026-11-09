@@ -5464,9 +5464,6 @@ select {
     pointer-events: auto !important;
     z-index: 10000 !important;
   }
-    opacity: 1 !important;
-    pointer-events: auto !important;
-  }
 
   /* Контейнер содержимого меню с учетом безопасных зон */
   .mobile-menu-container {
@@ -6334,67 +6331,131 @@ select {
 }
 
 /* ========================================================
-   СТАБИЛИЗАЦИЯ 4-Й КАРТОЧКИ ДЛЯ НОУТБУКОВ (961px – 1200px)
+   4-Я КАРТОЧКА: ВИДЖЕТ ЗАЯВОК И СТАБИЛЬНЫЙ BENTO GRID (960px+)
    ======================================================== */
-@media (min-width: 961px) and (max-width: 1200px) {
-  /* Задаем стабильную сетку без прыжков */
-  .features-bento .card.bento-card.card-visual,
+@media (min-width: 961px) {
+  /* Контейнер 4 карточек 2x2 */
+  .features-bento {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 24px !important;
+    align-items: stretch !important;
+  }
+
+  /* Сама 4-я карточка сплитится на 2 колонки: 1.15fr текст, 0.85fr виджет */
+  .features-bento .bento-card.card-visual,
   .features-bento .bento-card:nth-child(4) {
     display: grid !important;
-    grid-template-columns: 1fr 1fr !important;
-    gap: 16px !important;
+    grid-template-columns: 1.15fr 0.85fr !important;
+    gap: 20px !important;
     align-items: center !important;
-    min-height: 280px !important; /* Фиксированный монолит по высоте */
-    padding: 24px 24px !important;
+    min-height: 280px !important;
+    padding: 28px !important;
     overflow: hidden !important;
   }
 
-  /* Левая текстовая колонка */
-  .features-bento .bento-card.card-visual .bento-text,
-  .features-bento .bento-card:nth-child(4) .bento-text {
+  .features-bento .bento-card.card-visual .bento-text {
     display: flex !important;
     flex-direction: column !important;
     justify-content: center !important;
     min-width: 0 !important;
   }
 
-  .features-bento .bento-card.card-visual .bento-text h3,
-  .features-bento .bento-card:nth-child(4) h3 {
-    font-size: 18px !important;
-    line-height: 1.25 !important;
-    margin-bottom: 8px !important;
-  }
-
-  .features-bento .bento-card.card-visual .bento-text p,
-  .features-bento .bento-card:nth-child(4) p {
-    font-size: 13px !important;
-    line-height: 1.45 !important;
-    margin: 0 !important;
-  }
-
-  /* Правый слот с виджетом: компактный масштаб без вылетов и дерганий */
+  /* Слот под виджет */
   .features-bento .bento-mockup-slot {
-    height: 100% !important;
-    min-height: 200px !important;
-    max-height: 220px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
     width: 100% !important;
+    height: 100% !important;
+    min-height: 210px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    transform: none !important;
+    overflow: visible !important;
+  }
+
+  /* Сам интерактивный виджет */
+  .stats-widget {
+    display: flex !important;
+    width: 100% !important;
+    max-width: 310px !important;
+    height: 195px !important;
+    background: radial-gradient(130% 130% at 80% 50%, rgba(0, 229, 184, 0.08) 0%, rgba(10, 14, 22, 0.95) 100%) !important;
+    border: 1px solid rgba(220, 230, 242, 0.1) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5) !important;
+    overflow: hidden !important;
+    position: relative !important;
+  }
+
+  /* Левая колонка таймлайна с месяцами */
+  .stats-timeline {
+    width: 84px !important;
+    height: 100% !important;
+    position: relative !important;
+    border-right: 1px solid rgba(220, 230, 242, 0.08) !important;
     display: flex !important;
     align-items: center !important;
     justify-content: flex-end !important;
-    transform: none !important; /* Убираем резкие десктопные наклоны */
+    padding-right: 16px !important;
+    flex-shrink: 0 !important;
   }
 
-  .features-bento .stats-widget {
-    transform: scale(0.86) !important; /* Плавное аккуратное уменьшение */
-    transform-origin: right center !important;
+  .timeline-track-wrap {
+    height: 100% !important;
     width: 100% !important;
-    max-width: 320px !important;
-    height: 200px !important;
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4) !important;
+    overflow: hidden !important;
+    position: relative !important;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.2) 20%, black 50%, rgba(0, 0, 0, 0.2) 80%, transparent 100%) !important;
+    mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.2) 20%, black 50%, rgba(0, 0, 0, 0.2) 80%, transparent 100%) !important;
   }
 
-  .features-bento .stats-number {
-    font-size: 38px !important;
+  .timeline-dates {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 28px !important;
+    padding-top: 86px !important;
+    padding-bottom: 86px !important;
+    text-align: right !important;
+    will-change: transform !important;
+  }
+
+  .timeline-dates span {
+    font-family: var(--font-body) !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    color: rgba(220, 230, 242, 0.4) !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    transition: color 0.2s ease, text-shadow 0.2s ease !important;
+  }
+
+  .timeline-dates span.active-month {
+    color: var(--color-accent) !important;
+    text-shadow: 0 0 12px rgba(0, 229, 184, 0.5) !important;
+  }
+
+  /* Правая колонка со счетчиком заявок */
+  .stats-counter-wrap {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    padding: 0 14px !important;
+    position: relative !important;
+    z-index: 2 !important;
+  }
+
+  .stats-number {
+    font-family: var(--font-heading) !important;
+    font-size: 42px !important;
+    font-weight: 800 !important;
+    color: var(--color-text) !important;
+    line-height: 1 !important;
+    letter-spacing: -0.03em !important;
+    margin: 4px 0 !important;
   }
 }
 

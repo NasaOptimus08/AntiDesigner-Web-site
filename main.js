@@ -148,13 +148,13 @@ document.addEventListener('DOMContentLoaded', () => {
       window.requestAnimationFrame(stepForward);
     }
 
-    // Запуск при появлении на экране (threshold 0.15 для надежного срабатывания)
+    // Запуск анимации синхронно или при появлении карточки
     const statsObserver = new IntersectionObserver((entries) => {
       if (entries[0].isIntersecting) {
         animateCycle();
         statsObserver.unobserve(statsWidget);
       }
-    }, { threshold: 0.15 });
+    }, { threshold: 0.1 });
 
     statsObserver.observe(statsWidget);
   }
