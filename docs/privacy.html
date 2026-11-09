@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Политика в отношении обработки персональных данных · AntiDesigner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Unbounded:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --color-bg: #121314;
+      --color-surface: rgba(22, 27, 34, 0.75);
+      --color-border: rgba(220, 230, 242, 0.12);
+      --color-text: #DCE6F2;
+      --color-muted: #8b949e;
+      --color-accent: #00E599;
+      --font-body: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-heading: 'Unbounded', sans-serif;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: var(--color-bg);
+      background-image: 
+        radial-gradient(circle at 85% 10%, rgba(34, 61, 102, 0.22) 0%, transparent 45%),
+        radial-gradient(circle at 15% 90%, rgba(0, 229, 153, 0.04) 0%, transparent 40%);
+      color: var(--color-text);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.65;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      padding: 0 16px 60px;
+    }
+    .doc-header {
+      max-width: 860px;
+      margin: 24px auto 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 20px;
+      background: rgba(18, 24, 32, 0.8);
+      border: 1px solid var(--color-border);
+      border-radius: 16px;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+    .doc-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: #ffffff;
+      font-family: var(--font-heading);
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .doc-brand img {
+      height: 22px;
+      filter: invert(1) brightness(100);
+    }
+    .btn-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--color-accent);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: 10px;
+      background: rgba(0, 229, 153, 0.08);
+      border: 1px solid rgba(0, 229, 153, 0.2);
+      transition: background 0.2s, transform 0.15s;
+    }
+    .btn-back:hover {
+      background: rgba(0, 229, 153, 0.16);
+      transform: translateY(-1px);
+    }
+    .doc-container {
+      max-width: 860px;
+      margin: 0 auto;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 20px;
+      padding: clamp(24px, 5vw, 48px);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+    }
+    .doc-content h2, .doc-content h3 {
+      font-family: var(--font-heading);
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.01em;
+      margin: 28px 0 14px;
+      line-height: 1.35;
+    }
+    .doc-content h2 {
+      font-size: clamp(20px, 3.5vw, 24px);
+    }
+    .doc-content h3 {
+      font-size: clamp(16px, 2.5vw, 18px);
+    }
+    .text-center {
+      text-align: center;
+    }
+    .doc-content p {
+      margin-bottom: 14px;
+      color: #DCE6F2;
+    }
+    .doc-content ul, .doc-content ol {
+      margin: 12px 0 16px 24px;
+      color: #DCE6F2;
+    }
+    .doc-content li {
+      margin-bottom: 6px;
+    }
+    .doc-content table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 13.5px;
+    }
+    .doc-content td, .doc-content th {
+      border: 1px solid rgba(220, 230, 242, 0.15);
+      padding: 10px 14px;
+      vertical-align: top;
+    }
+    .doc-content mark, .doc-content .fill {
+      background: rgba(0, 229, 153, 0.15);
+      color: var(--color-accent);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .doc-content strong, .doc-content b {
+      color: #ffffff;
+      font-weight: 700;
+    }
+    .doc-footer-meta {
+      margin-top: 36px;
+      padding-top: 20px;
+      border-top: 1px solid var(--color-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 12.5px;
+      color: var(--color-muted);
+    }
+    .doc-download-link {
+      color: var(--color-accent);
+      text-decoration: none;
+    }
+    .doc-download-link:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <header class="doc-header">
+    <a href="../index.html" class="doc-brand">
+      <img src="../assets/mylogo.svg" alt="AntiDesigner">
+      <span>AntiDesigner</span>
+    </a>
+    <a href="../index.html" class="btn-back">← На главную</a>
+  </header>
+
+  <main class="doc-container">
+    <article class="doc-content">
+      <h3 class="text-center">Политика в отношении обработки персональных данных</h3><p class="text-center">Сайт: antidesigner.tech</p><h3>1. Общие положения</h3><p>1.1. Настоящая Политика определяет порядок обработки и защиты персональных данных пользователей сайта antidesigner.tech (далее — Сайт) и разработана в соответствии с Федеральным законом от 27.07.2006 № 152-ФЗ «О персональных данных».</p><p>1.2. Оператор персональных данных: Антипин Евгений Дмитриевич, самозанятый (плательщик НПД, ИНН 540698242607), адрес: г. Новосибирск ул. красный проспект д. 46 (далее — Оператор).</p><p>1.3. Используя Сайт и оставляя свои данные в формах, пользователь подтверждает согласие с настоящей Политикой.</p><h3>2. Какие персональные данные обрабатываются</h3><p>2.1. Оператор обрабатывает следующие персональные данные: фамилия, имя, отчество; адрес электронной почты; номер телефона; cookie, IP-адрес, данные о посещении сайта.</p><p>2.2. Оператор не обрабатывает специальные категории персональных данных (о расовой, национальной принадлежности, состоянии здоровья и т.п.).</p><h3>3. Цели обработки</h3><p>3.1. Персональные данные обрабатываются в следующих целях:</p><p>1) обработка обращений и обратная связь;</p><p>2) приём и обработка заявок и заказов;</p><p>3) заключение и исполнение договоров с пользователем;</p><p>4) информационные и рекламные рассылки;</p><h3>4. Правовые основания обработки</h3><p>4.1. Обработка осуществляется на основании ст. 6 152-ФЗ: согласия пользователя, а также в целях исполнения договора, стороной которого является пользователь.</p><h3>5. Порядок и условия обработки</h3><p>5.1. Обработка осуществляется с использованием средств автоматизации и без таковых. Оператор принимает необходимые правовые, организационные и технические меры для защиты данных от неправомерного доступа, уничтожения, изменения и распространения.</p><p>5.2. Доступ к данным имеют только уполномоченные лица Оператора, принявшие обязательство о конфиденциальности.</p><h3>6. Файлы cookie и аналитика</h3><p>6.1. На Сайте используются сервисы веб-аналитики, собирающие обезличенные данные о посещениях с помощью файлов cookie: Яндекс.Метрика (ООО «Яндекс»); Google Analytics (Google LLC); CRM-система для обработки заявок.</p><p>6.2. Пользователь может отключить cookie в настройках браузера, это может ограничить доступ к части функций Сайта.</p><h3>7. Передача данных третьим лицам</h3><p>7.1. Оператор не передаёт персональные данные третьим лицам, кроме случаев, предусмотренных законодательством, либо когда это необходимо для исполнения договора (например, службам доставки, платёжным и аналитическим сервисам).</p><h3>8. Права пользователя</h3><p>8.1. Пользователь вправе получать информацию об обработке своих данных, требовать их уточнения, блокирования или уничтожения, а также отозвать согласие, направив обращение на e-mail: Optimuspptimus@gmail.com.</p><h3>9. Сроки хранения</h3><p>9.1. Персональные данные хранятся не дольше, чем этого требуют цели обработки, либо до отзыва согласия пользователем.</p><h3>10. Заключительные положения</h3><p>10.1. Оператор вправе изменять настоящую Политику. Актуальная редакция размещается на Сайте по адресу antidesigner.tech.</p><p>10.2. По вопросам обработки персональных данных обращайтесь на e-mail: Optimuspptimus@gmail.com.</p>
+    </article>
+    <div class="doc-footer-meta">
+      <span>AntiDesigner · Евгений Антипин</span>
+      <a href="../assets/Документы/Политика конфиденциальности_Политика в отношении обработки персональных данных.doc" download class="doc-download-link">Скачать оригинал в формате .doc</a>
+    </div>
+  </main>
+</body>
+</html>

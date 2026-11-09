@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Согласие на обработку персональных данных · AntiDesigner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Unbounded:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --color-bg: #121314;
+      --color-surface: rgba(22, 27, 34, 0.75);
+      --color-border: rgba(220, 230, 242, 0.12);
+      --color-text: #DCE6F2;
+      --color-muted: #8b949e;
+      --color-accent: #00E599;
+      --font-body: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-heading: 'Unbounded', sans-serif;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: var(--color-bg);
+      background-image: 
+        radial-gradient(circle at 85% 10%, rgba(34, 61, 102, 0.22) 0%, transparent 45%),
+        radial-gradient(circle at 15% 90%, rgba(0, 229, 153, 0.04) 0%, transparent 40%);
+      color: var(--color-text);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.65;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      padding: 0 16px 60px;
+    }
+    .doc-header {
+      max-width: 860px;
+      margin: 24px auto 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 20px;
+      background: rgba(18, 24, 32, 0.8);
+      border: 1px solid var(--color-border);
+      border-radius: 16px;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+    .doc-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: #ffffff;
+      font-family: var(--font-heading);
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .doc-brand img {
+      height: 22px;
+      filter: invert(1) brightness(100);
+    }
+    .btn-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--color-accent);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: 10px;
+      background: rgba(0, 229, 153, 0.08);
+      border: 1px solid rgba(0, 229, 153, 0.2);
+      transition: background 0.2s, transform 0.15s;
+    }
+    .btn-back:hover {
+      background: rgba(0, 229, 153, 0.16);
+      transform: translateY(-1px);
+    }
+    .doc-container {
+      max-width: 860px;
+      margin: 0 auto;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 20px;
+      padding: clamp(24px, 5vw, 48px);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+    }
+    .doc-content h2, .doc-content h3 {
+      font-family: var(--font-heading);
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.01em;
+      margin: 28px 0 14px;
+      line-height: 1.35;
+    }
+    .doc-content h2 {
+      font-size: clamp(20px, 3.5vw, 24px);
+    }
+    .doc-content h3 {
+      font-size: clamp(16px, 2.5vw, 18px);
+    }
+    .text-center {
+      text-align: center;
+    }
+    .doc-content p {
+      margin-bottom: 14px;
+      color: #DCE6F2;
+    }
+    .doc-content ul, .doc-content ol {
+      margin: 12px 0 16px 24px;
+      color: #DCE6F2;
+    }
+    .doc-content li {
+      margin-bottom: 6px;
+    }
+    .doc-content table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 13.5px;
+    }
+    .doc-content td, .doc-content th {
+      border: 1px solid rgba(220, 230, 242, 0.15);
+      padding: 10px 14px;
+      vertical-align: top;
+    }
+    .doc-content mark, .doc-content .fill {
+      background: rgba(0, 229, 153, 0.15);
+      color: var(--color-accent);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .doc-content strong, .doc-content b {
+      color: #ffffff;
+      font-weight: 700;
+    }
+    .doc-footer-meta {
+      margin-top: 36px;
+      padding-top: 20px;
+      border-top: 1px solid var(--color-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 12.5px;
+      color: var(--color-muted);
+    }
+    .doc-download-link {
+      color: var(--color-accent);
+      text-decoration: none;
+    }
+    .doc-download-link:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <header class="doc-header">
+    <a href="../index.html" class="doc-brand">
+      <img src="../assets/mylogo.svg" alt="AntiDesigner">
+      <span>AntiDesigner</span>
+    </a>
+    <a href="../index.html" class="btn-back">← На главную</a>
+  </header>
+
+  <main class="doc-container">
+    <article class="doc-content">
+      <h3 class="text-center">Согласие на обработку персональных данных</h3><p>Настоящим я, действуя свободно, своей волей и в своём интересе, даю согласие оператору персональных данных: Антипин Евгений Дмитриевич, самозанятый (плательщик НПД, ИНН 540698242607), адрес: г. Новосибирск ул. красный проспект д. 46 (далее — Оператор), на обработку моих персональных данных, указанных мной на сайте antidesigner.tech.</p><p><strong>Перечень данных:</strong> фамилия, имя, отчество; адрес электронной почты; cookie, IP-адрес, данные о посещении сайта.</p><p><strong>Перечень действий:</strong> сбор, запись, систематизация, накопление, хранение, уточнение, использование, передача (в случаях, предусмотренных законом), обезличивание, блокирование, удаление и уничтожение, с использованием средств автоматизации и без таковых.</p><p><strong>Цели обработки:</strong> обработка обращений и обратная связь; приём и обработка заявок и заказов; заключение и исполнение договоров с пользователем; информационные и рекламные рассылки.</p><p>Согласие даётся на срок до достижения целей обработки либо до его отзыва. Я уведомлён(а), что вправе отозвать согласие, направив письменное обращение на e-mail: Optimuspptimus@gmail.com.</p><p>Я подтверждаю, что ознакомлен(а) с Политикой в отношении обработки персональных данных, размещённой на сайте antidesigner.tech.</p><p style="margin-top:20px">Настоящее согласие считается предоставленным с момента отправки формы заявки на сайте antidesigner.tech</p>
+    </article>
+    <div class="doc-footer-meta">
+      <span>AntiDesigner · Евгений Антипин</span>
+      <a href="../assets/Документы/Согласие на обработку ПД_Согласие на обработку персональных данных.doc" download class="doc-download-link">Скачать оригинал в формате .doc</a>
+    </div>
+  </main>
+</body>
+</html>

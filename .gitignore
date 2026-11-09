@@ -15,3 +15,12 @@ __pycache__/
 
 # Local server / environment
 .env
+
+# Agent local configuration & skills
+.agents/
+skills-lock.json
+
+# Archive & scratch
+_trash/
+trash_archive/
+scratch/

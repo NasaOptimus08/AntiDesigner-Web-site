@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /_trash/
+Disallow: /trash_archive/
+
+Sitemap: https://antidesigner.tech/sitemap.xml
+Host: https://antidesigner.tech
+
