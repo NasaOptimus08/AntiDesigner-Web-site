@@ -175,19 +175,27 @@ document.addEventListener('DOMContentLoaded', () => {
     animatedSections.forEach((sec) => viewObserver.observe(sec));
   }
 
-  // Оптимизированный автозапуск и пауза видео при скролле (IntersectionObserver)
+  // Оптимизированный ленивый запуск и пауза видео только при появлении в viewport (IntersectionObserver)
   const allMediaVideos = document.querySelectorAll('.stack-video-mockup, .case-visual-media');
   if (allMediaVideos.length) {
+    const isMobile = window.innerWidth <= 768;
     const videoObserver = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
         const v = entry.target;
         if (entry.isIntersecting) {
+          // Начинаем загрузку и воспроизведение только когда видео вошло в видимую зону
+          if (v.preload !== 'auto') {
+            v.preload = 'auto';
+          }
           v.play().catch(() => {});
         } else {
           v.pause();
         }
       });
-    }, { rootMargin: '200px 0px', threshold: 0.1 });
+    }, {
+      rootMargin: isMobile ? '50px 0px' : '150px 0px',
+      threshold: 0.1
+    });
 
     allMediaVideos.forEach(v => videoObserver.observe(v));
   }
