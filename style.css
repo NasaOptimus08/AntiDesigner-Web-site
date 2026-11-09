@@ -1274,6 +1274,26 @@ section {
   box-sizing: border-box !important;
 }
 
+/* Строгое выравнивание текста карточки 05 по левому краю */
+.fb-wide-bottom,
+.fb-wide-bottom .fb-content,
+.approach-card-05,
+.approach-card-05 .fb-content {
+  text-align: left !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+}
+
+.fb-wide-bottom .fb-tag,
+.fb-wide-bottom .card-title,
+.fb-wide-bottom .muted,
+.approach-card-05 .fb-tag,
+.approach-card-05 .card-title,
+.approach-card-05 .muted {
+  text-align: left !important;
+  align-self: flex-start !important;
+}
+
 /* 06. Нижняя правая карточка (CTA) */
 .fb-cta-action {
   grid-column: 3;
