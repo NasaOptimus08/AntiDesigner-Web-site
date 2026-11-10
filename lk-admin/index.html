@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AntiDesigner Core // Admin Control Plane</title>
+  <meta name="robots" content="noindex, nofollow">
+
+  <!-- Google Font: JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Dark Tech Stylesheet -->
+  <link rel="stylesheet" href="css/dark-tech.css">
+</head>
+<body>
+  <div class="app-shell">
+    
+    <!-- Сайдбар управления -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand-row">
+          <span class="brand-prefix">&gt;</span>
+          <span class="brand-title">ANTIDESIGNER<span class="brand-dot">.</span>CORE</span>
+        </div>
+        <div class="agent-status-badge">
+          <span class="status-dot"></span>
+          <span class="status-label">AGENT ONLINE</span>
+          <span class="agent-mode">90/10</span>
+        </div>
+      </div>
+
+      <!-- Навигация по 8 модулям -->
+      <nav class="sidebar-nav">
+        <a href="#factory" class="nav-item active" data-tab="factory">
+          <span class="nav-icon">⚡</span>
+          <span class="nav-text">Контент-фабрика</span>
+          <span class="nav-pill">5x</span>
+        </a>
+        <a href="#crm" class="nav-item" data-tab="crm">
+          <span class="nav-icon">👥</span>
+          <span class="nav-text">CRM и Лиды</span>
+          <span class="nav-pill">Канбан</span>
+        </a>
+        <a href="#knowledge" class="nav-item" data-tab="knowledge">
+          <span class="nav-icon">🧠</span>
+          <span class="nav-text">База знаний</span>
+          <span class="nav-pill">RAG</span>
+        </a>
+        <a href="#outbound" class="nav-item" data-tab="outbound">
+          <span class="nav-icon">🎯</span>
+          <span class="nav-text">Холодный парсинг</span>
+          <span class="nav-pill">Vision</span>
+        </a>
+        <a href="#bot" class="nav-item" data-tab="bot">
+          <span class="nav-icon">🤖</span>
+          <span class="nav-text">ТГ-Бот и магниты</span>
+          <span class="nav-pill">Hook</span>
+        </a>
+        <a href="#trends" class="nav-item" data-tab="trends">
+          <span class="nav-icon">📡</span>
+          <span class="nav-text">Тренды</span>
+          <span class="nav-pill">Radar</span>
+        </a>
+        <a href="#calendar" class="nav-item" data-tab="calendar">
+          <span class="nav-icon">📅</span>
+          <span class="nav-text">Контент-план</span>
+          <span class="nav-pill">Сетка</span>
+        </a>
+        <a href="#skills" class="nav-item" data-tab="skills">
+          <span class="nav-icon">⚙️</span>
+          <span class="nav-text">Скиллы (Промпты)</span>
+          <span class="nav-pill">LLM</span>
+        </a>
+      </nav>
+
+      <!-- Инфраструктурные плашки хостинга -->
+      <div class="sidebar-footer">
+        <div class="sys-chip-row">
+          <div class="sys-chip">
+            <span class="sys-label">HOST</span>
+            <span class="sys-val">LOCAL DEV</span>
+          </div>
+          <div class="sys-chip">
+            <span class="sys-label">CPU</span>
+            <span class="sys-val sys-green">0.1%</span>
+          </div>
+        </div>
+        <div class="sys-chip-row">
+          <div class="sys-chip full-width">
+            <span class="sys-label">SQLITE</span>
+            <span class="sys-val">WAL / STRICT 8.3</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Основная рабочая область (Viewport) -->
+    <main class="main-viewport">
+      
+      <!-- Верхний статус-бар -->
+      <header class="top-bar">
+        <div class="top-bar-left">
+          <div class="breadcrumb">
+            <span class="bc-root">CORE</span>
+            <span class="bc-sep">//</span>
+            <span class="bc-active" id="breadcrumbActive">FACTORY</span>
+          </div>
+          <h1 class="page-title" id="pageTitle">⚡ Контент-фабрика</h1>
+        </div>
+        <div class="top-bar-right">
+          <div class="api-status-badge" id="apiStatusBadge">
+            <span class="api-dot"></span>
+            <span class="api-text">API: PROBING</span>
+          </div>
+          <button type="button" class="btn-tech-outline" id="checkApiBtn" title="Проверить состояние базы данных">
+            <span class="btn-icon">↺</span>
+            <span>PING DB</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Контейнер сменяемых табов SPA -->
+      <div class="content-canvas">
+
+        <!-- 1. Контент-фабрика -->
+        <section class="tab-pane active" id="pane-factory">
+          <div class="module-hero-card">
+            <div class="module-card-header">
+              <div class="module-title-wrap">
+                <span class="module-kicker">OMNICHANNEL ENGINE 5-IN-1</span>
+                <h2>Контент-фабрика</h2>
+              </div>
+              <span class="badge-accent">AGENT-IN-THE-LOOP</span>
+            </div>
+            <p class="module-desc">
+              Генерация готового пакета из 5 материалов из 1 инфоповода: лонгрид для VC.ru/Habr, GEO-статья для поискового SEO, пост в Telegram, сценарий для Shorts/Reels и каркас PDF-лид-магнита.
+            </p>
+
+            <div class="tech-grid-3">
+              <div class="tech-metric-card">
+                <span class="metric-num">5</span>
+                <span class="metric-label">Форматов за 1 цикл</span>
+                <span class="metric-hint">VC · Habr · TG · Reels · LeadMagnet</span>
+              </div>
+              <div class="tech-metric-card">
+                <span class="metric-num">0</span>
+                <span class="metric-label">Зависимостей</span>
+                <span class="metric-hint">Чистый FastCGI REST без Node/NPM</span>
+              </div>
+              <div class="tech-metric-card">
+                <span class="metric-num">90%</span>
+                <span class="metric-label">Автономность ИИ</span>
+                <span class="metric-hint">10% — супервайзинг и аппрув</span>
+              </div>
+            </div>
+
+            <div class="module-placeholder-box">
+              <div class="box-icon">⚡</div>
+              <h3>Генератор пакета материалов готов к интеграции Спринта 2</h3>
+              <p>Поле ввода инфоповода, подключение Gemini 1.5 Pro и Markdown-превью для публикации в один клик.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2. CRM и Лиды -->
+        <section class="tab-pane" id="pane-crm">
+          <div class="module-hero-card">
+            <div class="module-card-header">
+              <div class="module-title-wrap">
+                <span class="module-kicker">LEAD PIPELINE &amp; ATTRIBUTION</span>
+                <h2>CRM и Воронка Лидов</h2>
+              </div>
+              <span class="badge-accent">SQLITE WAL</span>
+            </div>
+            <p class="module-desc">
+              Канбан-доска статусов: <code class="tech-code">new</code> → <code class="tech-code">qualified</code> → <code class="tech-code">hot</code> → <code class="tech-code">deal_closed</code> → <code class="tech-code">archived</code> с точной UTM-атрибуцией статьи или поста, приведшего клиента.
+            </p>
+
+            <div class="tech-grid-3">
+              <div class="tech-metric-card">
+                <span class="metric-num">3</span>
+                <span class="metric-label">Тарифных коридора</span>
+                <span class="metric-hint">18к–25к · 25к–35к · 35к+</span>
+              </div>
+              <div class="tech-metric-card">
+                <span class="metric-num">100%</span>
+                <span class="metric-label">Атрибуция UTM</span>
+                <span class="metric-hint">Сквозной трекинг источников</span>
+              </div>
+              <div class="tech-metric-card">
+                <span class="metric-num">0 ms</span>
+                <span class="metric-label">Задержка записи</span>
+                <span class="metric-hint">Транзакции WAL без дедлоков</span>
+              </div>
+            </div>
+
+            <div class="module-placeholder-box">
+              <div class="box-icon">👥</div>
+              <h3>Канбан-доска и учет заявок готовы к интеграции</h3>
+              <p>Интерфейс перемещения карточек лидов, фиксация выданных магнитов и контактов Telegram.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. База знаний -->
+        <section class="tab-pane" id="pane-knowledge">
+          <div class="module-hero-card">
+            <div class="module-card-header">
+              <div class="module-title-wrap">
+                <span class="module-kicker">KNOWLEDGE CONTEXT STORE</span>
+                <h2>База знаний</h2>
+              </div>
+              <span class="badge-accent">RAG CONTEXT</span>
+            </div>
+            <p class="module-desc">
+              Постоянный контекст для нейросети, разбитый по 4 категориям: для контента, для переписки с клиентами, для самообучения агента и для аналитики CRM.
+            </p>
+
+            <div class="tech-grid-4">
+              <div class="tech-category-chip">
+                <span class="cat-tag">CAT 01</span>
+                <strong>Контент-маркетинг</strong>
+                <p>УТП чистого кода, боли конструкторов, тон AntiDesigner</p>
+              </div>
+              <div class="tech-category-chip">
+                <span class="cat-tag">CAT 02</span>
+                <strong>Диалоги и продажи</strong>
+                <p>Скрипты квалификации, отработка возражений по цене</p>
+              </div>
+              <div class="tech-category-chip">
+                <span class="cat-tag">CAT 03</span>
+                <strong>Самообучение агента</strong>
+                <p>Выводы из гипотез и корректировки поведения</p>
+              </div>
+              <div class="tech-category-chip">
+                <span class="cat-tag">CAT 04</span>
+                <strong>CRM Аналитика</strong>
+                <p>Метрики конверсии и статистика эффективности постов</p>
+              </div>
+            </div>
+
+            <div class="module-placeholder-box">
+              <div class="box-icon">🧠</div>
+              <h3>Редактор постоянного контекста базы знаний</h3>
+              <p>Markdown-редактор с сохранением в таблицу <code class="tech-code">knowledge_base</code>.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- 4. Холодный аутрич -->
+        <section class="tab-pane" id="pane-outbound">
+          <div class="module-hero-card">
+            <div class="module-card-header">
+              <div class="module-title-wrap">
+                <span class="module-kicker">OUTBOUND AUDIT &amp; PITCH ENGINE</span>
+                <h2>Холодный аутрич</h2>
+              </div>
+              <span class="badge-accent">VISION + PAGESPEED</span>
+            </div>
+            <p class="module-desc">
+              Автоматический технический аудит по PageSpeed Insights REST API + визуальный анализ первого экрана через Multimodal Vision (Gemini 1.5) с генерацией персонализированного питча.
+            </p>
+
+            <div class="tech-grid-3">
+              <div class="tech-metric-card">
+                <span class="metric-num">API v5</span>
+                <span class="metric-label">Google PageSpeed</span>
+                <span class="metric-hint">Оценка + скриншот base64 без браузера</span>
+              </div>
+              <div class="tech-metric-card">
+                <span class="metric-num">Vision</span>
+                <span class="metric-label">Gemini Multimodal</span>
+                <span class="metric-hint">Аудит типографики, композиции и UI</span>
+              </div>
+              <div class="tech-metric-card">
+                <span class="metric-num">1-Click</span>
+                <span class="metric-label">Генерация питча</span>
+                <span class="metric-hint">Фактические аргументы для звонка/письма</span>
+              </div>
+            </div>
+
+            <div class="module-placeholder-box">
+              <div class="box-icon">🎯</div>
+              <h3>Модуль аудита сайтов лидов подготовлен</h3>
+              <p>Форма ввода URL, автоматический опрос PageSpeed API и вывод результатов сгенерированного питча.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- 5. ТГ-Бот и магниты -->
+        <section class="tab-pane" id="pane-bot">
+          <div class="module-hero-card">
+            <div class="module-card-header">
+              <div class="module-title-wrap">
+                <span class="module-kicker">TELEGRAM BOT WEBHOOK ENGINE</span>
+                <h2>ТГ-Бот и лид-магниты</h2>
+              </div>
+              <span class="badge-accent">FASTCGI WEBHOOK</span>
+            </div>
+            <p class="module-desc">
+              Автономный бот на Webhook. Выдает лид-магниты по кодовым словам из постов, квалифицирует лидов и моментально шлет уведомление администратору при появлении горячего клиента.
+            </p>
+
+            <div class="tech-grid-3">
+              <div class="tech-metric-card">
+                <span class="metric-num">0.05с</span>
+                <span class="metric-label">Отклик вебхука</span>
+                <span class="metric-hint">Легковесный PHP без демонов</span>
+              </div>
+              <div class="tech-metric-card">
+                <span class="metric-num">2FA</span>
+                <span class="metric-label">Безопасность админки</span>
+                <span class="metric-hint">Одноразовый код входа в Telegram</span>
+              </div>
+              <div class="tech-metric-card">
+                <span class="metric-num">Auto</span>
+                <span class="metric-label">Квалификация</span>
+                <span class="metric-hint">Сбор контактов прямо в CRM</span>
+              </div>
+            </div>
+
+            <div class="module-placeholder-box">
+              <div class="box-icon">🤖</div>
+              <h3>Управление ботом и кодовыми словами лид-магнитов</h3>
+              <p>Настройка вебхука, статистика выдачи PDF и лог входящих обращений.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- 6. Тренды -->
+        <section class="tab-pane" id="pane-trends">
+          <div class="module-hero-card">
+            <div class="module-card-header">
+              <div class="module-title-wrap">
+                <span class="module-kicker">RADAR &amp; SEARCH INTELLIGENCE</span>
+                <h2>Радар трендов</h2>
+              </div>
+              <span class="badge-accent">TAVILY SEARCH API</span>
+            </div>
+            <p class="module-desc">
+              Фоновый мониторинг IT-новостей и тематических инфоповодов через Tavily API. Фильтрация информационного шума с отбором 3–5 целевых тем и переносом в контент-план в 1 клик.
+            </p>
+
+            <div class="tech-grid-3">
+              <div class="tech-metric-card">
+                <span class="metric-num">Cron</span>
+                <span class="metric-label">Автосбор 1 раз в сутки</span>
+                <span class="metric-hint">Фоновый скрипт с защитой flock</span>
+              </div>
+              <div class="tech-metric-card">
+                <span class="metric-num">3–5</span>
+                <span class="metric-label">Топ инфоповодов</span>
+                <span class="metric-hint">Очищенные от воды смыслы</span>
+              </div>
+              <div class="tech-metric-card">
+                <span class="metric-num">1 Click</span>
+                <span class="metric-label">В контент-план</span>
+                <span class="metric-hint">Мгновенный трансфер в фабрику</span>
+              </div>
+            </div>
+
+            <div class="module-placeholder-box">
+              <div class="box-icon">📡</div>
+              <h3>Лента трендов и инфоповодов готова к подключению API</h3>
+              <p>Таблица <code class="tech-code">trends</code> подключена и проиндексирована по полю <code class="tech-code">is_approved</code>.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- 7. Контент-план -->
+        <section class="tab-pane" id="pane-calendar">
+          <div class="module-hero-card">
+            <div class="module-card-header">
+              <div class="module-title-wrap">
+                <span class="module-kicker">MONTHLY CALENDAR GRID</span>
+                <h2>Интерактивный контент-план</h2>
+              </div>
+              <span class="badge-accent">CALENDAR GRID</span>
+            </div>
+            <p class="module-desc">
+              Календарная сетка на 30 дней с распределением форматов и тем по дням недели с возможностью редактирования прямо в ячейках.
+            </p>
+
+            <div class="tech-grid-3">
+              <div class="tech-metric-card">
+                <span class="metric-num">30</span>
+                <span class="metric-label">Дней в сетке</span>
+                <span class="metric-hint">Распределение с учетом болей ЦА</span>
+              </div>
+              <div class="tech-metric-card">
+                <span class="metric-num">Inline</span>
+                <span class="metric-label">Правки на лету</span>
+                <span class="metric-hint">Автосохранение изменений в SQLite</span>
+              </div>
+              <div class="tech-metric-card">
+                <span class="metric-num">4</span>
+                <span class="metric-label">Статуса публикаций</span>
+                <span class="metric-hint">planned · ready · published · archived</span>
+              </div>
+            </div>
+
+            <div class="module-placeholder-box">
+              <div class="box-icon">📅</div>
+              <h3>Сетка контент-плана подготовлена</h3>
+              <p>Управление датами публикаций и статусами материалов из таблицы <code class="tech-code">content_items</code>.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- 8. Скиллы (Промпты) -->
+        <section class="tab-pane" id="pane-skills">
+          <div class="module-hero-card">
+            <div class="module-card-header">
+              <div class="module-title-wrap">
+                <span class="module-kicker">PROMPT ENGINEERING STUDIO</span>
+                <h2>Конструктор Скиллов</h2>
+              </div>
+              <span class="badge-accent">NO-CODE PROMPTS</span>
+            </div>
+            <p class="module-desc">
+              Управление промптами без вмешательства в исходный код системы: редактирование системных инструкций для каждого формата (VC, Habr, TG, Reels, Pitch), настройка Tone of Voice и стоп-слов.
+            </p>
+
+            <div class="tech-grid-3">
+              <div class="tech-metric-card">
+                <span class="metric-num">5+</span>
+                <span class="metric-label">Специализированных ролей</span>
+                <span class="metric-hint">vc · habr · tg · reels · pitch</span>
+              </div>
+              <div class="tech-metric-card">
+                <span class="metric-num">ToV</span>
+                <span class="metric-label">Tone of Voice</span>
+                <span class="metric-hint">Dark Tech / Экспертный / Без клише</span>
+              </div>
+              <div class="tech-metric-card">
+                <span class="metric-num">Markdown</span>
+                <span class="metric-label">Загрузка файлов</span>
+                <span class="metric-hint">Прикрепление шаблонов и инструкций</span>
+              </div>
+            </div>
+
+            <div class="module-placeholder-box">
+              <div class="box-icon">⚙️</div>
+              <h3>Студия промптов готова к настройке</h3>
+              <p>Хранилище промптов в таблице <code class="tech-code">skills</code> с уникальными кодами форматов.</p>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Client-side SPA Router & Live Status Checker -->
+  <script src="js/app.js" defer></script>
+</body>
+</html>

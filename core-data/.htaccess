@@ -1,0 +1,2 @@
+# Block direct HTTP access to SQLite database and configs
+Require all denied
