@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 =============================================================================
-ANTIDESIGNER CORE — TELEGRAM CLIENT ASSISTANT (Telethon Userbot)
+ANTIDESIGNER CORE - TELEGRAM CLIENT ASSISTANT (Telethon Userbot)
 Autonomous AI sales agent with intent filtering, human typing delay,
 blacklist protection and bidirectional synchronization with lk-admin API.
 =============================================================================
@@ -44,7 +44,7 @@ INTENT_KEYWORDS = [
 ]
 
 DEFAULT_SYSTEM_PROMPT = (
-    "Ты — автономный ассистент веб-студии AntiDesigner. Твоя задача — квалифицировать лида, "
+    "Ты - автономный ассистент веб-студии AntiDesigner. Твоя задача - квалифицировать лида, "
     "выявить потребность в быстром сайте на чистом коде с гарантией скорости 95-100/100 "
     "(без конструкторов Tilda/Wordpress), предложить подходящий тариф (18к-25к, 25к-35к или 35к+) "
     "и предложить бесплатный экспресс-аудит текущего сайта."
@@ -91,18 +91,89 @@ def sync_message_to_admin(lead_id_or_user_id: str, username: str, full_name: str
         print(f"[SYNC ERROR] Failed to sync to {SYNC_ENDPOINT}: {e}")
         return None
 
-def generate_assistant_reply(user_message: str) -> str:
-    """Generate rule-based / context reply for AntiDesigner assistant."""
+def load_bot_skill() -> dict:
+    """Load bot_consultant skill from SQLite database."""
+    import sqlite3
+    db_path = os.path.join(os.path.dirname(__file__), "..", "core-data", "database.sqlite")
+    if os.path.exists(db_path):
+        try:
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            cursor.execute("SELECT system_prompt, tone_of_voice FROM skills WHERE code = 'bot_consultant' OR category = 'bot' ORDER BY id ASC LIMIT 1")
+            row = cursor.fetchone()
+            conn.close()
+            if row and row[0]:
+                return {"system_prompt": row[0], "tone_of_voice": row[1] or ""}
+        except Exception as e:
+            print(f"[SKILL LOAD WARNING] Could not load skill from DB: {e}")
+    return {
+        "system_prompt": DEFAULT_SYSTEM_PROMPT,
+        "tone_of_voice": "Вежливый, оперативный, структурированный бот-помощник"
+    }
+
+def get_fast_api_key() -> str:
+    """Extract gemini_fast_api_key (AQ...) from config.local.php or env."""
+    key = os.getenv("GEMINI_FAST_API_KEY", "")
+    if not key:
+        config_path = os.path.join(os.path.dirname(__file__), "..", "core-data", "config.local.php")
+        if os.path.exists(config_path):
+            try:
+                with open(config_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+                    match = re.search(r"['\"]gemini_fast_api_key['\"]\s*=>\s*['\"]([^'\"]+)['\"]", content)
+                    if match:
+                        key = match.group(1).strip()
+            except Exception:
+                pass
+    return key
+
+def generate_assistant_reply(user_message: str, live_ai: bool = False) -> str:
+    """
+    Generate reply for AntiDesigner assistant.
+    Pulls bot_consultant skill from SQLite database and queries MODEL_FAST (AQ...) if live_ai=True.
+    Falls back to deterministic rule-based reply in mock/offline mode to save AI tokens.
+    """
+    skill = load_bot_skill()
+    fast_key = get_fast_api_key()
+
+    if live_ai and fast_key and fast_key.startswith("AQ"):
+        import urllib.request
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={fast_key}"
+        typography_rule = (
+            "\n\nСТРОГИЕ ПРАВИЛА ТЕКСТА И ТИПОГРАФИКИ: "
+            "Никогда не используй длинные тире (символ —). Заменяй их исключительно на дефис (-) или стрелки (->). "
+            "Отвечай кратко, доброжелательно, ориентируй на тарифы 18к-35к+ и бесплатный аудит."
+        )
+        sys_prompt = skill["system_prompt"] + "\n\nTONE OF VOICE:\n" + skill["tone_of_voice"] + typography_rule
+
+        payload = {
+            "system_instruction": {"parts": [{"text": sys_prompt}]},
+            "contents": [{"role": "user", "parts": [{"text": user_message}]}],
+            "generationConfig": {"temperature": 0.4, "maxOutputTokens": 300}
+        }
+        try:
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers={"Content-Type": "application/json"}
+            )
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                data = json.loads(resp.read().decode())
+                ai_text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                return ai_text.replace("—", "-").replace("–", "-")
+        except Exception as e:
+            print(f"[AI ROUTER FALLBACK] Model call failed: {e}. Using rule-based fallback.")
+
     msg = user_message.lower()
     if "скорост" in msg or "чек" in msg or "магнит" in msg:
         return (
             "Привет! Держите чек-лист: «10 скрытых признаков того, что ваш сайт на конструкторе сливает бюджет». "
-            "Отправляю файл. Напишите адрес вашего сайта — за 10 минут снимем экспресс-аудит скорости!"
+            "Отправляю файл. Напишите адрес вашего сайта - за 10 минут снимем экспресс-аудит скорости!"
         )
     elif "тариф" in msg or "цен" in msg or "стоим" in msg or "сколько" in msg:
         return (
             "Привет! Мы делаем сайты только на чистом коде (без Tilda и WP) со скоростью 100/100 в PageSpeed за 5-7 дней. "
-            "Тарифы под ключ: базовый лендинг — от 18к до 25к, бизнес-сайт с анимациями и микро-админкой — 25к–35к руб. "
+            "Тарифы под ключ: базовый лендинг - от 18к до 25к, бизнес-сайт с анимациями и микро-админкой - 25к-35к руб. "
             "Какой у вас бизнес и есть ли текущий сайт?"
         )
     else:
@@ -116,7 +187,7 @@ def generate_assistant_reply(user_message: str) -> str:
 # =============================================================================
 def run_mock_simulation():
     print("=" * 70)
-    print("  ANTIDESIGNER TELEGRAM ASSISTANT — MOCK SANDBOX MODE")
+    print("  ANTIDESIGNER TELEGRAM ASSISTANT - MOCK SANDBOX MODE")
     print("=" * 70)
     print(f"[*] API Config: ID={API_ID}, HASH={API_HASH[:6]}... Delays={DELAY_MIN}-{DELAY_MAX}s")
     print(f"[*] Blacklist items: {len(BLACKLIST)} ({', '.join(BLACKLIST)})")

@@ -136,10 +136,27 @@ try {
             ':id'      => $leadId
         ]);
 
-        // Вызываем ИИ для Win/Loss анализа
+        // Подтягиваем контекст диалогов из bot_messages
+        $extraContext = "";
+        $stmtBotMsgs = $pdo->query("SELECT sender, text FROM bot_messages ORDER BY id DESC LIMIT 6");
+        $recentMsgs = $stmtBotMsgs->fetchAll();
+        if (!empty($recentMsgs)) {
+            $extraContext = "\nКОНТЕКСТ ДРУГИХ ДИАЛОГОВ CRM:\n";
+            foreach (array_reverse($recentMsgs) as $bm) {
+                $extraContext .= "[{$bm['sender']}]: {$bm['text']}\n";
+            }
+        }
+
+        // Подтягиваем скилл отработки возражений из базы skills
+        $objSkill = $aiRouter->loadSkill('objections');
+
+        // Вызываем MODEL_HEAVY (Gemini Flash 3.8, ключ pza...) с thinkingBudget = 2048
         $sysPrompt = <<<PROMPT
-Ты - AI-аналитик продаж студии AntiDesigner.
-Твоя задача:  провести глубокий Win/Loss разбор завершившейся переписки с клиентом.
+Ты - главный AI-аналитик продаж студии AntiDesigner.
+Твоя задача: провести глубокий Win/Loss разбор завершившейся переписки с клиентом.
+
+РЕГЛАМЕНТ РАБОТЫ С ВОЗРАЖЕНИЯМИ:
+{$objSkill['system_prompt']}
 
 ИТОГ ПЕРЕПИСКИ: {$dealOutcome} (won -> закрыли сделку на разработку; lost -> сорвалась или отказ).
 НИША: {$lead['niche']}
@@ -148,6 +165,7 @@ try {
 Сформулируй:
 1. Краткий стратегический вывод (hypothesis) для калибровки будущих питчей: какие аргументы помогли закрыть сделку, либо какая фраза/возражение привели к отказу.
 2. Метрику или кейс-подтверждение (supporting_metric).
+Без длинных тире (символ —). Используй только дефис (-) или стрелки (->).
 
 ФОРМАТ СТРОГО JSON:
 {
@@ -156,8 +174,8 @@ try {
 }
 PROMPT;
 
-        $userPrompt = "ИСТОРИЯ ПЕРЕПИСКИ:\n{$chatHistory}\n\nИСХОДНЫЙ ПИТЧ:\n{$lead['generated_pitch']}";
-        $response = $aiRouter->call($userPrompt, $sysPrompt, AIRouter::MODEL_FAST, 0.4);
+        $userPrompt = "ИСТОРИЯ ПЕРЕПИСКИ С КЛИЕНТОМ:\n{$chatHistory}\n\nИСХОДНЫЙ ПИТЧ:\n{$lead['generated_pitch']}{$extraContext}";
+        $response = $aiRouter->call($userPrompt, $sysPrompt, AIRouter::MODEL_HEAVY, 0.4, 2048);
 
         $cleanJson = trim($response);
         $cleanJson = preg_replace('/^```(?:json)?\s*/i', '', $cleanJson);

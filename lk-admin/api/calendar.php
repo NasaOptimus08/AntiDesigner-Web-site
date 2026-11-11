@@ -377,14 +377,16 @@ try {
             $rubricsContext .= "- {$r['title']}: {$r['description']}\n";
         }
 
-        // 3. Формируем системную инструкцию
-        $sysInstruction = <<<PROMPT
-Ты - главный SMM-стратег и контент-директор веб-студии AntiDesigner.
-УТП AntiDesigner: Разработка быстрых, конвертящих сайтов на чистом коде (HTML5, Vanilla JS, CSS3) с гарантией скорости 100/100 PageSpeed и загрузкой до 0.5 сек. Мы открыто разоблачаем медленные конструкторы (Tilda, WordPress, Elementor), которые грузят по 140 скриптов и сжигают 40% рекламного бюджета клиентов на мобильном трафике. Прайс: 18к-35к+, пожизненная собственность без абонентской платы.
+        // 3. Подтягиваем профильный скилл контент-планировщика из базы skills
+        $aiRouter = new AIRouter();
+        $aiRouter->setPDO($pdo);
+        $plannerSkill = $aiRouter->loadSkill('content_planner');
 
-ЗАДАЧА:
-Спроектировать контент-план на ближайшие 1-2 дня (сегодня и завтра): ровно 3-4 ударных публикации.
-Материалы должны бить в боли предпринимателей и маркетологов, привлекать горячих лидов и мотивировать заказать аудит или сайт на чистом коде.
+        $sysInstruction = <<<PROMPT
+{$plannerSkill['system_prompt']}
+
+TONE OF VOICE:
+{$plannerSkill['tone_of_voice']}
 
 {$rubricsContext}
 
@@ -414,8 +416,6 @@ try {
 PROMPT;
 
         $userPrompt = "Сформируй 3-4 публикации на 1-2 дня с распределением по доступным рубрикам и форматам.";
-
-        $aiRouter = new AIRouter();
         $rawResult = $aiRouter->generateWithModel(AIRouter::MODEL_FAST, $sysInstruction, $userPrompt);
 
         // Извлекаем JSON из ответа

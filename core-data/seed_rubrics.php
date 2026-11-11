@@ -72,3 +72,4 @@ if ($count === 0) {
 } else {
     echo "Rubrics table already has {$count} records.\n";
 }
+

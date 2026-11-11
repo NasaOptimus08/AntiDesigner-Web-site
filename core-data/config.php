@@ -3,17 +3,43 @@ declare(strict_types=1);
 
 /**
  * =============================================================================
- * ANTIDESIGNER CORE — CONFIGURATION STORE
- * Dual API Keys support (Fast & Heavy tiers) with backward compatibility.
+ * ANTIDESIGNER CORE - CONFIGURATION STORE
+ * Dual API Keys support (Fast & Heavy tiers) with strict tier isolation.
  * Live keys are isolated in core-data/config.local.php (in .gitignore).
  * =============================================================================
  */
 
 $config = [
-    // API Ключи Gemini (раздельные для Free и Flex/Paid тарифов)
-    'gemini_fast_api_key'  => getenv('GEMINI_FAST_API_KEY') ?: '', // Ключ для MODEL_FAST (Free Tier / Flash-Lite)
-    'gemini_heavy_api_key' => getenv('GEMINI_HEAVY_API_KEY') ?: '', // Ключ для MODEL_HEAVY (Flex Tier / Flash / Pro)
-    'gemini_api_key'       => getenv('GEMINI_API_KEY') ?: '', // Универсальный фоллбэк (если используется 1 общий ключ)
+    // Конфигурация AI моделей и разделения обязанностей
+    'models' => [
+        'fast' => [
+            'name'        => 'gemini-3.5-flash-lite',
+            'provider'    => 'google_ai_studio',
+            'key_field'   => 'gemini_fast_api_key',
+            'key_prefix'  => 'AQ',
+            'description' => 'Черновая работа, парсинг, диспетчеризация, первичный аудит и мгновенные ответы в чате'
+        ],
+        'heavy' => [
+            'name'        => 'google/gemini-3.8-flash',
+            'provider'    => 'polza_ai',
+            'key_field'   => 'gemini_heavy_api_key',
+            'key_prefix'  => 'pza',
+            'description' => 'Глубокая аналитика, оценка лидов (1-10), финальный экспертный копирайтинг, Win/Loss разбор'
+        ]
+    ],
+
+    // API Ключи Gemini (строго разделены по тирам)
+    // Ключ AQ... -> используется ТОЛЬКО при обращении к Gemini Flash-Lite 3.5 (MODEL_FAST)
+    'gemini_fast_api_key'  => getenv('GEMINI_FAST_API_KEY') ?: '',
+
+    // Ключ pza... -> используется ТОЛЬКО при обращении к Gemini Flash 3.8 (MODEL_HEAVY)
+    'gemini_heavy_api_key' => getenv('GEMINI_HEAVY_API_KEY') ?: '',
+
+    // Универсальный фоллбэк
+    'gemini_api_key'       => getenv('GEMINI_API_KEY') ?: '',
+
+    // Провайдер Polza.ai (для Heavy модели)
+    'polza_api_url'        => getenv('POLZA_API_URL') ?: 'https://polza.ai/api/v1',
 
     // Telegram
     'telegram_bot_token'   => getenv('TELEGRAM_BOT_TOKEN') ?: '',

@@ -122,30 +122,45 @@ try {
         $configFile = dirname(__DIR__, 2) . '/core-data/config.php';
         $config = file_exists($configFile) ? require $configFile : [];
         $aiRouter = new AIRouter($config);
+        $aiRouter->setPDO($pdo);
 
         $results = [];
         $errors = [];
 
-        // 4. Для каждого выбранного формата вызываем Gemini через роутер
+        // 4. Для каждого выбранного формата вызываем Gemini Flash 3.8 (MODEL_HEAVY) с подтягиванием профильного скилла
         foreach ($formats as $fmtCode) {
-            $skill = $allSkills[$fmtCode] ?? null;
-            if (!$skill) {
-                // Если скилл отсутствует, пропускаем
-                continue;
+            // Обязательный точечный запрос скилла из базы данных skills
+            $stmtSkill = $pdo->prepare('SELECT code, title, system_prompt, tone_of_voice FROM skills WHERE code = :code LIMIT 1');
+            $stmtSkill->execute([':code' => $fmtCode]);
+            $skill = $stmtSkill->fetch();
+
+            if (!$skill || empty($skill['system_prompt'])) {
+                // Если скилла нет по прямому коду, пробуем через loadSkill роутера
+                $skill = $aiRouter->loadSkill($fmtCode);
             }
 
             $systemInstruction = $skill['system_prompt'] . "\n\n" .
-                "TONE OF VOICE:\n" . ($skill['tone_of_voice'] ?: 'Dark Tech, лаконичный, экспертный') . "\n\n" .
+                "TONE OF VOICE:\n" . ($skill['tone_of_voice'] ?: 'Dark Tech, лаконичный, экспертный, фактологический') . "\n\n" .
                 $knowledgeContext;
 
             $userPrompt = "ТЕМА МАТЕРИАЛА: {$topic}\n\n" .
                 "ЗАДАЧА: Сгенерируй полноценный, готовый к публикации материал для формата «{$skill['title']}» (код: {$fmtCode}). " .
-                "Опирайся на контекст компании, приводи реальные цифры и преимущества чистого кода перед конструкторами. " .
-                "Отдай только готовый текст без лишних вступительных реплик.";
+                "Опирайся на контекст компании AntiDesigner, приводи реальные цифры и преимущества чистого кода перед конструкторами. " .
+                "Отдай только готовый текст без лишних вступительных реплик. Без длинных тире (символ —).";
 
             try {
-                // Маршрутизация: vc_ru и lead_magnet идут в MODEL_HEAVY, остальные в MODEL_FAST
-                $generatedText = $aiRouter->execute($fmtCode, $systemInstruction, $userPrompt);
+                // Все чистовые материалы Контент-фабрики генерирует MODEL_HEAVY (Gemini Flash 3.8, ключ pza...)
+                // Для лонгридов (vc_ru) подключаем thinkingBudget = 2048
+                $thinkingBudget = ($fmtCode === 'vc_ru') ? 2048 : null;
+                $generatedText = $aiRouter->generateWithModel(
+                    AIRouter::MODEL_HEAVY,
+                    $systemInstruction,
+                    $userPrompt,
+                    $thinkingBudget
+                );
+
+                // Дополнительная валидация типографики: исключение длинных тире
+                $generatedText = str_replace(['—', '–'], '-', trim($generatedText));
 
                 // Сохраняем в базу данных в статусе draft
                 $stmtInsert = $pdo->prepare('INSERT INTO content_items (topic, format, content_markdown, status) VALUES (:topic, :format, :content, :status)');
