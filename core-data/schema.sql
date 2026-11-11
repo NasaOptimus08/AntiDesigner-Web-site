@@ -129,6 +129,7 @@ CREATE TABLE IF NOT EXISTS content_plan (
     platform_vc INTEGER DEFAULT 0,
     platform_habr INTEGER DEFAULT 0,
     platform_inst INTEGER DEFAULT 0,
+    platform_setka INTEGER DEFAULT 0,
     platform_site INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -152,7 +153,34 @@ CREATE TABLE IF NOT EXISTS bot_training_examples (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- 14. Трекер кликов по коротким ссылкам
+-- 14. Настройки локального Python-скрипта (Telegram-ассистента)
+CREATE TABLE IF NOT EXISTS tg_assistant_config (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    system_prompt TEXT NOT NULL,
+    tone_of_voice TEXT,
+    typing_delay_min INTEGER DEFAULT 3,
+    typing_delay_max INTEGER DEFAULT 7,
+    blacklist_phones TEXT,     -- Черный список контактов (семья, музыка)
+    api_id TEXT,
+    api_hash TEXT,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 15. Платформенная аналитика публикаций (TG, VC, Habr, IG, Setka)
+CREATE TABLE IF NOT EXISTS publication_analytics (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    platform TEXT NOT NULL,    -- 'telegram', 'vc_ru', 'habr', 'instagram', 'setka'
+    title TEXT NOT NULL,
+    post_url TEXT,
+    views_count INTEGER DEFAULT 0,
+    likes_count INTEGER DEFAULT 0,
+    comments_count INTEGER DEFAULT 0,
+    video_plays INTEGER DEFAULT 0,
+    published_date DATE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 16. Трекер кликов по коротким ссылкам
 CREATE TABLE IF NOT EXISTS link_clicks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     slug TEXT NOT NULL,
@@ -169,6 +197,7 @@ CREATE INDEX IF NOT EXISTS idx_site_visits_date ON site_visits(visited_at);
 CREATE INDEX IF NOT EXISTS idx_site_clicks_btn ON site_button_clicks(button_name);
 CREATE INDEX IF NOT EXISTS idx_content_plan_status ON content_plan(status);
 CREATE INDEX IF NOT EXISTS idx_bot_messages_lead ON bot_messages(lead_id);
+CREATE INDEX IF NOT EXISTS idx_publication_platform ON publication_analytics(platform);
 CREATE INDEX IF NOT EXISTS idx_link_clicks_slug ON link_clicks(slug);
 
 

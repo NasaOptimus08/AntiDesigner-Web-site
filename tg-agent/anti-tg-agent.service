@@ -1,0 +1,17 @@
+[Unit]
+Description=AntiDesigner Telegram Client Assistant
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/anti-tg-agent
+ExecStart=/opt/anti-tg-agent/venv/bin/python client_agent.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+

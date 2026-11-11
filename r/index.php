@@ -73,3 +73,4 @@ if (file_exists($dbFile)) {
 
 header("Location: " . $targetUrl, true, 302);
 exit;
+

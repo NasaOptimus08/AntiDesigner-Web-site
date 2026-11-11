@@ -90,15 +90,17 @@ try {
             $formats = ['tg_post'];
         } elseif ($formatKey === 'instagram') {
             $formats = ['reels_hook'];
+        } elseif ($formatKey === 'setka') {
+            $formats = ['setka_post'];
         } elseif ($formatKey === 'lead_magnet') {
             $formats = ['lead_magnet'];
         } elseif ($formatKey === 'all' || !empty($input['formats'])) {
-            $formats = $input['formats'] ?? ['vc_ru', 'tg_post', 'reels_hook', 'lead_magnet', 'site_geo'];
+            $formats = $input['formats'] ?? ['vc_ru', 'tg_post', 'reels_hook', 'lead_magnet', 'site_geo', 'setka_post'];
             if (is_string($formats)) {
                 $formats = array_filter(array_map('trim', explode(',', $formats)));
             }
         } else {
-            $formats = ['vc_ru', 'tg_post', 'reels_hook', 'lead_magnet'];
+            $formats = ['vc_ru', 'tg_post', 'reels_hook', 'lead_magnet', 'setka_post'];
         }
 
         // 1. Подтягиваем всю актуальную базу знаний для RAG-контекста

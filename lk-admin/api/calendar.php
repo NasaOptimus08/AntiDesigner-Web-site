@@ -46,6 +46,7 @@ try {
                 'platform_vc'   => 0,
                 'platform_habr' => 0,
                 'platform_inst' => 0,
+                'platform_setka'=> 1,
                 'platform_site' => 0
             ],
             [
@@ -59,6 +60,7 @@ try {
                 'platform_vc'   => 0,
                 'platform_habr' => 0,
                 'platform_inst' => 1,
+                'platform_setka'=> 0,
                 'platform_site' => 0
             ],
             [
@@ -72,6 +74,7 @@ try {
                 'platform_vc'   => 1,
                 'platform_habr' => 1,
                 'platform_inst' => 0,
+                'platform_setka'=> 1,
                 'platform_site' => 1
             ],
             [
@@ -85,6 +88,7 @@ try {
                 'platform_vc'   => 0,
                 'platform_habr' => 0,
                 'platform_inst' => 1,
+                'platform_setka'=> 0,
                 'platform_site' => 1
             ],
             [
@@ -98,26 +102,28 @@ try {
                 'platform_vc'   => 0,
                 'platform_habr' => 0,
                 'platform_inst' => 1,
+                'platform_setka'=> 0,
                 'platform_site' => 0
             ],
             [
                 'day_label'     => '6 день',
-                'format'        => 'poll',
+                'format'        => 'post_setka',
                 'rubric'        => '🏎 Скорость и чистый код',
-                'title'         => 'Опрос: сколько секунд вы готовы ждать загрузки сайта с телефона, прежде чем закроете вкладку?',
-                'comment'       => 'Интерактивный опрос в Telegram для прогрева перед анонсом кейса',
-                'status'        => 'idea',
+                'title'         => 'Отказ от React на лендингах: почему мы пишем на Vanilla JS и отдаем 100/100 в PageSpeed',
+                'comment'       => 'Экспертный пост для IT-сообщества Сетки с бенчмарками и вызовом к дискуссии',
+                'status'        => 'ready',
                 'platform_tg'   => 1,
                 'platform_vc'   => 0,
-                'platform_habr' => 0,
+                'platform_habr' => 1,
                 'platform_inst' => 0,
+                'platform_setka'=> 1,
                 'platform_site' => 0
             ]
         ];
 
         $stmtIns = $pdo->prepare("
-            INSERT INTO content_plan (day_label, format, rubric, title, comment, status, platform_tg, platform_vc, platform_habr, platform_inst, platform_site, created_at)
-            VALUES (:day, :fmt, :rub, :title, :comment, :st, :ptg, :pvc, :phabr, :pinst, :psite, CURRENT_TIMESTAMP)
+            INSERT INTO content_plan (day_label, format, rubric, title, comment, status, platform_tg, platform_vc, platform_habr, platform_inst, platform_setka, platform_site, created_at)
+            VALUES (:day, :fmt, :rub, :title, :comment, :st, :ptg, :pvc, :phabr, :pinst, :psetka, :psite, CURRENT_TIMESTAMP)
         ");
 
         foreach ($defaultSeed as $row) {
@@ -132,6 +138,7 @@ try {
                 ':pvc'     => $row['platform_vc'],
                 ':phabr'   => $row['platform_habr'],
                 ':pinst'   => $row['platform_inst'],
+                ':psetka'  => $row['platform_setka'],
                 ':psite'   => $row['platform_site']
             ]);
         }
@@ -167,11 +174,12 @@ try {
         $pvc = !empty($input['platform_vc']) ? 1 : 0;
         $phabr = !empty($input['platform_habr']) ? 1 : 0;
         $pinst = !empty($input['platform_inst']) ? 1 : 0;
+        $psetka = !empty($input['platform_setka']) ? 1 : 0;
         $psite = !empty($input['platform_site']) ? 1 : 0;
 
         $stmt = $pdo->prepare("
-            INSERT INTO content_plan (day_label, format, rubric, title, comment, status, platform_tg, platform_vc, platform_habr, platform_inst, platform_site, created_at)
-            VALUES (:day, :fmt, :rub, :title, :comment, :st, :ptg, :pvc, :phabr, :pinst, :psite, CURRENT_TIMESTAMP)
+            INSERT INTO content_plan (day_label, format, rubric, title, comment, status, platform_tg, platform_vc, platform_habr, platform_inst, platform_setka, platform_site, created_at)
+            VALUES (:day, :fmt, :rub, :title, :comment, :st, :ptg, :pvc, :phabr, :pinst, :psetka, :psite, CURRENT_TIMESTAMP)
         ");
         $stmt->execute([
             ':day'     => $dayLabel,
@@ -184,6 +192,7 @@ try {
             ':pvc'     => $pvc,
             ':phabr'   => $phabr,
             ':pinst'   => $pinst,
+            ':psetka'  => $psetka,
             ':psite'   => $psite
         ]);
 
@@ -222,6 +231,7 @@ try {
             'platform_vc'   => 'int',
             'platform_habr' => 'int',
             'platform_inst' => 'int',
+            'platform_setka'=> 'int',
             'platform_site' => 'int'
         ];
 
@@ -346,3 +356,4 @@ try {
         'message' => $e->getMessage()
     ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 }
+

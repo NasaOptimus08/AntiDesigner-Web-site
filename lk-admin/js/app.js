@@ -1079,9 +1079,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  async function loadPlatformAnalytics() {
+  let currentPlatformFilter = 'all';
+
+  async function loadPlatformAnalytics(platform = currentPlatformFilter) {
+    currentPlatformFilter = platform;
     try {
-      const res = await fetch(`api/crm.php?action=platform_analytics&period=${crmCurrentPeriod}`);
+      const res = await fetch(`api/crm.php?action=platform_analytics&period=${crmCurrentPeriod}&platform=${platform}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.status !== 'success') throw new Error(data.message);
@@ -1089,18 +1092,67 @@ document.addEventListener('DOMContentLoaded', () => {
       const elViews = document.getElementById('paViewsTotal');
       const elLikes = document.getElementById('paLikesTotal');
       const elComments = document.getElementById('paCommentsTotal');
-      const elClicks = document.getElementById('paClicksTotal');
+      const elVideoPlays = document.getElementById('paVideoPlaysTotal');
       const elLeads = document.getElementById('paLeadsTotal');
       const elConvHint = document.getElementById('paConvHint');
       const elTableBody = document.getElementById('paTableBody');
+      const elPubsBody = document.getElementById('paPubsTableBody');
+      const elTableTitle = document.getElementById('paTableTitle');
+      const elTableBadge = document.getElementById('paTableBadge');
 
       if (elViews) elViews.textContent = (data.total_views || 0).toLocaleString('ru-RU');
       if (elLikes) elLikes.textContent = (data.total_likes || 0).toLocaleString('ru-RU');
       if (elComments) elComments.textContent = (data.total_comments || 0).toLocaleString('ru-RU');
-      if (elClicks) elClicks.textContent = (data.total_link_clicks || 0).toLocaleString('ru-RU');
+      if (elVideoPlays) elVideoPlays.textContent = (data.total_video_plays || 0).toLocaleString('ru-RU');
       if (elLeads) elLeads.textContent = (data.total_leads || 0).toLocaleString('ru-RU');
       if (elConvHint) elConvHint.textContent = `Конверсия в лид ${data.conversion_pct || 0}%`;
 
+      // Таблица публикаций выбранной платформы
+      if (elPubsBody && Array.isArray(data.publications)) {
+        if (data.publications.length === 0) {
+          elPubsBody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding:20px;color:var(--color-text-subtle);">Нет публикаций за выбранный период</td></tr>';
+        } else {
+          elPubsBody.innerHTML = data.publications.map(pub => {
+            const platBadges = {
+              telegram: '<span class="plat-badge tg">Telegram</span>',
+              vc_ru: '<span class="plat-badge vc">VC.ru</span>',
+              habr: '<span class="plat-badge habr">Habr</span>',
+              instagram: '<span class="plat-badge inst">Instagram</span>',
+              setka: '<span class="plat-badge setka">Setka</span>'
+            };
+            const badgeHtml = platBadges[pub.platform] || `<span class="tech-tag">${pub.platform}</span>`;
+            return `
+              <tr>
+                <td><strong>${escapeHtml(pub.title)}</strong></td>
+                <td>${badgeHtml}</td>
+                <td>${(pub.views_count || 0).toLocaleString('ru-RU')}</td>
+                <td>${(pub.likes_count || 0).toLocaleString('ru-RU')}</td>
+                <td>${(pub.comments_count || 0).toLocaleString('ru-RU')}</td>
+                <td>${(pub.video_plays || 0) > 0 ? (pub.video_plays).toLocaleString('ru-RU') : '-'}</td>
+                <td><span class="tech-tag">${pub.published_date || '-'}</span></td>
+                <td style="text-align: center;">
+                  ${pub.post_url ? `<a href="${escapeHtml(pub.post_url)}" target="_blank" rel="noopener" class="btn-tech-outline btn-xs" title="Открыть материал">↗</a>` : '-'}
+                </td>
+              </tr>
+            `;
+          }).join('');
+        }
+        if (elTableBadge) elTableBadge.textContent = `${data.publications.length} МАТЕРИАЛОВ`;
+      }
+
+      if (elTableTitle) {
+        const platformNames = {
+          all: 'Все платформы',
+          telegram: 'Telegram-канал',
+          vc_ru: 'VC.ru Лонгриды',
+          habr: 'Habr',
+          instagram: 'Instagram',
+          setka: 'Сетка (HeadHunter)'
+        };
+        elTableTitle.textContent = `Публикации (${platformNames[platform] || platform})`;
+      }
+
+      // Таблица детализации по каналам
       if (elTableBody && Array.isArray(data.platforms)) {
         elTableBody.innerHTML = data.platforms.map(p => `
           <tr>
@@ -1207,6 +1259,40 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Слушатели фильтра платформенной аналитики
+  document.querySelectorAll('#paPlatformFilterPills .pa-pill').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      document.querySelectorAll('#paPlatformFilterPills .pa-pill').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const plat = btn.getAttribute('data-platform') || 'all';
+      await loadPlatformAnalytics(plat);
+    });
+  });
+
+  // Экспорт инсайтов платформенной аналитики в Базу Знаний (crm_memory)
+  const exportInsightsBtn = document.getElementById('exportInsightsBtn');
+  if (exportInsightsBtn) {
+    exportInsightsBtn.addEventListener('click', async () => {
+      exportInsightsBtn.disabled = true;
+      exportInsightsBtn.innerHTML = '<span class="loader-spinner btn-sm"></span> Экспорт инсайтов...';
+      try {
+        const res = await fetch('api/crm.php?action=export_insights', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'export_insights' })
+        });
+        const data = await res.json();
+        if (!res.ok || data.status !== 'success') throw new Error(data.message || 'Ошибка экспорта');
+        showToast('✓ Топ-инсайты сохранены в Базу Знаний (раздел crm_memory)!', 'success');
+      } catch (err) {
+        showToast(`Ошибка экспорта: ${err.message}`, 'error');
+      } finally {
+        exportInsightsBtn.disabled = false;
+        exportInsightsBtn.innerHTML = '<span class="btn-icon">⚡</span> Экспортировать инсайты в Базу Знаний (CRM-память)';
+      }
+    });
+  }
+
   // Добавление лида
   if (crmAddLeadBtn) {
     crmAddLeadBtn.addEventListener('click', () => {
@@ -1297,6 +1383,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const SMM_FORMATS = [
     { key: 'post_tg', name: '💬 Текстовый пост' },
+    { key: 'post_setka', name: '🌐 Пост для Сетки' },
     { key: 'article', name: '📝 Статья' },
     { key: 'reels', name: '📹 Видео/Reels' },
     { key: 'carousel', name: '🖼 Карусель' },
@@ -1428,6 +1515,10 @@ document.addEventListener('DOMContentLoaded', () => {
               <label class="smm-chk-label" title="Instagram">
                 <input type="checkbox" class="smm-chk-field" data-id="${id}" data-key="platform_inst" ${row.platform_inst ? 'checked' : ''}>
                 <span>Inst</span>
+              </label>
+              <label class="smm-chk-label" title="Сетка (HeadHunter)">
+                <input type="checkbox" class="smm-chk-field" data-id="${id}" data-key="platform_setka" ${row.platform_setka ? 'checked' : ''}>
+                <span>Setka</span>
               </label>
               <label class="smm-chk-label" title="Сайт">
                 <input type="checkbox" class="smm-chk-field" data-id="${id}" data-key="platform_site" ${row.platform_site ? 'checked' : ''}>
@@ -2134,6 +2225,147 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (botRefreshChatsBtn) {
     botRefreshChatsBtn.addEventListener('click', () => loadBotLeads());
+  }
+
+  // Переключение подразделов ТГ-Ассистента (Мессенджер vs Конфигуратор VPS)
+  const botSubtabsNav = document.getElementById('botSubtabsNav');
+  const botSubpaneMessenger = document.getElementById('botSubpaneMessenger');
+  const botSubpaneVps = document.getElementById('botSubpaneVps');
+
+  if (botSubtabsNav) {
+    botSubtabsNav.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.view-tab-btn');
+      if (!btn) return;
+      botSubtabsNav.querySelectorAll('.view-tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const sub = btn.getAttribute('data-botsub') || 'messenger';
+      if (botSubpaneMessenger) botSubpaneMessenger.style.display = sub === 'messenger' ? 'block' : 'none';
+      if (botSubpaneVps) botSubpaneVps.style.display = sub === 'vps' ? 'block' : 'none';
+      if (sub === 'vps') {
+        await loadVpsConfig();
+      }
+    });
+  }
+
+  async function loadVpsConfig() {
+    try {
+      const res = await fetch('api/bot.php?action=get_config');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.status === 'success' && data.config) {
+        const c = data.config;
+        const elPrompt = document.getElementById('vpsSystemPrompt');
+        const elTone = document.getElementById('vpsToneOfVoice');
+        const elMin = document.getElementById('vpsDelayMin');
+        const elMax = document.getElementById('vpsDelayMax');
+        const elBl = document.getElementById('vpsBlacklistPhones');
+        const elId = document.getElementById('vpsApiId');
+        const elHash = document.getElementById('vpsApiHash');
+
+        if (elPrompt && c.system_prompt) elPrompt.value = c.system_prompt;
+        if (elTone && c.tone_of_voice) elTone.value = c.tone_of_voice;
+        if (elMin && c.typing_delay_min) elMin.value = c.typing_delay_min;
+        if (elMax && c.typing_delay_max) elMax.value = c.typing_delay_max;
+        if (elBl && c.blacklist_phones) elBl.value = c.blacklist_phones;
+        if (elId && c.api_id) elId.value = c.api_id;
+        if (elHash && c.api_hash) elHash.value = c.api_hash;
+      }
+    } catch (err) {
+      console.warn('Error loading VPS config:', err);
+    }
+  }
+
+  const vpsSaveConfigBtn = document.getElementById('vpsSaveConfigBtn');
+  if (vpsSaveConfigBtn) {
+    vpsSaveConfigBtn.addEventListener('click', async () => {
+      vpsSaveConfigBtn.disabled = true;
+      vpsSaveConfigBtn.innerHTML = '<span class="loader-spinner btn-sm"></span> Сохранение...';
+      try {
+        const payload = {
+          action: 'save_config',
+          system_prompt: (document.getElementById('vpsSystemPrompt')?.value || '').trim(),
+          tone_of_voice: (document.getElementById('vpsToneOfVoice')?.value || '').trim(),
+          typing_delay_min: parseInt(document.getElementById('vpsDelayMin')?.value || '3', 10),
+          typing_delay_max: parseInt(document.getElementById('vpsDelayMax')?.value || '7', 10),
+          blacklist_phones: (document.getElementById('vpsBlacklistPhones')?.value || '').trim(),
+          api_id: (document.getElementById('vpsApiId')?.value || '').trim(),
+          api_hash: (document.getElementById('vpsApiHash')?.value || '').trim()
+        };
+
+        const res = await fetch('api/bot.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok || data.status !== 'success') throw new Error(data.message || 'Ошибка сохранения');
+        showToast('✓ Настройки ассистента успешно сохранены', 'success');
+      } catch (err) {
+        showToast(`Ошибка: ${err.message}`, 'error');
+      } finally {
+        vpsSaveConfigBtn.disabled = false;
+        vpsSaveConfigBtn.innerHTML = '<span class="btn-icon">💾</span> Сохранить настройки';
+      }
+    });
+  }
+
+  const vpsTestMockBtn = document.getElementById('vpsTestMockBtn');
+  const vpsSandboxConsole = document.getElementById('vpsSandboxConsole');
+  const sandboxConsoleBody = document.getElementById('sandboxConsoleBody');
+  const closeSandboxConsoleBtn = document.getElementById('closeSandboxConsoleBtn');
+
+  if (closeSandboxConsoleBtn && vpsSandboxConsole) {
+    closeSandboxConsoleBtn.addEventListener('click', () => {
+      vpsSandboxConsole.style.display = 'none';
+    });
+  }
+
+  if (vpsTestMockBtn) {
+    vpsTestMockBtn.addEventListener('click', async () => {
+      if (vpsSandboxConsole) vpsSandboxConsole.style.display = 'block';
+      if (sandboxConsoleBody) {
+        sandboxConsoleBody.innerHTML = `
+          <div class="console-line info">[INIT] Инициализация Mock Sandbox (без сессии Telegram и без расхода токенов)...</div>
+          <div class="console-line">[1/4] Имитация входящего вопроса от лида: "Здравствуйте! Сколько стоит сайт на чистом коде? Сайт на Тильде грузится 5 секунд."</div>
+        `;
+      }
+
+      try {
+        vpsTestMockBtn.disabled = true;
+        const res = await fetch('api/bot.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'test_mock' })
+        });
+        const data = await res.json();
+        if (!res.ok || data.status !== 'success') throw new Error(data.message);
+
+        if (sandboxConsoleBody) {
+          sandboxConsoleBody.innerHTML += `
+            <div class="console-line success">[2/4] Проверка черного списка: ${escapeHtml(data.blacklist_status)}</div>
+            <div class="console-line info">[3/4] Анализ коммерческого намерения: Интент подтвержден (ключевое слово: '${escapeHtml(data.matched_keyword)}')</div>
+            <div class="console-line warning">[4/4] Имитация поведения человека: ${escapeHtml(data.simulated_delay)}</div>
+            <div class="console-line success" style="margin-top:8px;">[BOT RESPONSE] ${escapeHtml(data.bot_response)}</div>
+            <div class="console-line" style="color:#00E5B8;font-weight:700;margin-top:6px;">✓ СИМУЛЯЦИЯ ЗАВЕРШЕНА: Скрипт готов к боевому запуску!</div>
+          `;
+          sandboxConsoleBody.scrollTop = sandboxConsoleBody.scrollHeight;
+        }
+      } catch (err) {
+        if (sandboxConsoleBody) {
+          sandboxConsoleBody.innerHTML += `<div class="console-line error">[ERROR] ${escapeHtml(err.message)}</div>`;
+        }
+      } finally {
+        vpsTestMockBtn.disabled = false;
+      }
+    });
+  }
+
+  const vpsDownloadZipBtn = document.getElementById('vpsDownloadZipBtn');
+  if (vpsDownloadZipBtn) {
+    vpsDownloadZipBtn.addEventListener('click', () => {
+      window.location.href = 'api/bot.php?action=download_vps_package';
+      showToast('Загрузка пакета antidesigner-tg-agent.zip началась...', 'success');
+    });
   }
 
   // ---------------------------------------------------------------------------
