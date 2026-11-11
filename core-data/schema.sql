@@ -97,3 +97,4 @@ CREATE TABLE IF NOT EXISTS agent_memory (
 CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
 CREATE INDEX IF NOT EXISTS idx_content_status ON content_items(status);
 CREATE INDEX IF NOT EXISTS idx_trends_approved ON trends(is_approved);
+

@@ -24,3 +24,4 @@ try {
         'message' => 'Test query failed: ' . $e->getMessage()
     ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 }
+

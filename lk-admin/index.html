@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,14 +10,17 @@
   <!-- Google Fonts: Manrope + Unbounded (Единая типографика AntiDesigner) + JetBrains Mono для технического кода -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Unbounded:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Unbounded:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
 
   <!-- Dark Tech Stylesheet -->
   <link rel="stylesheet" href="css/dark-tech.css">
 </head>
+
 <body>
   <div class="app-shell">
-    
+
     <!-- Сайдбар управления -->
     <aside class="sidebar">
       <div class="sidebar-header">
@@ -98,7 +102,7 @@
 
     <!-- Основная рабочая область (Viewport) -->
     <main class="main-viewport">
-      
+
       <!-- Верхний статус-бар -->
       <header class="top-bar">
         <div class="top-bar-left">
@@ -135,7 +139,8 @@
               <span class="badge-accent">AGENT-IN-THE-LOOP</span>
             </div>
             <p class="module-desc">
-              Генерация готового пакета из 5 материалов из 1 инфоповода: лонгрид для VC.ru/Habr, GEO-статья для поискового SEO, пост в Telegram, сценарий для Shorts/Reels и каркас PDF-лид-магнита.
+              Генерация готового пакета из 5 материалов из 1 инфоповода: лонгрид для VC.ru/Habr, GEO-статья для
+              поискового SEO, пост в Telegram, сценарий для Shorts/Reels и каркас PDF-лид-магнита.
             </p>
 
             <div class="tech-grid-3">
@@ -156,10 +161,113 @@
               </div>
             </div>
 
-            <div class="module-placeholder-box">
-              <div class="box-icon">⚡</div>
-              <h3>Генератор пакета материалов готов к интеграции Спринта 2</h3>
-              <p>Поле ввода инфоповода, подключение Gemini 1.5 Pro и Markdown-превью для публикации в один клик.</p>
+            <!-- Панель запуска генерации пакета -->
+            <div class="factory-generator-box">
+              <div class="factory-generator-header">
+                <div>
+                  <h3 class="generator-title">⚡ Генератор омниканального пакета материалов (5-in-1)</h3>
+                  <p class="generator-subtitle">Введите тему или инфоповод. Агент объединит системные скиллы с постоянным контекстом Базы Знаний и сформирует готовые тексты.</p>
+                </div>
+                <div class="generator-badge">
+                  <span class="gen-pulse-dot"></span>
+                  <span>GEMINI 1.5 PRO / FLASH</span>
+                </div>
+              </div>
+
+              <div class="generator-form">
+                <div class="form-group">
+                  <label class="tech-label" for="factoryTopicInput">Тема или инфоповод публикации</label>
+                  <div class="generator-input-row">
+                    <input type="text" id="factoryTopicInput" class="tech-input" placeholder="Например: Почему сайты на Tilda теряют 40% клиентов из-за скорости загрузки">
+                    <button type="button" id="generateBtn" class="btn-tech-primary">
+                      <span class="btn-icon">⚡</span>
+                      <span>Сгенерировать пакет (Omnichannel)</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="tech-label">Форматы для одновременной генерации</label>
+                  <div class="format-checkbox-group">
+                    <label class="format-checkbox-pill">
+                      <input type="checkbox" name="factoryFormats" value="tg_post" checked>
+                      <span class="pill-badge">TG</span>
+                      <span class="pill-name">Пост Telegram</span>
+                    </label>
+                    <label class="format-checkbox-pill">
+                      <input type="checkbox" name="factoryFormats" value="vc_ru" checked>
+                      <span class="pill-badge">VC</span>
+                      <span class="pill-name">Лонгрид VC.ru / Habr</span>
+                    </label>
+                    <label class="format-checkbox-pill">
+                      <input type="checkbox" name="factoryFormats" value="reels" checked>
+                      <span class="pill-badge">REELS</span>
+                      <span class="pill-name">Сценарий Reels/Shorts</span>
+                    </label>
+                    <label class="format-checkbox-pill">
+                      <input type="checkbox" name="factoryFormats" value="lead_magnet" checked>
+                      <span class="pill-badge">PDF</span>
+                      <span class="pill-name">Лид-магнит / Чек-лист</span>
+                    </label>
+                    <label class="format-checkbox-pill">
+                      <input type="checkbox" name="factoryFormats" value="site_geo">
+                      <span class="pill-badge">SEO</span>
+                      <span class="pill-name">GEO-статья для сайта</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Анимированный лоадер генерации -->
+              <div id="factoryLoader" class="factory-loader-box" style="display: none;">
+                <div class="loader-scanner-track">
+                  <div class="loader-scanner-bar"></div>
+                </div>
+                <div class="loader-status-row">
+                  <span class="loader-spinner"></span>
+                  <span id="factoryLoaderText" class="loader-text">Нейросеть Gemini анализирует базу знаний и пишет материалы пакета...</span>
+                </div>
+              </div>
+
+              <!-- Результаты генерации -->
+              <div id="factoryResults" class="factory-results-box" style="display: none;">
+                <div class="results-header">
+                  <div class="results-header-left">
+                    <span class="tech-tag">РЕЗУЛЬТАТЫ ГЕНЕРАЦИИ</span>
+                    <h4 id="factoryResultTopic" class="results-topic-title">Тема</h4>
+                  </div>
+                  <div class="result-format-tabs" id="factoryResultTabs">
+                    <!-- Заполняется динамически кнопками форматов -->
+                  </div>
+                </div>
+
+                <div class="result-editor-card">
+                  <div class="result-editor-toolbar">
+                    <div class="toolbar-info">
+                      <span id="factoryActiveFormatTitle" class="toolbar-title">Пост для Telegram</span>
+                      <span id="factoryActiveStatusBadge" class="status-badge-draft">ЧЕРНОВИК</span>
+                    </div>
+                    <div class="toolbar-actions">
+                      <button type="button" id="factoryCopyBtn" class="btn-tech-outline" title="Скопировать в буфер обмена">
+                        <span class="btn-icon">📋</span> Скопировать
+                      </button>
+                      <button type="button" id="factorySaveDraftBtn" class="btn-tech-outline" title="Сохранить правки в базу">
+                        <span class="btn-icon">💾</span> Сохранить черновик
+                      </button>
+                      <button type="button" id="factoryPublishTgBtn" class="btn-tech-primary" title="Опубликовать в Telegram-канал">
+                        <span class="btn-icon">✈️</span> Опубликовать в Telegram
+                      </button>
+                    </div>
+                  </div>
+
+                  <textarea id="factoryContentTextarea" class="tech-textarea code-font" rows="16" placeholder="Текст сгенерированного материала..."></textarea>
+                  
+                  <div class="result-footer">
+                    <span id="factoryActionStatus" class="action-status-hint">Готов к публикации или правкам.</span>
+                    <span id="factoryCharCounter" class="char-counter">0 символов</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -175,7 +283,9 @@
               <span class="badge-accent">SQLITE WAL</span>
             </div>
             <p class="module-desc">
-              Канбан-доска статусов: <code class="tech-code">new</code> → <code class="tech-code">qualified</code> → <code class="tech-code">hot</code> → <code class="tech-code">deal_closed</code> → <code class="tech-code">archived</code> с точной UTM-атрибуцией статьи или поста, приведшего клиента.
+              Канбан-доска статусов: <code class="tech-code">new</code> → <code class="tech-code">qualified</code> →
+              <code class="tech-code">hot</code> → <code class="tech-code">deal_closed</code> → <code
+                class="tech-code">archived</code> с точной UTM-атрибуцией статьи или поста, приведшего клиента.
             </p>
 
             <div class="tech-grid-3">
@@ -215,7 +325,8 @@
               <span class="badge-accent">RAG CONTEXT</span>
             </div>
             <p class="module-desc">
-              Постоянный контекст для нейросети, разбитый по 4 категориям: для контента, для переписки с клиентами, для самообучения агента и для аналитики CRM.
+              Постоянный контекст для нейросети, разбитый по 4 категориям: для контента, для переписки с клиентами, для
+              самообучения агента и для аналитики CRM.
             </p>
 
             <div class="tech-grid-4">
@@ -241,10 +352,63 @@
               </div>
             </div>
 
-            <div class="module-placeholder-box">
-              <div class="box-icon">🧠</div>
-              <h3>Редактор постоянного контекста базы знаний</h3>
-              <p>Markdown-редактор с сохранением в таблицу <code class="tech-code">knowledge_base</code>.</p>
+            <!-- Редактор постоянного контекста Базы Знаний -->
+            <div class="kb-studio-box">
+              <div class="kb-studio-header">
+                <div>
+                  <h3 class="studio-title">🧠 Контекстное хранилище AntiDesigner (RAG Context)</h3>
+                  <p class="studio-subtitle">Данные категории автоматически подмешиваются в системные промпты Gemini при каждой генерации контента и питчей.</p>
+                </div>
+                <div class="rag-status-badge">
+                  <span class="rag-dot"></span>
+                  <span>RAG INJECTION ACTIVE</span>
+                </div>
+              </div>
+
+              <!-- Переключатель категорий -->
+              <div class="kb-categories-nav" id="kbCategoriesNav">
+                <button type="button" class="kb-cat-btn active" data-category="tariffs">
+                  <span class="cat-num">01</span>
+                  <span class="cat-label">Тарифы и цены</span>
+                </button>
+                <button type="button" class="kb-cat-btn" data-category="usp">
+                  <span class="cat-num">02</span>
+                  <span class="cat-label">УТП чистого кода</span>
+                </button>
+                <button type="button" class="kb-cat-btn" data-category="target_audience">
+                  <span class="cat-num">03</span>
+                  <span class="cat-label">Целевая аудитория и боли</span>
+                </button>
+                <button type="button" class="kb-cat-btn" data-category="cases">
+                  <span class="cat-num">04</span>
+                  <span class="cat-label">Эталонные кейсы</span>
+                </button>
+              </div>
+
+              <!-- Рабочая карточка редактора -->
+              <div class="kb-editor-card">
+                <div class="kb-editor-header">
+                  <div class="kb-title-block">
+                    <span class="tech-tag" id="kbCategoryBadge">CATEGORY: TARIFFS</span>
+                    <h4 id="kbActiveTitle" class="kb-active-heading">Тарифная сетка и форматы разработки</h4>
+                  </div>
+                  <div class="kb-actions-block">
+                    <span id="kbSaveStatus" class="action-status-hint"></span>
+                    <button type="button" id="saveKbBtn" class="btn-tech-primary">
+                      <span class="btn-icon">💾</span> Сохранить контекст
+                    </button>
+                  </div>
+                </div>
+
+                <div class="kb-textarea-wrap">
+                  <textarea id="kbContentInput" class="tech-textarea code-font" rows="18" placeholder="Markdown-контекст категории..."></textarea>
+                </div>
+
+                <div class="kb-footer-bar">
+                  <span class="kb-notice-text">💡 Совет: Форматируйте смыслы четкими пунктами, цифрами и формулировками. Это повышает точность генераций нейросети.</span>
+                  <span id="kbUpdatedTimestamp" class="kb-timestamp">Синхронизировано</span>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -260,7 +424,8 @@
               <span class="badge-accent">VISION + PAGESPEED</span>
             </div>
             <p class="module-desc">
-              Автоматический технический аудит по PageSpeed Insights REST API + визуальный анализ первого экрана через Multimodal Vision (Gemini 1.5) с генерацией персонализированного питча.
+              Автоматический технический аудит по PageSpeed Insights REST API + визуальный анализ первого экрана через
+              Multimodal Vision (Gemini 1.5) с генерацией персонализированного питча.
             </p>
 
             <div class="tech-grid-3">
@@ -300,7 +465,8 @@
               <span class="badge-accent">FASTCGI WEBHOOK</span>
             </div>
             <p class="module-desc">
-              Автономный бот на Webhook. Выдает лид-магниты по кодовым словам из постов, квалифицирует лидов и моментально шлет уведомление администратору при появлении горячего клиента.
+              Автономный бот на Webhook. Выдает лид-магниты по кодовым словам из постов, квалифицирует лидов и
+              моментально шлет уведомление администратору при появлении горячего клиента.
             </p>
 
             <div class="tech-grid-3">
@@ -340,7 +506,8 @@
               <span class="badge-accent">TAVILY SEARCH API</span>
             </div>
             <p class="module-desc">
-              Фоновый мониторинг IT-новостей и тематических инфоповодов через Tavily API. Фильтрация информационного шума с отбором 3–5 целевых тем и переносом в контент-план в 1 клик.
+              Фоновый мониторинг IT-новостей и тематических инфоповодов через Tavily API. Фильтрация информационного
+              шума с отбором 3–5 целевых тем и переносом в контент-план в 1 клик.
             </p>
 
             <div class="tech-grid-3">
@@ -364,7 +531,8 @@
             <div class="module-placeholder-box">
               <div class="box-icon">📡</div>
               <h3>Лента трендов и инфоповодов готова к подключению API</h3>
-              <p>Таблица <code class="tech-code">trends</code> подключена и проиндексирована по полю <code class="tech-code">is_approved</code>.</p>
+              <p>Таблица <code class="tech-code">trends</code> подключена и проиндексирована по полю <code
+                  class="tech-code">is_approved</code>.</p>
             </div>
           </div>
         </section>
@@ -380,7 +548,8 @@
               <span class="badge-accent">CALENDAR GRID</span>
             </div>
             <p class="module-desc">
-              Календарная сетка на 30 дней с распределением форматов и тем по дням недели с возможностью редактирования прямо в ячейках.
+              Календарная сетка на 30 дней с распределением форматов и тем по дням недели с возможностью редактирования
+              прямо в ячейках.
             </p>
 
             <div class="tech-grid-3">
@@ -404,7 +573,8 @@
             <div class="module-placeholder-box">
               <div class="box-icon">📅</div>
               <h3>Сетка контент-плана подготовлена</h3>
-              <p>Управление датами публикаций и статусами материалов из таблицы <code class="tech-code">content_items</code>.</p>
+              <p>Управление датами публикаций и статусами материалов из таблицы <code
+                  class="tech-code">content_items</code>.</p>
             </div>
           </div>
         </section>
@@ -420,7 +590,8 @@
               <span class="badge-accent">NO-CODE PROMPTS</span>
             </div>
             <p class="module-desc">
-              Управление промптами без вмешательства в исходный код системы: редактирование системных инструкций для каждого формата (VC, Habr, TG, Reels, Pitch), настройка Tone of Voice и стоп-слов.
+              Управление промптами без вмешательства в исходный код системы: редактирование системных инструкций для
+              каждого формата (VC, Habr, TG, Reels, Pitch), настройка Tone of Voice и стоп-слов.
             </p>
 
             <div class="tech-grid-3">
@@ -441,10 +612,59 @@
               </div>
             </div>
 
-            <div class="module-placeholder-box">
-              <div class="box-icon">⚙️</div>
-              <h3>Студия промптов готова к настройке</h3>
-              <p>Хранилище промптов в таблице <code class="tech-code">skills</code> с уникальными кодами форматов.</p>
+            <!-- Двухколоночная студия промпт-инжиниринга -->
+            <div class="skills-studio-grid">
+              
+              <!-- Левая колонка: Список доступных скиллов -->
+              <div class="skills-sidebar-card">
+                <div class="skills-sidebar-header">
+                  <h3 class="skills-col-title">Роли ИИ (Скиллы)</h3>
+                  <span class="skills-count-pill" id="skillsCountBadge">5 активных</span>
+                </div>
+                <p class="skills-col-desc">Выберите роль для настройки системного промпта и Tone of Voice.</p>
+
+                <div class="skills-list" id="skillsList">
+                  <!-- Заполняется динамически через JS -->
+                  <div class="skills-list-skeleton">Загрузка скиллов из базы данных...</div>
+                </div>
+              </div>
+
+              <!-- Правая колонка: Редактор выбранного скилла -->
+              <div class="skills-editor-card" id="skillEditorCard">
+                <div class="skill-editor-top">
+                  <div class="skill-editor-headings">
+                    <div class="skill-code-row">
+                      <span class="tech-tag" id="skillEditorCode">SKILL: TG_POST</span>
+                      <span class="badge-accent">SYSTEM INSTRUCTION</span>
+                    </div>
+                    <h3 id="skillEditorTitle" class="skill-heading">Пост для Telegram</h3>
+                  </div>
+                  <div class="skill-editor-actions">
+                    <span id="skillSaveStatus" class="action-status-hint"></span>
+                    <button type="button" id="saveSkillBtn" class="btn-tech-primary">
+                      <span class="btn-icon">💾</span> Сохранить скилл
+                    </button>
+                  </div>
+                </div>
+
+                <div class="skill-form">
+                  <div class="form-group">
+                    <label class="tech-label" for="skillTovInput">Tone of Voice (Тональность и стиль коммуникации)</label>
+                    <input type="text" id="skillTovInput" class="tech-input" placeholder="Дерзкий Dark Tech, емкий, без воды, ударные буллеты">
+                  </div>
+
+                  <div class="form-group">
+                    <label class="tech-label" for="skillPromptInput">Системный промпт для Gemini API (System Instruction)</label>
+                    <textarea id="skillPromptInput" class="tech-textarea code-font" rows="15" placeholder="Введите системную инструкцию для роли..."></textarea>
+                  </div>
+                </div>
+
+                <div class="skill-editor-footer">
+                  <span class="tech-hint">⚙️ Изменения мгновенно влияют на качество и структуру материалов в Контент-фабрике.</span>
+                  <span id="skillUpdatedTimestamp" class="kb-timestamp">Синхронизировано</span>
+                </div>
+              </div>
+
             </div>
           </div>
         </section>
@@ -453,8 +673,11 @@
     </main>
   </div>
 
+  <!-- Всплывающие уведомления (Toast Notifications) -->
+  <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
   <!-- Client-side SPA Router & Live Status Checker -->
   <script src="js/app.js" defer></script>
 </body>
-</html>
 
+</html>
