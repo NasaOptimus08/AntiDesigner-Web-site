@@ -12,11 +12,12 @@ CREATE TABLE IF NOT EXISTS admin_auth (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- 2. Скиллы (Промпт-инжиниринг и системные роли LLM)
+-- 2. Скиллы (Промпт-инжиниринг и системные роли LLM по 5 категориям)
 CREATE TABLE IF NOT EXISTS skills (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     code TEXT UNIQUE NOT NULL,
     title TEXT NOT NULL,
+    category TEXT DEFAULT 'articles',
     system_prompt TEXT NOT NULL,
     tone_of_voice TEXT,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP

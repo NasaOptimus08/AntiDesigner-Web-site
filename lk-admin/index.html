@@ -125,6 +125,17 @@
         </div>
       </header>
 
+      <!-- Баннер предупреждения, если панель открыта через file:// -->
+      <div id="fileProtocolBanner" class="protocol-warning-banner" style="display: none;">
+        <div class="pwb-icon">⚠️</div>
+        <div class="pwb-content">
+          <div class="pwb-title">Панель открыта как локальный файл (<code>file://</code>)</div>
+          <div class="pwb-desc">Браузер блокирует запросы к API и базе данных SQLite. Откройте панель через запущенный локальный сервер:</div>
+          <a href="http://localhost:8000/lk-admin/" class="pwb-link">http://localhost:8000/lk-admin/</a>
+        </div>
+        <a href="http://localhost:8000/lk-admin/" class="btn-tech-primary btn-sm">Открыть сервер →</a>
+      </div>
+
       <!-- Контейнер сменяемых табов SPA -->
       <div class="content-canvas">
 
@@ -175,18 +186,40 @@
               </div>
 
               <div class="generator-form">
+                <!-- Переключатель формата генерации -->
+                <div class="form-group">
+                  <label class="tech-label">Режим генерации контента</label>
+                  <div class="factory-mode-selector" id="factoryModeSelector">
+                    <button type="button" class="mode-tab-btn active" data-mode="all">
+                      <span class="mode-icon">⚡</span> Полный пакет (5-in-1)
+                    </button>
+                    <button type="button" class="mode-tab-btn" data-mode="article">
+                      <span class="mode-icon">📝</span> Статья (VC / Habr)
+                    </button>
+                    <button type="button" class="mode-tab-btn" data-mode="telegram">
+                      <span class="mode-icon">💬</span> Пост в ТГ
+                    </button>
+                    <button type="button" class="mode-tab-btn" data-mode="instagram">
+                      <span class="mode-icon">📸</span> Инстаграм (Reels)
+                    </button>
+                    <button type="button" class="mode-tab-btn" data-mode="lead_magnet">
+                      <span class="mode-icon">🧲</span> Лид-магнит
+                    </button>
+                  </div>
+                </div>
+
                 <div class="form-group">
                   <label class="tech-label" for="factoryTopicInput">Тема или инфоповод публикации</label>
                   <div class="generator-input-row">
                     <input type="text" id="factoryTopicInput" class="tech-input" placeholder="Например: Почему сайты на Tilda теряют 40% клиентов из-за скорости загрузки">
                     <button type="button" id="generateBtn" class="btn-tech-primary">
                       <span class="btn-icon">⚡</span>
-                      <span>Сгенерировать пакет (Omnichannel)</span>
+                      <span>Сгенерировать</span>
                     </button>
                   </div>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" id="packageFormatsGroup">
                   <label class="tech-label">Форматы для одновременной генерации</label>
                   <div class="format-checkbox-group">
                     <label class="format-checkbox-pill">
@@ -200,7 +233,7 @@
                       <span class="pill-name">Лонгрид VC.ru / Habr</span>
                     </label>
                     <label class="format-checkbox-pill">
-                      <input type="checkbox" name="factoryFormats" value="reels" checked>
+                      <input type="checkbox" name="factoryFormats" value="reels_hook" checked>
                       <span class="pill-badge">REELS</span>
                       <span class="pill-name">Сценарий Reels/Shorts</span>
                     </label>
@@ -365,23 +398,23 @@
                 </div>
               </div>
 
-              <!-- Переключатель категорий -->
+              <!-- Переключатель 4 интерактивных разделов базы знаний -->
               <div class="kb-categories-nav" id="kbCategoriesNav">
-                <button type="button" class="kb-cat-btn active" data-category="tariffs">
+                <button type="button" class="kb-cat-btn active" data-category="leads_archive">
                   <span class="cat-num">01</span>
-                  <span class="cat-label">Тарифы и цены</span>
+                  <span class="cat-label">База холодных лидов и аудитов</span>
                 </button>
-                <button type="button" class="kb-cat-btn" data-category="usp">
+                <button type="button" class="kb-cat-btn" data-category="crm_memory">
                   <span class="cat-num">02</span>
-                  <span class="cat-label">УТП чистого кода</span>
+                  <span class="cat-label">CRM-память конверсий</span>
                 </button>
-                <button type="button" class="kb-cat-btn" data-category="target_audience">
+                <button type="button" class="kb-cat-btn" data-category="scraping_logs">
                   <span class="cat-num">03</span>
-                  <span class="cat-label">Целевая аудитория и боли</span>
+                  <span class="cat-label">Журнал парсингов по дням</span>
                 </button>
-                <button type="button" class="kb-cat-btn" data-category="cases">
+                <button type="button" class="kb-cat-btn" data-category="content_rules">
                   <span class="cat-num">04</span>
-                  <span class="cat-label">Эталонные кейсы</span>
+                  <span class="cat-label">Правила и алгоритмы платформ</span>
                 </button>
               </div>
 
@@ -389,10 +422,14 @@
               <div class="kb-editor-card">
                 <div class="kb-editor-header">
                   <div class="kb-title-block">
-                    <span class="tech-tag" id="kbCategoryBadge">CATEGORY: TARIFFS</span>
-                    <h4 id="kbActiveTitle" class="kb-active-heading">Тарифная сетка и форматы разработки</h4>
+                    <span class="tech-tag" id="kbCategoryBadge">CATEGORY: LEADS_ARCHIVE</span>
+                    <h4 id="kbActiveTitle" class="kb-active-heading">База холодных лидов и аудитов</h4>
                   </div>
                   <div class="kb-actions-block">
+                    <label class="btn-tech-outline upload-btn-label" title="Загрузить документ в текущую категорию">
+                      <span class="btn-icon">📎</span> Загрузить документ (PDF / DOCX / MD)
+                      <input type="file" id="kbFileInput" accept=".pdf,.docx,.md,.txt" style="display: none;">
+                    </label>
                     <span id="kbSaveStatus" class="action-status-hint"></span>
                     <button type="button" id="saveKbBtn" class="btn-tech-primary">
                       <span class="btn-icon">💾</span> Сохранить контекст
@@ -545,36 +582,110 @@
                 <span class="module-kicker">MONTHLY CALENDAR GRID</span>
                 <h2>Интерактивный контент-план</h2>
               </div>
-              <span class="badge-accent">CALENDAR GRID</span>
+              <span class="badge-accent">30 ДНЕЙ / FASTCGI SQLITE</span>
             </div>
             <p class="module-desc">
-              Календарная сетка на 30 дней с распределением форматов и тем по дням недели с возможностью редактирования
-              прямо в ячейках.
+              Календарная сетка на 30 дней с автоматическим распределением форматов и целевых тем под боли ЦА.
+              Кликайте по любой теме для редактирования или переходите к мгновенной генерации через Контент-фабрику.
             </p>
 
             <div class="tech-grid-3">
               <div class="tech-metric-card">
-                <span class="metric-num">30</span>
+                <span class="metric-num" id="calStatTotal">30</span>
                 <span class="metric-label">Дней в сетке</span>
-                <span class="metric-hint">Распределение с учетом болей ЦА</span>
+                <span class="metric-hint">Охват всех 5 омни-форматов</span>
               </div>
               <div class="tech-metric-card">
-                <span class="metric-num">Inline</span>
-                <span class="metric-label">Правки на лету</span>
-                <span class="metric-hint">Автосохранение изменений в SQLite</span>
+                <span class="metric-num sys-green" id="calStatReady">0</span>
+                <span class="metric-label">Готово / Опубликовано</span>
+                <span class="metric-hint">ready + published материалы</span>
               </div>
               <div class="tech-metric-card">
-                <span class="metric-num">4</span>
-                <span class="metric-label">Статуса публикаций</span>
-                <span class="metric-hint">planned · ready · published · archived</span>
+                <span class="metric-num" id="calStatPlanned">30</span>
+                <span class="metric-label">Запланировано</span>
+                <span class="metric-hint">Темы в очереди на генерацию</span>
               </div>
             </div>
 
-            <div class="module-placeholder-box">
-              <div class="box-icon">📅</div>
-              <h3>Сетка контент-плана подготовлена</h3>
-              <p>Управление датами публикаций и статусами материалов из таблицы <code
-                  class="tech-code">content_items</code>.</p>
+            <!-- Инструменты управления календарем -->
+            <div class="calendar-controls-bar">
+              <div class="calendar-filter-pills" id="calendarFilterPills">
+                <button type="button" class="cal-filter-btn active" data-fmt="all">Все форматы</button>
+                <button type="button" class="cal-filter-btn" data-fmt="tg_post">💬 Telegram</button>
+                <button type="button" class="cal-filter-btn" data-fmt="vc_ru">📝 VC / Habr</button>
+                <button type="button" class="cal-filter-btn" data-fmt="reels_hook">📸 Reels</button>
+                <button type="button" class="cal-filter-btn" data-fmt="lead_magnet">🧲 Лид-магнит</button>
+                <button type="button" class="cal-filter-btn" data-fmt="site_geo">🌐 SEO</button>
+              </div>
+              <div class="calendar-actions-right">
+                <button type="button" id="calAddPostBtn" class="btn-tech-outline">
+                  <span class="btn-icon">+</span> Добавить тему
+                </button>
+                <button type="button" id="calGenerateAiBtn" class="btn-tech-primary">
+                  <span class="btn-icon">⚡</span> AI-план на 30 дней
+                </button>
+              </div>
+            </div>
+
+            <!-- Интерактивная 30-дневная сетка -->
+            <div class="calendar-board-wrap">
+              <div class="calendar-weekdays-bar">
+                <span>ПН</span><span>ВТ</span><span>СР</span><span>ЧТ</span><span>ПТ</span><span>СБ</span><span>ВС</span>
+              </div>
+              <div class="calendar-grid-cells" id="calendarGridCells">
+                <div class="calendar-loading-hint">Загрузка сетки контент-плана...</div>
+              </div>
+            </div>
+
+            <!-- Модальное окно создания/редактирования публикации -->
+            <div id="calEditModal" class="cal-modal-backdrop" style="display: none;">
+              <div class="cal-modal-box">
+                <div class="cal-modal-header">
+                  <h3 id="calModalTitle">Редактирование публикации</h3>
+                  <button type="button" class="cal-modal-close" id="calModalClose">&times;</button>
+                </div>
+                <div class="cal-modal-body">
+                  <input type="hidden" id="calModalItemId">
+                  <div class="form-group">
+                    <label class="tech-label" for="calModalDate">Дата публикации</label>
+                    <input type="date" id="calModalDate" class="tech-input">
+                  </div>
+                  <div class="form-group">
+                    <label class="tech-label" for="calModalFormat">Формат материала</label>
+                    <select id="calModalFormat" class="tech-input">
+                      <option value="tg_post">💬 Пост Telegram</option>
+                      <option value="vc_ru">📝 Лонгрид VC.ru / Habr</option>
+                      <option value="reels_hook">📸 Сценарий Reels / Shorts</option>
+                      <option value="lead_magnet">🧲 Лид-магнит / Чек-лист (PDF)</option>
+                      <option value="site_geo">🌐 GEO-статья для SEO</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="tech-label" for="calModalStatus">Статус публикации</label>
+                    <select id="calModalStatus" class="tech-input">
+                      <option value="planned">⚪ planned (Запланировано)</option>
+                      <option value="ready">🟡 ready (Готово к выходу)</option>
+                      <option value="published">🟢 published (Опубликовано)</option>
+                      <option value="archived">⚫ archived (В архиве)</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="tech-label" for="calModalTopic">Тема или заголовок публикации</label>
+                    <textarea id="calModalTopic" class="tech-textarea" rows="3" placeholder="Тема материала без длинных тире..."></textarea>
+                  </div>
+                </div>
+                <div class="cal-modal-footer">
+                  <button type="button" id="calModalDeleteBtn" class="btn-tech-danger" style="margin-right: auto;">
+                    Удалить
+                  </button>
+                  <button type="button" id="calModalGoFactoryBtn" class="btn-tech-outline">
+                    ⚡ В Контент-фабрику
+                  </button>
+                  <button type="button" id="calModalSaveBtn" class="btn-tech-primary">
+                    💾 Сохранить
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -619,9 +730,19 @@
               <div class="skills-sidebar-card">
                 <div class="skills-sidebar-header">
                   <h3 class="skills-col-title">Роли ИИ (Скиллы)</h3>
-                  <span class="skills-count-pill" id="skillsCountBadge">5 активных</span>
+                  <span class="skills-count-pill" id="skillsCountBadge">Загрузка...</span>
                 </div>
                 <p class="skills-col-desc">Выберите роль для настройки системного промпта и Tone of Voice.</p>
+
+                <!-- Фильтр по 5 категориям скиллов -->
+                <div class="skills-filter-tabs" id="skillsFilterTabs">
+                  <button type="button" class="skill-filter-btn active" data-cat="all">Все</button>
+                  <button type="button" class="skill-filter-btn" data-cat="articles">Статьи</button>
+                  <button type="button" class="skill-filter-btn" data-cat="telegram">Посты в ТГ</button>
+                  <button type="button" class="skill-filter-btn" data-cat="instagram">Инстаграм</button>
+                  <button type="button" class="skill-filter-btn" data-cat="sales">Продажи</button>
+                  <button type="button" class="skill-filter-btn" data-cat="bot">Бот</button>
+                </div>
 
                 <div class="skills-list" id="skillsList">
                   <!-- Заполняется динамически через JS -->
@@ -635,11 +756,15 @@
                   <div class="skill-editor-headings">
                     <div class="skill-code-row">
                       <span class="tech-tag" id="skillEditorCode">SKILL: TG_POST</span>
-                      <span class="badge-accent">SYSTEM INSTRUCTION</span>
+                      <span class="badge-accent" id="skillCategoryTag">CATEGORY: TELEGRAM</span>
                     </div>
                     <h3 id="skillEditorTitle" class="skill-heading">Пост для Telegram</h3>
                   </div>
                   <div class="skill-editor-actions">
+                    <label class="btn-tech-outline upload-btn-label" title="Загрузить файл скилла (MD / Текст / Скрипт)">
+                      <span class="btn-icon">📎</span> Загрузить файл скилла
+                      <input type="file" id="skillFileInput" accept=".md,.txt,.json,.py,.js,.sql" style="display: none;">
+                    </label>
                     <span id="skillSaveStatus" class="action-status-hint"></span>
                     <button type="button" id="saveSkillBtn" class="btn-tech-primary">
                       <span class="btn-icon">💾</span> Сохранить скилл

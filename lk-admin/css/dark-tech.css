@@ -913,6 +913,93 @@ html, body {
   50% { opacity: 0.4; transform: scale(0.85); }
 }
 
+/* Переключатель режимов генерации (Контент-фабрика) */
+.factory-mode-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.mode-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  background: rgba(18, 27, 44, 0.65);
+  border: 1px solid var(--color-border-card);
+  border-radius: 12px;
+  color: var(--color-text-muted);
+  font-family: var(--font-heading);
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  user-select: none;
+}
+
+.mode-tab-btn:hover {
+  border-color: rgba(0, 229, 184, 0.35);
+  background: rgba(18, 27, 44, 0.9);
+  color: var(--color-text);
+}
+
+.mode-tab-btn.active {
+  background: rgba(0, 229, 184, 0.12);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  box-shadow: 0 0 16px rgba(0, 229, 184, 0.2);
+}
+
+.mode-icon {
+  font-size: 13px;
+  line-height: 1;
+}
+
+/* Фильтры категорий скиллов */
+.skills-filter-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.skill-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  background: rgba(16, 24, 40, 0.6);
+  border: 1px solid var(--color-border-card);
+  border-radius: 8px;
+  color: var(--color-text-muted);
+  font-family: var(--font-heading);
+  font-size: 10.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.skill-filter-btn:hover {
+  border-color: rgba(0, 229, 184, 0.3);
+  color: var(--color-text);
+}
+
+.skill-filter-btn.active {
+  background: var(--color-accent);
+  color: #0b1424;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 12px rgba(0, 229, 184, 0.3);
+}
+
+/* Лейбл кнопки загрузки файла */
+.upload-btn-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  user-select: none;
+}
+
 .generator-input-row {
   display: flex;
   gap: 12px;
@@ -1640,4 +1727,407 @@ html, body {
   .kb-categories-nav {
     grid-template-columns: 1fr;
   }
+  .calendar-weekdays-bar,
+  .calendar-grid-cells {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* =========================================
+   8. ПРЕДУПРЕЖДЕНИЕ FILE:// И КАЛЕНДАРЬ
+   ========================================= */
+.protocol-warning-banner {
+  background: rgba(254, 211, 48, 0.12);
+  border: 1px solid rgba(254, 211, 48, 0.45);
+  border-radius: var(--radius-sm);
+  padding: 14px 20px;
+  margin: 18px 28px 0 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  animation: fadeIn 0.3s ease;
+}
+
+.pwb-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.pwb-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.pwb-title {
+  font-weight: 700;
+  color: #fed330;
+  font-size: 14px;
+}
+
+.pwb-desc {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.pwb-link {
+  font-family: var(--font-mono);
+  color: var(--color-accent);
+  text-decoration: underline;
+  word-break: break-all;
+}
+
+/* --- КОНТЕНТ-ПЛАН И СЕТКА НА 30 ДНЕЙ --- */
+.calendar-controls-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 20px 0 16px 0;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-border-card);
+}
+
+.calendar-filter-pills {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cal-filter-btn {
+  background: var(--color-input-bg);
+  border: 1px solid var(--color-input-border);
+  color: var(--color-text-muted);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.cal-filter-btn:hover {
+  color: var(--color-text);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.cal-filter-btn.active {
+  background: rgba(0, 229, 184, 0.12);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.calendar-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.calendar-board-wrap {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-card);
+  padding: 16px;
+  overflow-x: auto;
+}
+
+.calendar-weekdays-bar {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(130px, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.calendar-weekdays-bar span {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--color-text-subtle);
+  text-align: center;
+  padding: 4px 0;
+}
+
+.calendar-grid-cells {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(130px, 1fr));
+  gap: 8px;
+}
+
+.calendar-loading-hint {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 40px;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.cal-day-cell {
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  transition: all var(--transition-fast);
+}
+
+.cal-day-cell:hover {
+  border-color: rgba(0, 229, 184, 0.35);
+  background: #242527;
+}
+
+.cal-day-cell.today {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 12px rgba(0, 229, 184, 0.15);
+}
+
+.cal-day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+
+.cal-day-date {
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.cal-day-cell.today .cal-day-date {
+  color: var(--color-accent);
+}
+
+.cal-day-wday {
+  color: var(--color-text-subtle);
+  font-size: 10.5px;
+  text-transform: uppercase;
+}
+
+.cal-card-box {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.cal-card-box:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(0, 0, 0, 0.38);
+}
+
+.cal-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cal-fmt-badge {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 3px;
+  letter-spacing: 0.04em;
+}
+
+.cal-fmt-badge.tg_post {
+  background: rgba(0, 229, 184, 0.15);
+  color: #00E5B8;
+  border: 1px solid rgba(0, 229, 184, 0.3);
+}
+
+.cal-fmt-badge.vc_ru {
+  background: rgba(75, 123, 236, 0.15);
+  color: #4b7bec;
+  border: 1px solid rgba(75, 123, 236, 0.3);
+}
+
+.cal-fmt-badge.reels_hook {
+  background: rgba(253, 121, 168, 0.15);
+  color: #fd79a8;
+  border: 1px solid rgba(253, 121, 168, 0.3);
+}
+
+.cal-fmt-badge.lead_magnet {
+  background: rgba(254, 211, 48, 0.15);
+  color: #fed330;
+  border: 1px solid rgba(254, 211, 48, 0.3);
+}
+
+.cal-fmt-badge.site_geo {
+  background: rgba(38, 222, 129, 0.15);
+  color: #26de81;
+  border: 1px solid rgba(38, 222, 129, 0.3);
+}
+
+.cal-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.cal-status-dot.planned { background: #778ca3; }
+.cal-status-dot.ready { background: #fed330; box-shadow: 0 0 6px rgba(254, 211, 48, 0.5); }
+.cal-status-dot.published { background: #00E5B8; box-shadow: 0 0 6px rgba(0, 229, 184, 0.6); }
+.cal-status-dot.archived { background: #4b6584; }
+
+.cal-topic-text {
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--color-text);
+  font-weight: 500;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cal-card-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 4px;
+}
+
+.cal-btn-factory {
+  background: transparent;
+  border: 1px solid rgba(0, 229, 184, 0.3);
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.cal-btn-factory:hover {
+  background: var(--color-accent);
+  color: var(--color-bg);
+}
+
+.cal-empty-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 70px;
+  border: 1px dashed rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  color: var(--color-text-subtle);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.cal-empty-slot:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  background: rgba(0, 229, 184, 0.04);
+}
+
+/* Модальное окно */
+.cal-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: fadeIn 0.2s ease;
+}
+
+.cal-modal-box {
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-card);
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 24px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+}
+
+.cal-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cal-modal-header h3 {
+  font-family: var(--font-heading);
+  font-size: 16px;
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.cal-modal-close {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 24px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.cal-modal-close:hover {
+  color: #fff;
+}
+
+.cal-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cal-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border-card);
+}
+
+.btn-tech-danger {
+  background: rgba(235, 59, 90, 0.15);
+  border: 1px solid rgba(235, 59, 90, 0.4);
+  color: #eb3b5a;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-tech-danger:hover {
+  background: #eb3b5a;
+  color: #fff;
 }

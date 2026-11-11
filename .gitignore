@@ -17,6 +17,8 @@ __pycache__/
 .env
 core-data/config.local.php
 core-data/*.sqlite*
+core-data/uploads/*
+!core-data/uploads/.htaccess
 
 # Agent local configuration & skills
 .agents/
