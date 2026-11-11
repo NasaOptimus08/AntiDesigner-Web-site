@@ -57,9 +57,12 @@ class AIRouter
      */
     public function isPolzaModel(string $model): bool
     {
-        return str_starts_with($this->heavyApiKey, 'pza_')
-            || str_contains($model, 'google/gemini')
-            || ($model === self::MODEL_HEAVY);
+        if ($model === self::MODEL_FAST || str_contains($model, 'lite')) {
+            return false;
+        }
+        return ($model === self::MODEL_HEAVY)
+            || str_starts_with($this->heavyApiKey, 'pza_')
+            || str_contains($model, 'google/gemini');
     }
 
     /**
