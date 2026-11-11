@@ -55,37 +55,6 @@ try {
         $dateFilterVisits = "WHERE visited_at >= datetime('now', '-30 days')";
     }
 
-    // Авто-сид лидов, если таблица пуста
-    $leadsCount = (int)$pdo->query("SELECT COUNT(*) FROM leads")->fetchColumn();
-    if ($leadsCount === 0) {
-        $sampleLeads = [
-            ['tg_id' => '982314', 'username' => 'alex_stroi', 'name' => 'Александр (СтройГрупп)', 'utm' => 'vc_case_speed', 'status' => 'new', 'budget' => '35к+', 'magnet' => 'Аудит первого экрана', 'notes' => 'Хочет сайт за 7 дней на замену Tilda, жалуется на медленный мобильный отклик'],
-            ['tg_id' => '441209', 'username' => 'elena_dr', 'name' => 'Елена Романова (Клиника)', 'utm' => 'tg_post_ttfb', 'status' => 'qualified', 'budget' => '25к-35к', 'magnet' => 'Чек-лист 10 признаков', 'notes' => 'Пришла с поста про клинику. Бюджет согласован, нужен аудит текущего сайта'],
-            ['tg_id' => '773125', 'username' => 'dmitry_b2b', 'name' => 'Дмитрий (Оборудование B2B)', 'utm' => 'reels_speed_test', 'status' => 'hot', 'budget' => '35к+', 'magnet' => 'Бриф на разработку', 'notes' => 'Готов оплачивать аванс, запросил реквизиты ИП. Ждет созвона по структуре'],
-            ['tg_id' => '552190', 'username' => 'maxim_estate', 'name' => 'Максим (Недвижимость)', 'utm' => 'habr_clean_code', 'status' => 'deal_closed', 'budget' => '35к+', 'magnet' => 'Карта триггеров доверия', 'notes' => 'Сделка закрыта! 35 000 руб оплачено, разработка запущена'],
-            ['tg_id' => '119834', 'username' => 'ivan_freelance', 'name' => 'Иван С.', 'utm' => 'tg_post_tilda_loss', 'status' => 'archived', 'budget' => '18к-25к', 'magnet' => 'Гайд по скорости', 'notes' => 'Хобби-проект, бюджет менее 15к, перенесен в архив'],
-            ['tg_id' => '881244', 'username' => 'sergey_auto', 'name' => 'Сергей (Автоподбор)', 'utm' => 'site_geo_moscow', 'status' => 'new', 'budget' => '25к-35к', 'magnet' => 'Аудит мобильной верстки', 'notes' => 'Оставил заявку с формы сайта, нужен лендинг под Директ']
-        ];
-
-        $stmtIns = $pdo->prepare("
-            INSERT INTO leads (telegram_user_id, telegram_username, full_name, utm_source, status, budget_range, lead_magnet_claimed, notes, created_at)
-            VALUES (:tg_id, :username, :name, :utm, :status, :budget, :magnet, :notes, CURRENT_TIMESTAMP)
-        ");
-
-        foreach ($sampleLeads as $l) {
-            $stmtIns->execute([
-                ':tg_id'    => $l['tg_id'],
-                ':username' => $l['username'],
-                ':name'     => $l['name'],
-                ':utm'      => $l['utm'],
-                ':status'   => $l['status'],
-                ':budget'   => $l['budget'],
-                ':magnet'   => $l['magnet'],
-                ':notes'    => $l['notes']
-            ]);
-        }
-    }
-
     // -------------------------------------------------------------------------
     // 1. action = kanban
     // -------------------------------------------------------------------------

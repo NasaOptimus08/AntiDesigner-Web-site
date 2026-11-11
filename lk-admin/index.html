@@ -77,6 +77,11 @@
           <span class="nav-text">Скиллы (Промпты)</span>
           <span class="nav-pill">LLM</span>
         </a>
+        <a href="#testlab" class="nav-item" data-tab="testlab">
+          <span class="nav-icon">🧪</span>
+          <span class="nav-text">Тест-Центр</span>
+          <span class="nav-pill" style="background: rgba(0, 255, 136, 0.15); color: #00ff88; border-color: rgba(0, 255, 136, 0.3);">LIVE</span>
+        </a>
       </nav>
 
       <!-- Инфраструктурные плашки хостинга -->
@@ -1433,6 +1438,209 @@
                 </div>
               </div>
 
+            </div>
+          </div>
+        </section>
+
+        <!-- ============================================================= -->
+        <!-- 9. ВКЛАДКА: ТЕСТ-ЦЕНТР И ДИАГНОСТИКА ИИ (#testlab)             -->
+        <!-- ============================================================= -->
+        <section class="tab-pane" id="pane-testlab">
+          <div class="module-header">
+            <div>
+              <h2 class="module-title">🧪 Тест-Центр и Интерактивная Диагностика ИИ</h2>
+              <p class="module-subtitle">Ручной запуск фоновых задач Cron, замер задержек моделей Gemini (Fast & Heavy), живой терминал выполнения и песочница Telegram-Ассистента</p>
+            </div>
+            <div class="module-actions">
+              <span class="badge badge-success" style="font-family: var(--font-mono); font-size: 11px;">ZERO-TEST-PROTOCOL: ACTIVE</span>
+            </div>
+          </div>
+
+          <!-- БЛОК 1: [Статус моделей и Пульт запуска задач] -->
+          <div class="testlab-block-title">
+            <span class="block-num">БЛОК 1</span>
+            <h3>Статус моделей и Пульт запуска фоновых задач</h3>
+          </div>
+
+          <div class="testlab-grid">
+            <!-- Карточка 1: Проверка моделей Gemini -->
+            <div class="testlab-card">
+              <div class="testlab-card-header">
+                <div class="card-icon-badge">⚡</div>
+                <div>
+                  <h4 class="card-title">Диагностика моделей Gemini</h4>
+                  <span class="card-meta">Flash-Lite 3.5 (AQ...) / Flash 3.8 (pza...)</span>
+                </div>
+              </div>
+              <p class="card-desc">Отправляет проверочный пинг к обеим моделям, замеряет roundtrip задержку (мс) и статус авторизации.</p>
+              <div class="model-status-preview" id="modelsStatusPreview">
+                <div class="model-row">
+                  <span class="model-name">Flash-Lite 3.5:</span>
+                  <span class="model-badge" id="badgeFastModel">ОЖИДАНИЕ</span>
+                </div>
+                <div class="model-row">
+                  <span class="model-name">Flash 3.8 Heavy:</span>
+                  <span class="model-badge" id="badgeHeavyModel">ОЖИДАНИЕ</span>
+                </div>
+              </div>
+              <button id="btnTestModels" class="btn btn-primary btn-block">
+                <span class="btn-icon">⚡</span> Проверить отклик моделей
+              </button>
+            </div>
+
+            <!-- Карточка 2: Парсер трендов -->
+            <div class="testlab-card">
+              <div class="testlab-card-header">
+                <div class="card-icon-badge">📡</div>
+                <div>
+                  <h4 class="card-title">Парсер трендов</h4>
+                  <span class="card-meta">cron_trends.php (Tavily + Flash-Lite)</span>
+                </div>
+              </div>
+              <p class="card-desc">Поиск свежих инфоповодов о медленных сайтах и конструкторах, фильтрация через Flash-Lite 3.5 и запись в таблицу trends.</p>
+              <div class="card-metric-hint">
+                <span>Таблица: <code>trends</code></span>
+                <span>Модель: <code>MODEL_FAST</code></span>
+              </div>
+              <button id="btnRunTrends" class="btn btn-secondary btn-block">
+                <span class="btn-icon">▶</span> Запустить сбор трендов (cron_trends.php)
+              </button>
+            </div>
+
+            <!-- Карточка 3: B2B-Скаутинг -->
+            <div class="testlab-card">
+              <div class="testlab-card-header">
+                <div class="card-icon-badge">🎯</div>
+                <div>
+                  <h4 class="card-title">B2B-Скаутинг</h4>
+                  <span class="card-meta">cron_scout.php (Двухэтапный конвейер)</span>
+                </div>
+              </div>
+              <p class="card-desc">Аудит скорости PageSpeed v5, скриншот первого экрана, оценка 1-10 и генерация питча через Flash 3.8.</p>
+              <div class="form-group" style="margin-bottom: 10px;">
+                <input type="text" id="testScoutUrl" class="tech-input" placeholder="https://stroy-komplekt.ru" value="https://stroy-komplekt.ru" style="font-size: 12px; padding: 6px 10px;">
+              </div>
+              <button id="btnRunScout" class="btn btn-secondary btn-block">
+                <span class="btn-icon">▶</span> Запустить аудит и поиск лидов (cron_scout.php)
+              </button>
+            </div>
+
+            <!-- Карточка 4: Аналитика CRM -->
+            <div class="testlab-card">
+              <div class="testlab-card-header">
+                <div class="card-icon-badge">📊</div>
+                <div>
+                  <h4 class="card-title">Аналитика CRM</h4>
+                  <span class="card-meta">cron_analytics.php (Память агента)</span>
+                </div>
+              </div>
+              <p class="card-desc">Агрегация переходов по UTM-ссылкам, визитов и кликов, обновление раздела crm_memory в Базе Знаний.</p>
+              <div class="card-metric-hint">
+                <span>База: <code>knowledge_base</code></span>
+                <span>Раздел: <code>crm_memory</code></span>
+              </div>
+              <button id="btnRunAnalytics" class="btn btn-secondary btn-block">
+                <span class="btn-icon">▶</span> Пересчитать метрики и память ИИ
+              </button>
+            </div>
+          </div>
+
+          <!-- БЛОК 2: [Темная консоль вывода (Live Terminal)] -->
+          <div class="testlab-block-title" style="margin-top: 28px;">
+            <span class="block-num">БЛОК 2</span>
+            <h3>Темная консоль вывода (Live Terminal)</h3>
+          </div>
+
+          <div class="terminal-wrapper">
+            <div class="terminal-bar">
+              <div class="terminal-dots">
+                <span class="dot dot-red"></span>
+                <span class="dot dot-yellow"></span>
+                <span class="dot dot-green"></span>
+              </div>
+              <div class="terminal-title">bash - antidesigner-core@ispmanager: ~/cron_stream</div>
+              <div class="terminal-actions">
+                <button id="btnClearTerminal" class="term-btn" title="Очистить консоль">Очистить</button>
+                <button id="btnCopyTerminal" class="term-btn" title="Скопировать лог">Скопировать</button>
+              </div>
+            </div>
+            <div class="terminal-body" id="terminalScrollContainer">
+              <pre class="terminal-output" id="terminalOutput">[2026-11-11 23:55:00] AntiDesigner Core v4.2 Diagnostic Terminal initialized.
+[2026-11-11 23:55:00] Ready for manual test execution. Choose an action above or test the Telegram agent below.
+</pre>
+            </div>
+          </div>
+
+          <!-- БЛОК 3: [Песочница Telegram-Ассистента] -->
+          <div class="testlab-block-title" style="margin-top: 28px;">
+            <span class="block-num">БЛОК 3</span>
+            <h3>Песочница Telegram-Ассистента (Live Sandbox)</h3>
+          </div>
+
+          <div class="sandbox-card">
+            <div class="sandbox-header">
+              <p class="sandbox-subtitle">Проверка сквозного пайплайна клиентского диалога: фильтрация спама, детекция коммерческого интента, маршрутизация в Flash-Lite 3.5 со скиллом bot_consultant и замер задержки ответа.</p>
+            </div>
+
+            <!-- Готовые шаблоны фраз для быстрого клика -->
+            <div class="sandbox-suggestions">
+              <span class="sugg-label">Тестовые фразы:</span>
+              <button type="button" class="sugg-pill" data-phrase="Здравствуйте! Сколько стоит сайт на чистом коде?">Сколько стоит сайт на чистом коде?</button>
+              <button type="button" class="sugg-pill" data-phrase="У нас сайт на Тильде грузится 6 секунд с телефона. Можете ускорить?">Сайт на Тильде грузится 6 сек</button>
+              <button type="button" class="sugg-pill" data-phrase="Какие сроки разработки корпоративного сайта под ключ?">Сроки разработки сайта</button>
+              <button type="button" class="sugg-pill sugg-spam" data-phrase="Казино Вулкан дарит 500 фриспинов при регистрации!">Казино / Спам</button>
+              <button type="button" class="sugg-pill sugg-neutral" data-phrase="Привет! Какая сегодня погода в Москве?">Сообщение без интента</button>
+            </div>
+
+            <div class="sandbox-form">
+              <div class="form-group" style="margin-bottom: 12px;">
+                <label class="tech-label" for="testAssistantInput">Фраза потенциального клиента в Telegram:</label>
+                <div class="sandbox-input-row">
+                  <input type="text" id="testAssistantInput" class="tech-input" placeholder="Введите фразу клиента..." value="Здравствуйте! Сколько стоит сайт на чистом коде?">
+                  <button id="btnTestAssistant" class="btn btn-primary" style="white-space: nowrap;">
+                    <span class="btn-icon">💬</span> Проверить ответ ИИ
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Результаты симуляции -->
+            <div class="sandbox-verdict-box" id="sandboxVerdictBox">
+              <div class="verdict-chips-grid">
+                <div class="verdict-chip">
+                  <span class="chip-label">Фильтр спама</span>
+                  <span class="chip-val" id="chipSpamFilter">-</span>
+                </div>
+                <div class="verdict-chip">
+                  <span class="chip-label">Коммерческий интент</span>
+                  <span class="chip-val" id="chipIntent">-</span>
+                </div>
+                <div class="verdict-chip">
+                  <span class="chip-label">Выбранная модель</span>
+                  <span class="chip-val" id="chipModel">-</span>
+                </div>
+                <div class="verdict-chip">
+                  <span class="chip-label">Имитация typing</span>
+                  <span class="chip-val" id="chipDelay">-</span>
+                </div>
+              </div>
+
+              <!-- Диалоговый пузырь -->
+              <div class="sandbox-dialogue-preview" id="sandboxDialoguePreview" style="display: none;">
+                <div class="dialogue-bubble user-bubble">
+                  <div class="bubble-sender">Клиент</div>
+                  <div class="bubble-text" id="bubbleUserText">Здравствуйте! Сколько стоит сайт на чистом коде?</div>
+                </div>
+                <div class="dialogue-bubble bot-bubble">
+                  <div class="bubble-sender">🤖 Telegram-Ассистент (AntiDesigner)</div>
+                  <div class="bubble-text" id="bubbleBotText">...</div>
+                  <div class="bubble-meta" id="bubbleMeta">100% честность • Тарифная сетка 18к-35к+ руб</div>
+                </div>
+              </div>
+
+              <div class="sandbox-summary-text" id="sandboxSummaryText">
+                Нажмите «Проверить ответ ИИ» или выберите тестовую фразу выше для запуска симуляции.
+              </div>
             </div>
           </div>
         </section>

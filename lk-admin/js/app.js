@@ -51,6 +51,11 @@ document.addEventListener('DOMContentLoaded', () => {
       title: '⚙️ Скиллы (Промпты)',
       breadcrumb: 'SKILLS',
       onActivate: () => initSkillsTab()
+    },
+    testlab: {
+      title: '🧪 Тест-Центр',
+      breadcrumb: 'TESTLAB',
+      onActivate: () => initTestLabTab()
     }
   };
 
@@ -1079,6 +1084,8 @@ document.addEventListener('DOMContentLoaded', () => {
       archived: { list: document.getElementById('kanbanColArchived'), badge: document.getElementById('kanbanCountArchived') }
     };
 
+    const totalLeads = Object.values(counts || {}).reduce((a, b) => a + Number(b || 0), 0);
+
     Object.keys(colIds).forEach(status => {
       const col = colIds[status];
       if (col.badge) col.badge.textContent = counts[status] || 0;
@@ -1086,7 +1093,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const leads = columns[status] || [];
       if (leads.length === 0) {
-        col.list.innerHTML = '<div style="font-size:11.5px;color:var(--color-text-subtle);text-align:center;padding:24px 0;">Нет лидов</div>';
+        if (totalLeads === 0 && status === 'new') {
+          col.list.innerHTML = '<div style="font-size:12px;color:var(--color-text-muted);text-align:center;padding:24px 10px;line-height:1.4;">Лидов пока нет. Запустите поиск в Тест-Центре или дождитесь заявки</div>';
+        } else {
+          col.list.innerHTML = '<div style="font-size:11.5px;color:var(--color-text-subtle);text-align:center;padding:24px 0;">Нет лидов</div>';
+        }
         return;
       }
 
@@ -1548,7 +1559,10 @@ document.addEventListener('DOMContentLoaded', () => {
       : smmPlanItems.filter(i => i.status === smmStatusFilter);
 
     if (filtered.length === 0) {
-      smmTableBody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding:24px;color:var(--color-text-subtle);">Нет строк по выбранному статусу</td></tr>';
+      const emptyMsg = smmPlanItems.length === 0
+        ? 'Контент-план пуст. Нажмите «+ Добавить строку», «Спроектировать план на 1-2 дня (AI)» или выберите тему из Рубрикатора ниже.'
+        : 'Нет строк по выбранному статусу';
+      smmTableBody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding:36px 20px;color:var(--color-text-muted);font-size:13px;">${emptyMsg}</td></tr>`;
       return;
     }
 
@@ -2268,7 +2282,12 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       if (botLeadsData.length === 0) {
-        botLeadsList.innerHTML = '<div class="messenger-loading-hint">Нет активных диалогов</div>';
+        botLeadsList.innerHTML = '<div class="messenger-loading-hint" style="padding: 30px 15px; text-align: center; color: var(--color-text-muted);">Нет активных диалогов.<br><span style="font-size: 11px; opacity: 0.8;">Ожидаем обращений клиентов</span></div>';
+        if (chatMessagesStream) {
+          chatMessagesStream.innerHTML = '<div class="chat-empty-hint">Переписка чиста. При первом обращении клиента в Telegram здесь появится живой диалог.</div>';
+        }
+        const nameEl = document.getElementById('chatLeadName');
+        if (nameEl) nameEl.textContent = 'Нет активных диалогов';
         return;
       }
 
@@ -2754,11 +2773,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (filtered.length === 0) {
+      const isTotallyEmpty = outreachLeads.length === 0;
       outreachLeadsList.innerHTML = `
         <div class="module-placeholder-box" style="padding: 40px 20px;">
-          <div class="box-icon">🔍</div>
-          <h3>Лиды не найдены</h3>
-          <p>По вашему фильтру нет целевых сайтов. Запустите квалификацию нового URL выше или сбросьте фильтр.</p>
+          <div class="box-icon">🎯</div>
+          <h3>${isTotallyEmpty ? 'История проверок чиста' : 'Лиды не найдены'}</h3>
+          <p>${isTotallyEmpty ? 'Введите URL сайта выше для запуска квалификации или запустите B2B-скаут в Тест-Центре.' : 'По вашему фильтру нет целевых сайтов. Запустите квалификацию нового URL выше или сбросьте фильтр.'}</p>
         </div>
       `;
       return;
@@ -3421,6 +3441,302 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (e) {
       showToast(e.message, 'error');
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // 7.8. ВКЛАДКА: ТЕСТ-ЦЕНТР (#testlab) & LIVE TERMINAL
+  // ---------------------------------------------------------------------------
+  let testlabInitialized = false;
+
+  const appendTerminalLog = (text) => {
+    const termOutput = document.getElementById('terminalOutput');
+    const scrollContainer = document.getElementById('terminalScrollContainer');
+    if (!termOutput) return;
+
+    const trimmed = (text || '').trim();
+    if (!trimmed) return;
+
+    termOutput.textContent += '\n' + trimmed;
+    if (scrollContainer) {
+      scrollContainer.scrollTop = scrollContainer.scrollHeight;
+    }
+  };
+
+  const initTestLabTab = () => {
+    if (testlabInitialized) return;
+    testlabInitialized = true;
+
+    const btnTestModels = document.getElementById('btnTestModels');
+    const btnRunTrends = document.getElementById('btnRunTrends');
+    const btnRunScout = document.getElementById('btnRunScout');
+    const btnRunAnalytics = document.getElementById('btnRunAnalytics');
+    const btnClearTerminal = document.getElementById('btnClearTerminal');
+    const btnCopyTerminal = document.getElementById('btnCopyTerminal');
+
+    const badgeFast = document.getElementById('badgeFastModel');
+    const badgeHeavy = document.getElementById('badgeHeavyModel');
+    const testScoutUrl = document.getElementById('testScoutUrl');
+
+    const btnTestAssistant = document.getElementById('btnTestAssistant');
+    const testAssistantInput = document.getElementById('testAssistantInput');
+    const suggPills = document.querySelectorAll('.sugg-pill');
+
+    const chipSpam = document.getElementById('chipSpamFilter');
+    const chipIntent = document.getElementById('chipIntent');
+    const chipModel = document.getElementById('chipModel');
+    const chipDelay = document.getElementById('chipDelay');
+
+    const dialoguePreview = document.getElementById('sandboxDialoguePreview');
+    const bubbleUser = document.getElementById('bubbleUserText');
+    const bubbleBot = document.getElementById('bubbleBotText');
+    const sandboxSummary = document.getElementById('sandboxSummaryText');
+
+    // Кнопка 1: Проверка моделей Gemini
+    if (btnTestModels) {
+      btnTestModels.addEventListener('click', async () => {
+        btnTestModels.disabled = true;
+        const originalText = btnTestModels.innerHTML;
+        btnTestModels.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Проверка моделей...';
+        appendTerminalLog(`\n[${new Date().toLocaleTimeString()}] Запуск диагностики моделей Gemini (Flash-Lite 3.5 & Flash 3.8)...`);
+
+        try {
+          const resp = await fetch('api/test_runner.php?action=test_models');
+          const data = await resp.json();
+
+          if (data.status === 'success') {
+            appendTerminalLog(data.log);
+
+            if (badgeFast) {
+              const fastOk = data.fast_model && data.fast_model.status === 'online';
+              badgeFast.className = `model-badge ${fastOk ? 'online' : 'offline'}`;
+              badgeFast.textContent = fastOk ? `ONLINE (${data.fast_model.latency_ms} мс)` : 'OFFLINE';
+            }
+
+            if (badgeHeavy) {
+              const heavyOk = data.heavy_model && data.heavy_model.status === 'online';
+              badgeHeavy.className = `model-badge ${heavyOk ? 'online' : 'offline'}`;
+              badgeHeavy.textContent = heavyOk ? `ONLINE (${data.heavy_model.latency_ms} мс)` : 'OFFLINE';
+            }
+
+            showToast('Диагностика моделей Gemini завершена', 'success');
+          } else {
+            appendTerminalLog(`[ERROR] Ошибка проверки: ${data.message || 'Неизвестная ошибка'}`);
+            showToast(data.message || 'Ошибка проверки', 'error');
+          }
+        } catch (e) {
+          appendTerminalLog(`[ERROR] Сетевая ошибка: ${e.message}`);
+          showToast(e.message, 'error');
+        } finally {
+          btnTestModels.disabled = false;
+          btnTestModels.innerHTML = originalText;
+        }
+      });
+    }
+
+    // Кнопка 2: Парсер трендов
+    if (btnRunTrends) {
+      btnRunTrends.addEventListener('click', async () => {
+        btnRunTrends.disabled = true;
+        const originalText = btnRunTrends.innerHTML;
+        btnRunTrends.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Сбор трендов...';
+        appendTerminalLog(`\n[${new Date().toLocaleTimeString()}] Запуск фонового скрипта cron_trends.php...`);
+
+        try {
+          const resp = await fetch('api/test_runner.php?action=run_trends');
+          const data = await resp.json();
+
+          if (data.status === 'success') {
+            appendTerminalLog(data.log);
+            showToast('Сбор трендов успешно завершен', 'success');
+          } else {
+            appendTerminalLog(`[ERROR] Ошибка cron_trends: ${data.message || 'Неизвестная ошибка'}`);
+            showToast(data.message || 'Ошибка', 'error');
+          }
+        } catch (e) {
+          appendTerminalLog(`[ERROR] Сетевая ошибка: ${e.message}`);
+          showToast(e.message, 'error');
+        } finally {
+          btnRunTrends.disabled = false;
+          btnRunTrends.innerHTML = originalText;
+        }
+      });
+    }
+
+    // Кнопка 3: B2B Скаут
+    if (btnRunScout) {
+      btnRunScout.addEventListener('click', async () => {
+        const url = (testScoutUrl ? testScoutUrl.value.trim() : '') || 'https://stroy-komplekt.ru';
+        btnRunScout.disabled = true;
+        const originalText = btnRunScout.innerHTML;
+        btnRunScout.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Скаутинг...';
+        appendTerminalLog(`\n[${new Date().toLocaleTimeString()}] Запуск cron_scout.php для целевого сайта: ${url}...`);
+
+        try {
+          const resp = await fetch(`api/test_runner.php?action=run_scout&url=${encodeURIComponent(url)}`);
+          const data = await resp.json();
+
+          if (data.status === 'success') {
+            appendTerminalLog(data.log);
+            showToast('B2B-скаутинг сайта завершен', 'success');
+          } else {
+            appendTerminalLog(`[ERROR] Ошибка cron_scout: ${data.message || 'Неизвестная ошибка'}`);
+            showToast(data.message || 'Ошибка', 'error');
+          }
+        } catch (e) {
+          appendTerminalLog(`[ERROR] Сетевая ошибка: ${e.message}`);
+          showToast(e.message, 'error');
+        } finally {
+          btnRunScout.disabled = false;
+          btnRunScout.innerHTML = originalText;
+        }
+      });
+    }
+
+    // Кнопка 4: Аналитика CRM
+    if (btnRunAnalytics) {
+      btnRunAnalytics.addEventListener('click', async () => {
+        btnRunAnalytics.disabled = true;
+        const originalText = btnRunAnalytics.innerHTML;
+        btnRunAnalytics.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Аналитика...';
+        appendTerminalLog(`\n[${new Date().toLocaleTimeString()}] Запуск cron_analytics.php...`);
+
+        try {
+          const resp = await fetch('api/test_runner.php?action=run_analytics');
+          const data = await resp.json();
+
+          if (data.status === 'success') {
+            appendTerminalLog(data.log);
+            showToast('CRM-память и аналитика обновлены', 'success');
+          } else {
+            appendTerminalLog(`[ERROR] Ошибка cron_analytics: ${data.message || 'Неизвестная ошибка'}`);
+            showToast(data.message || 'Ошибка', 'error');
+          }
+        } catch (e) {
+          appendTerminalLog(`[ERROR] Сетевая ошибка: ${e.message}`);
+          showToast(e.message, 'error');
+        } finally {
+          btnRunAnalytics.disabled = false;
+          btnRunAnalytics.innerHTML = originalText;
+        }
+      });
+    }
+
+    // Кнопка очистки терминала
+    if (btnClearTerminal) {
+      btnClearTerminal.addEventListener('click', () => {
+        const termOutput = document.getElementById('terminalOutput');
+        if (termOutput) {
+          termOutput.textContent = `[${new Date().toLocaleTimeString()}] Консоль очищена.\n`;
+        }
+        showToast('Терминал очищен', 'info');
+      });
+    }
+
+    // Кнопка копирования терминала
+    if (btnCopyTerminal) {
+      btnCopyTerminal.addEventListener('click', async () => {
+        const termOutput = document.getElementById('terminalOutput');
+        if (!termOutput) return;
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(termOutput.textContent);
+          } else {
+            const ta = document.createElement('textarea');
+            ta.value = termOutput.textContent;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+          }
+          showToast('Лог терминала скопирован в буфер', 'success');
+        } catch (e) {
+          showToast('Не удалось скопировать лог', 'error');
+        }
+      });
+    }
+
+    // Быстрые шаблоны фраз в песочнице
+    suggPills.forEach(pill => {
+      pill.addEventListener('click', () => {
+        const phrase = pill.getAttribute('data-phrase');
+        if (phrase && testAssistantInput) {
+          testAssistantInput.value = phrase;
+          testAssistantInput.focus();
+        }
+      });
+    });
+
+    // Песочница Telegram-Ассистента
+    if (btnTestAssistant) {
+      btnTestAssistant.addEventListener('click', async () => {
+        const msg = testAssistantInput ? testAssistantInput.value.trim() : '';
+        if (!msg) {
+          showToast('Введите фразу для проверки', 'warning');
+          return;
+        }
+
+        btnTestAssistant.disabled = true;
+        const originalText = btnTestAssistant.innerHTML;
+        btnTestAssistant.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Проверка...';
+
+        if (dialoguePreview) dialoguePreview.style.display = 'flex';
+        if (bubbleUser) bubbleUser.textContent = msg;
+        if (bubbleBot) bubbleBot.textContent = 'Печатает ответ...';
+        if (sandboxSummary) sandboxSummary.textContent = 'Обработка сообщения ассистентом...';
+
+        try {
+          const resp = await fetch('api/test_runner.php?action=test_agent_message', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: msg, sender_name: 'Клиент (Песочница)' })
+          });
+          const data = await resp.json();
+
+          if (data.status === 'success') {
+            appendTerminalLog(`\n[${new Date().toLocaleTimeString()}] ТЕСТ TELEGRAM-АССИСТЕНТА:\n${data.log}`);
+
+            // Обновляем плашки вердикта
+            if (chipSpam) {
+              const isClean = !data.spam_filter.includes('BLOCKED');
+              chipSpam.className = `chip-val ${isClean ? 'clean' : 'blocked'}`;
+              chipSpam.textContent = data.spam_filter;
+            }
+
+            if (chipIntent) {
+              chipIntent.className = `chip-val ${data.intent_detected ? 'intent-yes' : 'intent-no'}`;
+              chipIntent.textContent = data.intent_detected ? `ОБНАРУЖЕН (${data.matched_keyword || ''})` : 'НЕТ';
+            }
+
+            if (chipModel) {
+              chipModel.textContent = data.selected_model;
+            }
+
+            if (chipDelay) {
+              chipDelay.textContent = data.typing_delay;
+            }
+
+            if (bubbleBot) {
+              bubbleBot.textContent = data.reply;
+            }
+
+            if (sandboxSummary) {
+              sandboxSummary.textContent = data.verdict;
+            }
+
+            showToast('Симуляция Telegram-ассистента выполнена', 'success');
+          } else {
+            appendTerminalLog(`[ERROR] Ошибка симуляции: ${data.message || 'Неизвестная ошибка'}`);
+            showToast(data.message || 'Ошибка', 'error');
+          }
+        } catch (e) {
+          appendTerminalLog(`[ERROR] Сетевая ошибка: ${e.message}`);
+          showToast(e.message, 'error');
+        } finally {
+          btnTestAssistant.disabled = false;
+          btnTestAssistant.innerHTML = originalText;
+        }
+      });
     }
   };
 
