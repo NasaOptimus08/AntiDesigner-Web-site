@@ -4,17 +4,18 @@ declare(strict_types=1);
 /**
  * =============================================================================
  * ANTIDESIGNER CORE — AI ROUTER (Dual-Tier Model & Budget Orchestrator)
- * Routes requests to Fast or Heavy Gemini models with strict cost controls.
+ * Routes requests to Fast (Google AI Studio) or Heavy (Polza.ai / Gemini 3.8)
+ * with strict cost controls and typography rules.
  * =============================================================================
  */
 
 class AIRouter
 {
-    // Модели Gemini
-    public const MODEL_FAST = 'gemini-3.5-flash-lite';
-    public const MODEL_HEAVY = 'gemini-3.8-flash';
+    // Модели
+    public const MODEL_FAST  = 'gemini-3.5-flash-lite';     // Google AI Studio
+    public const MODEL_HEAVY = 'google/gemini-3.8-flash';    // Polza.ai
 
-    // Типы контентных задач
+    // Константы задач
     public const TASK_LONGREAD    = 'vc_ru';
     public const TASK_LEAD_MAGNET = 'lead_magnet';
     public const TASK_TELEGRAM    = 'tg_post';
@@ -24,6 +25,7 @@ class AIRouter
     private string $fastApiKey;
     private string $heavyApiKey;
     private string $fallbackApiKey;
+    private string $polzaBaseUrl;
 
     /**
      * @param array<string, mixed>|string $configOrFastKey Массив конфигурации или ключ для Fast
@@ -41,11 +43,23 @@ class AIRouter
             $this->fallbackApiKey = trim((string)($config['gemini_api_key'] ?? ''));
             $this->fastApiKey     = trim((string)($config['gemini_fast_api_key'] ?? '')) ?: $this->fallbackApiKey;
             $this->heavyApiKey    = trim((string)($config['gemini_heavy_api_key'] ?? '')) ?: $this->fallbackApiKey;
+            $this->polzaBaseUrl   = rtrim((string)($config['polza_api_url'] ?? 'https://polza.ai/api/v1'), '/');
         } else {
             $this->fastApiKey     = trim($configOrFastKey);
             $this->heavyApiKey    = trim($heavyKey) ?: $this->fastApiKey;
             $this->fallbackApiKey = $this->fastApiKey;
+            $this->polzaBaseUrl   = 'https://polza.ai/api/v1';
         }
+    }
+
+    /**
+     * Проверка, использует ли ключ/модель провайдер Polza.ai
+     */
+    public function isPolzaModel(string $model): bool
+    {
+        return str_starts_with($this->heavyApiKey, 'pza_')
+            || str_contains($model, 'google/gemini')
+            || ($model === self::MODEL_HEAVY);
     }
 
     /**
@@ -59,7 +73,6 @@ class AIRouter
 
         $key = $isFast ? $this->fastApiKey : $this->heavyApiKey;
 
-        // Если специфический ключ пуст, пробуем универсальный фоллбэк
         if ($key === '') {
             $key = $this->fallbackApiKey;
         }
@@ -96,16 +109,100 @@ class AIRouter
 
         $fullSystemInstruction = trim($systemInstruction) . $typographyRule;
 
-        // 2. Формирование тела запроса (payload)
+        // 2. Отправка запроса в зависимости от провайдера
+        if ($this->isPolzaModel($model)) {
+            $generatedText = $this->sendPolzaRequest($model, $fullSystemInstruction, $userPrompt);
+        } else {
+            $generatedText = $this->sendGoogleRequest($model, $fullSystemInstruction, $userPrompt);
+        }
+
+        // 3. Постобработка: гарантия отсутствия длинных тире в готовом контенте
+        return str_replace(['—', '–'], '-', trim($generatedText));
+    }
+
+    /**
+     * Запрос к Polza.ai (OpenAI-совместимый API)
+     */
+    public function sendPolzaRequest(string $model, string $systemInstruction, string $userPrompt): string
+    {
+        $apiKey = $this->getApiKeyForModel($model);
+        $url = "{$this->polzaBaseUrl}/chat/completions";
+
+        $payload = [
+            'model'    => $model,
+            'messages' => [
+                ['role' => 'system', 'content' => $systemInstruction],
+                ['role' => 'user', 'content' => $userPrompt]
+            ],
+            'temperature' => 0.7
+        ];
+
+        $jsonData = json_encode($payload, JSON_UNESCAPED_UNICODE);
+
+        $ch = curl_init();
+        curl_setopt_array($ch, [
+            CURLOPT_URL            => $url,
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => $jsonData,
+            CURLOPT_HTTPHEADER     => [
+                "Authorization: Bearer {$apiKey}",
+                'Content-Type: application/json; charset=utf-8',
+                'Accept: application/json'
+            ],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 60,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_SSL_VERIFYPEER => true
+        ]);
+
+        $responseBody = curl_exec($ch);
+        $httpCode     = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError    = curl_error($ch);
+        curl_close($ch);
+
+        if ($curlError !== '') {
+            throw new RuntimeException("cURL ошибка Polza.ai [{$model}]: {$curlError}");
+        }
+
+        if (!is_string($responseBody) || $responseBody === '') {
+            throw new RuntimeException("Polza.ai [{$model}] вернул пустой ответ (HTTP {$httpCode})");
+        }
+
+        $decoded = json_decode($responseBody, true);
+        if (!is_array($decoded)) {
+            throw new RuntimeException("Ошибка декодирования ответа Polza.ai (HTTP {$httpCode})");
+        }
+
+        if ($httpCode !== 200 || isset($decoded['error'])) {
+            $msg = $decoded['error']['message'] ?? $decoded['error'] ?? "HTTP {$httpCode}";
+            throw new RuntimeException("Polza.ai Error [{$httpCode}]: " . (is_string($msg) ? $msg : json_encode($msg)));
+        }
+
+        $content = $decoded['choices'][0]['message']['content'] ?? '';
+        if ($content === '') {
+            throw new RuntimeException("Polza.ai вернул пустой текст ответа");
+        }
+
+        return (string)$content;
+    }
+
+    /**
+     * Запрос к Google AI Studio (Native REST API)
+     */
+    public function sendGoogleRequest(string $model, string $systemInstruction, string $userPrompt): string
+    {
+        $apiKey = $this->getApiKeyForModel($model);
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
+
         $payload = [
             'system_instruction' => [
                 'parts' => [
-                    ['text' => $fullSystemInstruction]
+                    ['text' => $systemInstruction]
                 ]
             ],
             'contents' => [
                 [
-                    'role' => 'user',
+                    'role'  => 'user',
                     'parts' => [
                         ['text' => $userPrompt]
                     ]
@@ -117,45 +214,7 @@ class AIRouter
             ]
         ];
 
-        // 3. Жесткая экономия для Heavy: отключаем платный reasoning и внешние tools
-        if ($model === self::MODEL_HEAVY) {
-            $payload['generationConfig']['thinkingConfig'] = [
-                'thinkingBudget' => 0
-            ];
-            // Отключаем платные инструменты Google Search Grounding если не запрошены явно
-            unset($payload['tools']);
-        }
-
-        // 4. Отправка запроса
-        $response = $this->sendRequest($model, $payload);
-
-        // 5. Извлечение сгенерированного текста
-        $generatedText = '';
-        if (isset($response['candidates'][0]['content']['parts'][0]['text'])) {
-            $generatedText = (string)$response['candidates'][0]['content']['parts'][0]['text'];
-        } elseif (isset($response['candidates'][0]['finishReason'])) {
-            $reason = (string)$response['candidates'][0]['finishReason'];
-            throw new RuntimeException("Генерация остановлена фильтром безопасности: finishReason = {$reason}");
-        } else {
-            throw new RuntimeException('Модель вернула пустой ответ или неожиданный формат данных');
-        }
-
-        // 6. Постобработка: гарантия отсутствия длинных тире в готовом контенте
-        return str_replace(['—', '–'], '-', trim($generatedText));
-    }
-
-    /**
-     * Низкоуровневая отправка HTTP cURL-запроса к Google AI Studio
-     */
-    public function sendRequest(string $model, array $payload): array
-    {
-        $apiKey = $this->getApiKeyForModel($model);
-        $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
-
         $jsonData = json_encode($payload, JSON_UNESCAPED_UNICODE);
-        if ($jsonData === false) {
-            throw new RuntimeException('Ошибка сериализации JSON для Gemini API: ' . json_last_error_msg());
-        }
 
         $ch = curl_init();
         curl_setopt_array($ch, [
@@ -178,30 +237,42 @@ class AIRouter
         curl_close($ch);
 
         if ($curlError !== '') {
-            throw new RuntimeException("Сетевая ошибка cURL при обращении к модели [{$model}]: {$curlError}");
+            throw new RuntimeException("cURL ошибка Google AI [{$model}]: {$curlError}");
         }
 
         if (!is_string($responseBody) || $responseBody === '') {
-            throw new RuntimeException("Модель [{$model}] вернула пустой HTTP-ответ (HTTP {$httpCode})");
+            throw new RuntimeException("Google AI [{$model}] вернул пустой ответ (HTTP {$httpCode})");
         }
 
         $decoded = json_decode($responseBody, true);
         if (!is_array($decoded)) {
-            throw new RuntimeException("Не удалось декодировать ответ Gemini API (HTTP {$httpCode}): " . substr($responseBody, 0, 300));
+            throw new RuntimeException("Ошибка декодирования ответа Google AI (HTTP {$httpCode})");
         }
 
         if ($httpCode !== 200 || isset($decoded['error'])) {
-            $errorMessage = $decoded['error']['message'] ?? "HTTP ошибка {$httpCode}";
-            $errorCode    = $decoded['error']['code'] ?? $httpCode;
-            throw new RuntimeException("Gemini API Error [{$errorCode}] для модели [{$model}]: {$errorMessage}");
+            $msg = $decoded['error']['message'] ?? "HTTP {$httpCode}";
+            throw new RuntimeException("Google AI Error [{$httpCode}]: {$msg}");
         }
 
-        return $decoded;
+        $content = $decoded['candidates'][0]['content']['parts'][0]['text'] ?? '';
+        if ($content === '') {
+            throw new RuntimeException("Google AI вернул пустой текст ответа");
+        }
+
+        return (string)$content;
     }
 
     /**
-     * Геттеры для проверки состояния
+     * Микро-пинг для диагностики
      */
+    public function ping(string $model): string
+    {
+        if ($this->isPolzaModel($model)) {
+            return $this->sendPolzaRequest($model, 'Ты — помощник. Отвечай кратко.', 'Ответь одним словом: OK');
+        }
+        return $this->sendGoogleRequest($model, 'Ты — помощник. Отвечай кратко.', 'Ответь одним словом: OK');
+    }
+
     public function isFastKeyConfigured(): bool
     {
         return $this->fastApiKey !== '';
