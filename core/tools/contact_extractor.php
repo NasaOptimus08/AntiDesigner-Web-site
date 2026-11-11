@@ -239,3 +239,4 @@ if (!function_exists('extractLPRContacts')) {
         ];
     }
 }
+

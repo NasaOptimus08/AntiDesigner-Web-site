@@ -187,3 +187,4 @@ if (!function_exists('auditPageSpeed')) {
         ];
     }
 }
+

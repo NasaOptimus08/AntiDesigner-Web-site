@@ -190,3 +190,4 @@ if (!function_exists('saveTrendsToDatabase')) {
         return $savedCount;
     }
 }
+

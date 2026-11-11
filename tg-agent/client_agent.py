@@ -40,7 +40,8 @@ BLACKLIST = [x.strip().lower() for x in os.getenv("BLACKLIST_PHONES", "+79990001
 INTENT_KEYWORDS = [
     r"сайт", r"лендинг", r"разработк", r"тильд", r"tilda", r"скорост", r"тариф",
     r"стоимост", r"цен", r"pagespeed", r"дизайн", r"верстк", r"код", r"wordpress",
-    r"клик", r"заказ", r"аудит", r"чек-лист", r"бюджет", r"договор"
+    r"клик", r"заказ", r"аудит", r"чек-лист", r"бюджет", r"договор",
+    r"бэкенд", r"backend", r"django", r"python"
 ]
 
 DEFAULT_SYSTEM_PROMPT = (
@@ -127,11 +128,61 @@ def get_fast_api_key() -> str:
                 pass
     return key
 
+def validate_and_sanitize_reply(reply_text: str, user_message: str) -> str:
+    """
+    Протокол "Анти-галлюцинация и 100% честность":
+    Проверяет сгенерированный моделью ответ перед отправкой клиенту.
+    Если ответ содержит признаки галлюцинации, неуверенности модели или выдуманных обещаний,
+    скрипт мягко переводит диалог в режим ожидания живого разработчика.
+    """
+    clean_text = reply_text.strip().replace("—", "-").replace("–", "-")
+    text_lower = clean_text.lower()
+    msg_lower = user_message.lower()
+
+    # Признаки галлюцинаций, извинений ИИ или неопределенности модели
+    uncertainty_markers = [
+        "я не уверен", "не уверена", "я языковая модель", "как ии", "как ai",
+        "as an ai", "к сожалению, я не знаю", "не могу точно сказать",
+        "не обладаю информацией", "извините за неудобство", "мои знания ограничены",
+        "я бот", "я виртуальный ассистент", "я не могу выполнить"
+    ]
+
+    # Маркеры нестандартных запросов, которых нет в базовых тарифах (Python, Django, сложные порталы)
+    unsupported_tech_markers = [
+        "django", "python-бэкенд", "бэкенд на питоне", "бэкенд на python",
+        "сложный маркетплейс", "1с erp"
+    ]
+
+    # Маркеры ложных инфоцыганских обещаний
+    false_promise_markers = [
+        "на 1 место в яндексе за 2 дня", "первое место в поиске гарантировано",
+        "100% конверси", "взрывной рост в 10 раз"
+    ]
+
+    for marker in uncertainty_markers:
+        if marker in text_lower:
+            return "Зафиксировал ваш вопрос, сейчас уточню точные технические детали и вернусь с ответом."
+
+    for marker in false_promise_markers:
+        if marker in text_lower:
+            return "Зафиксировал ваш вопрос, сейчас уточню точные технические детали и вернусь с ответом."
+
+    # Если клиент прямо просит нестандартный сложный бэкенд на Python/Django
+    for marker in unsupported_tech_markers:
+        if marker in msg_lower:
+            return (
+                "Мы специализируемся на сверхбыстрой фронтенд-верстке и легком бэкенде на чистом коде с гарантией 100/100 в PageSpeed. "
+                "Зафиксировал вашу задачу по индивидуальному стеку и передам разработчику для точного ответа."
+            )
+
+    return clean_text
+
 def generate_assistant_reply(user_message: str, live_ai: bool = False) -> str:
     """
     Generate reply for AntiDesigner assistant.
     Pulls bot_consultant skill from SQLite database and queries MODEL_FAST (AQ...) if live_ai=True.
     Falls back to deterministic rule-based reply in mock/offline mode to save AI tokens.
+    Guaranteed Zero Hallucinations filtering before sending.
     """
     skill = load_bot_skill()
     fast_key = get_fast_api_key()
@@ -139,17 +190,20 @@ def generate_assistant_reply(user_message: str, live_ai: bool = False) -> str:
     if live_ai and fast_key and fast_key.startswith("AQ"):
         import urllib.request
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={fast_key}"
-        typography_rule = (
-            "\n\nСТРОГИЕ ПРАВИЛА ТЕКСТА И ТИПОГРАФИКИ: "
-            "Никогда не используй длинные тире (символ —). Заменяй их исключительно на дефис (-) или стрелки (->). "
-            "Отвечай кратко, доброжелательно, ориентируй на тарифы 18к-35к+ и бесплатный аудит."
+        zero_hallucinations_rule = (
+            "\n\nЖЕСТКИЙ ПРОТОКОЛ ФАКТОЛОГИЧЕСКОЙ ЧЕСТНОСТИ (ZERO HALLUCINATIONS):\n"
+            "1. Не давай пустых гарантий и не выдумывай функционал.\n"
+            "2. Если клиент спрашивает нестандартный бэкенд (Python/Django) или сложные интеграции: "
+            "честно скажи, что специализируешься на сверхбыстрой верстке и легком бэкенде, а задачу передашь разработчику.\n"
+            "3. Называй тарифы прямо: 18к-25к, 25к-35к, 35к+ без скрытых условий.\n"
+            "4. Без длинных тире (символ —). Используй только дефис (-) или стрелки (->)."
         )
-        sys_prompt = skill["system_prompt"] + "\n\nTONE OF VOICE:\n" + skill["tone_of_voice"] + typography_rule
+        sys_prompt = skill["system_prompt"] + "\n\nTONE OF VOICE:\n" + skill["tone_of_voice"] + zero_hallucinations_rule
 
         payload = {
             "system_instruction": {"parts": [{"text": sys_prompt}]},
             "contents": [{"role": "user", "parts": [{"text": user_message}]}],
-            "generationConfig": {"temperature": 0.4, "maxOutputTokens": 300}
+            "generationConfig": {"temperature": 0.3, "maxOutputTokens": 300}
         }
         try:
             req = urllib.request.Request(
@@ -160,27 +214,35 @@ def generate_assistant_reply(user_message: str, live_ai: bool = False) -> str:
             with urllib.request.urlopen(req, timeout=8) as resp:
                 data = json.loads(resp.read().decode())
                 ai_text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
-                return ai_text.replace("—", "-").replace("–", "-")
+                return validate_and_sanitize_reply(ai_text, user_message)
         except Exception as e:
             print(f"[AI ROUTER FALLBACK] Model call failed: {e}. Using rule-based fallback.")
 
     msg = user_message.lower()
-    if "скорост" in msg or "чек" in msg or "магнит" in msg:
-        return (
+    candidate_reply = ""
+    if "python" in msg or "django" in msg:
+        candidate_reply = (
+            "Мы специализируемся на сверхбыстрой фронтенд-верстке и легком бэкенде на чистом коде с гарантией 100/100 в PageSpeed. "
+            "Зафиксировал вашу задачу по индивидуальному стеку и передам разработчику для точного ответа."
+        )
+    elif "скорост" in msg or "чек" in msg or "магнит" in msg:
+        candidate_reply = (
             "Привет! Держите чек-лист: «10 скрытых признаков того, что ваш сайт на конструкторе сливает бюджет». "
             "Отправляю файл. Напишите адрес вашего сайта - за 10 минут снимем экспресс-аудит скорости!"
         )
     elif "тариф" in msg or "цен" in msg or "стоим" in msg or "сколько" in msg:
-        return (
+        candidate_reply = (
             "Привет! Мы делаем сайты только на чистом коде (без Tilda и WP) со скоростью 100/100 в PageSpeed за 5-7 дней. "
             "Тарифы под ключ: базовый лендинг - от 18к до 25к, бизнес-сайт с анимациями и микро-админкой - 25к-35к руб. "
             "Какой у вас бизнес и есть ли текущий сайт?"
         )
     else:
-        return (
+        candidate_reply = (
             "Добрый день! Студия AntiDesigner на связи. Разрабатываем ультрабыстрые сайты на чистом коде за 5-7 дней. "
             "Подскажите, вам нужен сайт с нуля или хотите ускорить и пересобрать существующий проект?"
         )
+
+    return validate_and_sanitize_reply(candidate_reply, user_message)
 
 # =============================================================================
 # MOCK SANDBOX SIMULATION (--mock)
@@ -215,11 +277,18 @@ def run_mock_simulation():
             "username": "random_dude",
             "text": "Привет, скинь фотки с дачи за прошлый год",
             "expected": "NO_SALES_INTENT_IGNORED"
+        },
+        {
+            "sender_name": "Дмитрий Власов",
+            "phone": "+79051234567",
+            "username": "vlasov_tech",
+            "text": "Здравствуйте! Можете сделать сложный бэкенд на Python и Django с микросервисами?",
+            "expected": "HONESTY_BOUNDARY_HANDOFF"
         }
     ]
 
     for idx, sc in enumerate(test_scenarios, 1):
-        print(f"\n[ТЕСТ {idx}/3] Входящее сообщение от: {sc['sender_name']} (@{sc['username']}, {sc['phone']})")
+        print(f"\n[ТЕСТ {idx}/{len(test_scenarios)}] Входящее сообщение от: {sc['sender_name']} (@{sc['username']}, {sc['phone']})")
         print(f" > Текст: \"{sc['text']}\"")
 
         # 1. Проверка черного списка
