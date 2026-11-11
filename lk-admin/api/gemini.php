@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 /**
  * =============================================================================
- * ANTIDESIGNER CORE — GEMINI API CLIENT (Google AI Studio REST cURL)
+ * ANTIDESIGNER CORE - GEMINI API CLIENT (Google AI Studio REST cURL)
  * Zero heavy frameworks, native PHP FastCGI execution
  * =============================================================================
  */

@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 /**
  * =============================================================================
- * ANTIDESIGNER CORE — SECURE FILE UPLOAD HANDLER
+ * ANTIDESIGNER CORE - SECURE FILE UPLOAD HANDLER
  * Handles document parsing (.pdf, .docx, .md, .txt, scripts) for RAG & Skills
  * =============================================================================
  */

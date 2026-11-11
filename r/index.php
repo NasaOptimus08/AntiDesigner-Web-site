@@ -20,7 +20,7 @@ if ($slug === '' && !empty($_SERVER['PATH_INFO'])) {
     $slug = trim($_SERVER['PATH_INFO'], '/');
 }
 
-// Предопределенные шорткаты студии для постов и рекламы
+// Предопределенные шорткаты для постов и рекламы AntiDesigner (личный бренд Евгения Антипина)
 $predefinedSlugs = [
     'speed'     => 'https://t.me/AntiDesigner01?start=speed_audit',
     'checklist' => 'https://t.me/AntiDesigner01?start=checklist',

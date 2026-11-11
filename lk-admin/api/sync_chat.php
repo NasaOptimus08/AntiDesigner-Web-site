@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 /**
  * =============================================================================
- * ANTIDESIGNER CORE — TELEGRAM CHAT SYNCHRONIZATION API
+ * ANTIDESIGNER CORE - TELEGRAM CHAT SYNCHRONIZATION API
  * Receives messages from local / VPS Python client_agent.py and logs to SQLite
  * =============================================================================
  */

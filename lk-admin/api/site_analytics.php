@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 /**
  * =============================================================================
- * ANTIDESIGNER CORE — SITE ANALYTICS API (Visits, Scroll Funnel & Button Clicks)
+ * ANTIDESIGNER CORE - SITE ANALYTICS API (Visits, Scroll Funnel & Button Clicks)
  * Lightweight FastCGI SQLite handler
  * =============================================================================
  */

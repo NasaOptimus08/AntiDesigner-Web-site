@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 /**
  * =============================================================================
- * ANTIDESIGNER CORE — AI DIAGNOSTICS & PING TEST
+ * ANTIDESIGNER CORE - AI DIAGNOSTICS & PING TEST
  * Tests both Fast (Google AI Studio) and Heavy (Polza.ai / Gemini 3.8) models.
  * =============================================================================
  */

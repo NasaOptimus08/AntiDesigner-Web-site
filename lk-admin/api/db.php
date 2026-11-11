@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * AntiDesigner Core — Базовый коннектор к SQLite 3 в режиме FastCGI WAL
+ * AntiDesigner Core - Базовый коннектор к SQLite 3 в режиме FastCGI WAL
  */
 
 function getDatabaseConnection(): PDO
