@@ -132,6 +132,15 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
+    const contentCanvas = document.querySelector('.content-canvas');
+    if (contentCanvas) {
+      if (resolvedKey === 'bot') {
+        contentCanvas.classList.add('bot-active');
+      } else {
+        contentCanvas.classList.remove('bot-active');
+      }
+    }
+
     if (pageTitleEl) pageTitleEl.textContent = targetModule.title;
     if (breadcrumbActiveEl) breadcrumbActiveEl.textContent = targetModule.breadcrumb;
 
@@ -2110,6 +2119,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function scrollChatToBottom() {
+    const container = document.querySelector('.chat-messages-container') || document.getElementById('chatMessagesStream');
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
+  }
+  window.scrollChatToBottom = scrollChatToBottom;
+
   function renderChatMessages(messages) {
     if (!chatMessagesStream) return;
 
@@ -2146,7 +2163,8 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
     }).join('');
 
-    chatMessagesStream.scrollTop = chatMessagesStream.scrollHeight;
+    scrollChatToBottom();
+    setTimeout(() => scrollChatToBottom(), 50);
 
     // Слушатели кнопки коррекции ответа бота
     chatMessagesStream.querySelectorAll('.btn-bubble-correct').forEach(btn => {
@@ -2257,11 +2275,21 @@ document.addEventListener('DOMContentLoaded', () => {
         if (operatorMessageInput) operatorMessageInput.value = '';
         showToast('Ответ отправлен клиенту', 'success');
         await selectBotLead(activeBotLeadId);
+        scrollChatToBottom();
         await loadBotLeads();
       } catch (err) {
         showToast(`Ошибка отправки: ${err.message}`, 'error');
       } finally {
         sendOperatorMsgBtn.disabled = false;
+      }
+    });
+  }
+
+  if (operatorMessageInput) {
+    operatorMessageInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (sendOperatorMsgBtn) sendOperatorMsgBtn.click();
       }
     });
   }

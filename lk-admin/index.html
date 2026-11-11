@@ -892,22 +892,22 @@
 
             <!-- ПОДРАЗДЕЛ 1: [💬 Live Мессенджер] -->
             <div class="bot-subpane active" id="botSubpaneMessenger">
-              <div class="bot-messenger-container">
+              <div class="tg-messenger-layout bot-messenger-container">
                 <!-- Левая колонка: список лидов -->
-                <div class="messenger-sidebar">
+                <div class="dialogs-sidebar messenger-sidebar">
                   <div class="messenger-sidebar-header">
                     <span class="sidebar-title">Диалоги Telegram</span>
                     <button type="button" class="btn-tech-outline btn-xs" id="botRefreshChatsBtn" title="Обновить список чатов">↺</button>
                   </div>
-                  <div class="messenger-leads-list" id="botLeadsList">
+                  <div class="dialogs-list messenger-leads-list" id="botLeadsList">
                     <div class="messenger-loading-hint">Загрузка диалогов...</div>
                   </div>
                 </div>
 
                 <!-- Правая колонка: окно переписки -->
-                <div class="messenger-chat-window">
+                <div class="chat-window messenger-chat-window">
                   <!-- Шапка чата -->
-                  <div class="chat-header-bar" id="chatHeaderBar">
+                  <div class="chat-header chat-header-bar" id="chatHeaderBar">
                     <div class="chat-user-info">
                       <span class="chat-user-avatar">👤</span>
                       <div>
@@ -922,7 +922,7 @@
                   </div>
 
                   <!-- Тело переписки (лента сообщений) -->
-                  <div class="chat-messages-stream" id="chatMessagesStream">
+                  <div class="chat-messages-container chat-messages-stream" id="chatMessagesStream">
                     <div class="chat-empty-hint">Нажмите на любой контакт в списке слева, чтобы открыть переписку</div>
                   </div>
 
@@ -950,15 +950,15 @@
                   </div>
 
                   <!-- Подвал ввода ответа -->
-                  <div class="chat-composer-box">
-                    <div class="composer-quick-chips">
+                  <div class="chat-footer chat-composer-box">
+                    <div class="chat-quick-templates composer-quick-chips">
                       <span class="chips-label">Шаблоны:</span>
                       <button type="button" class="quick-chip" data-text="Тариф под ключ — от 25 000 руб за 5-7 дней без конструкторов. Включает чистый код, адаптив и PageSpeed 100/100.">💰 Тариф 25к</button>
                       <button type="button" class="quick-chip" data-text="Давайте проведем бесплатный экспресс-аудит скорости вашего сайта! Напишите домен.">🏎 Аудит скорости</button>
                       <button type="button" class="quick-chip" data-text="Держите PDF-гайд: 10 признаков того, что конструктор сливает рекламу. Прикрепил файл.">🧲 Лид-магнит</button>
                       <button type="button" class="quick-chip" data-text="Для запуска работы достаточно аванса 50% и ссылки на текущие материалы. Готовы начинать?">🤝 Старт проекта</button>
                     </div>
-                    <div class="composer-input-row">
+                    <div class="chat-input-row composer-input-row">
                       <textarea id="operatorMessageInput" class="tech-textarea" rows="2" placeholder="Напишите ответ клиенту от имени бота или оператора..."></textarea>
                       <button type="button" id="sendOperatorMsgBtn" class="btn-tech-primary">
                         <span class="btn-icon">✈️</span> Отправить
