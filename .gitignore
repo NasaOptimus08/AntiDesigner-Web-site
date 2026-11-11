@@ -17,6 +17,7 @@ __pycache__/
 .env
 core-data/config.local.php
 core-data/*.sqlite*
+core-data/*.lock
 core-data/uploads/*
 !core-data/uploads/.htaccess
 

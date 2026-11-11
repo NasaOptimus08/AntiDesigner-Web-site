@@ -29,7 +29,8 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     outbound: {
       title: '🎯 Холодный парсинг',
-      breadcrumb: 'OUTBOUND'
+      breadcrumb: 'OUTBOUND',
+      onActivate: () => initOutboundTab()
     },
     bot: {
       title: '🤖 ТГ-Бот и магниты',
@@ -507,6 +508,48 @@ document.addEventListener('DOMContentLoaded', () => {
       kbUpdatedTimestampEl.textContent = item.updated_at ? `Синхронизировано: ${item.updated_at}` : 'Синхронизировано';
     }
     if (kbSaveStatusEl) kbSaveStatusEl.textContent = '';
+
+    // Синхронизация реестра лидов для категории leads_archive
+    const kbLeadsDynamicPreview = document.getElementById('kbLeadsDynamicPreview');
+    if (kbLeadsDynamicPreview) {
+      if (category === 'leads_archive') {
+        kbLeadsDynamicPreview.style.display = 'block';
+        loadKbLeadsPreview();
+      } else {
+        kbLeadsDynamicPreview.style.display = 'none';
+      }
+    }
+  }
+
+  async function loadKbLeadsPreview() {
+    const listEl = document.getElementById('kbLeadsPreviewList');
+    if (!listEl) return;
+    try {
+      const res = await fetch('api/outreach.php?action=list');
+      const data = await res.json();
+      if (data && data.status === 'success' && Array.isArray(data.leads)) {
+        if (data.leads.length === 0) {
+          listEl.innerHTML = '<span style="color:#888e99;font-size:12px;">Лиды еще не добавлены. Запустите квалификацию в модуле «Холодный парсинг».</span>';
+          return;
+        }
+        listEl.innerHTML = data.leads.slice(0, 6).map(l => `
+          <div class="kb-lead-mini-card">
+            <div class="mini-header">
+              <span class="mini-company">${escapeHtml(l.company_name)}</span>
+              <span class="score-pill ${l.deal_score >= 8 ? 'score-high' : 'score-med'}" style="font-size:10px;padding:2px 8px;">★ ${l.deal_score}/10</span>
+            </div>
+            <div class="mini-niche">${escapeHtml(l.niche || 'B2B')} • ${escapeHtml(l.lpr_name || 'ЛПР')}</div>
+            <div class="mini-stats">
+              <span class="ps-score-pill ${l.pagespeed_score >= 50 ? 'ps-warn' : 'ps-bad'}" style="font-size:10px;padding:2px 6px;">⚡ ${l.pagespeed_score}/100</span>
+              <span style="color:#a3a8b5;font-size:11px;">FCP: ${l.load_time_sec}с</span>
+              <span class="status-pill status-${l.status}" style="font-size:9px;padding:2px 6px;">${l.status}</span>
+            </div>
+          </div>
+        `).join('');
+      }
+    } catch (e) {
+      console.warn('KB Leads Preview error:', e);
+    }
   }
 
   // Загрузка документов в Базу знаний (PDF, DOCX, MD, TXT)
@@ -2365,6 +2408,573 @@ document.addEventListener('DOMContentLoaded', () => {
     vpsDownloadZipBtn.addEventListener('click', () => {
       window.location.href = 'api/bot.php?action=download_vps_package';
       showToast('Загрузка пакета antidesigner-tg-agent.zip началась...', 'success');
+    });
+  }
+
+  // ===========================================================================
+  // 9. МОДУЛЬ: 🎯 B2B-СКАУТ & ХОЛОДНЫЙ ПАРСИНГ (#outbound)
+  // Two-stage pipeline: Flash-Lite -> Flash Heavy with strict filter >= 5
+  // ===========================================================================
+  let outreachLeads = [];
+  let outreachStatusFilter = 'all';
+  let outreachSearchQuery = '';
+  let isOutreachLoaded = false;
+  let isOutreachScanning = false;
+
+  const scoutUrlInput = document.getElementById('scoutUrlInput');
+  const scoutStartBtn = document.getElementById('scoutStartBtn');
+  const scoutQuotaBadge = document.getElementById('scoutQuotaBadge');
+  const scoutScannerBanner = document.getElementById('scoutScannerBanner');
+  const scoutScannerTitle = document.getElementById('scoutScannerTitle');
+  const scanStep1 = document.getElementById('scanStep1');
+  const scanStep2 = document.getElementById('scanStep2');
+  const scanStep3 = document.getElementById('scanStep3');
+  const scoutStatusFilters = document.getElementById('scoutStatusFilters');
+  const scoutSearchInput = document.getElementById('scoutSearchInput');
+  const scoutRefreshBtn = document.getElementById('scoutRefreshBtn');
+  const outreachLeadsList = document.getElementById('outreachLeadsList');
+
+  async function initOutboundTab() {
+    if (!isOutreachLoaded) {
+      await loadOutreachLeads();
+    }
+  }
+
+  async function loadOutreachLeads(force = false) {
+    if (isOutreachLoaded && !force) return;
+    try {
+      const res = await fetch('api/outreach.php?action=list', {
+        headers: { 'Accept': 'application/json' }
+      });
+      const data = await res.json();
+      if (!res.ok || data.status !== 'success') {
+        throw new Error(data.message || 'Ошибка загрузки лидов');
+      }
+
+      outreachLeads = Array.isArray(data.leads) ? data.leads : [];
+      isOutreachLoaded = true;
+
+      // Обновляем дневную квоту
+      if (scoutQuotaBadge) {
+        scoutQuotaBadge.textContent = `Отобрано сегодня: ${data.today_count} из ${data.today_quota}`;
+      }
+
+      // Обновляем счетчики на фильтр-табах
+      updateOutreachFilterCounts();
+
+      // Отрисовываем карточки
+      renderOutreachLeads();
+
+    } catch (err) {
+      console.error('Outreach load error:', err);
+      showToast(`Ошибка загрузки лидов: ${err.message}`, 'error');
+    }
+  }
+
+  function updateOutreachFilterCounts() {
+    const countAllEl = document.getElementById('countAllLeads');
+    const countQualEl = document.getElementById('countQualLeads');
+    const countSentEl = document.getElementById('countSentLeads');
+    const countRepliedEl = document.getElementById('countRepliedLeads');
+    const countWonEl = document.getElementById('countWonLeads');
+    const countLostEl = document.getElementById('countLostLeads');
+
+    if (countAllEl) countAllEl.textContent = outreachLeads.length;
+    if (countQualEl) countQualEl.textContent = outreachLeads.filter(l => l.status === 'qualified').length;
+    if (countSentEl) countSentEl.textContent = outreachLeads.filter(l => l.status === 'sent').length;
+    if (countRepliedEl) countRepliedEl.textContent = outreachLeads.filter(l => l.status === 'replied').length;
+    if (countWonEl) countWonEl.textContent = outreachLeads.filter(l => l.status === 'won').length;
+    if (countLostEl) countLostEl.textContent = outreachLeads.filter(l => l.status === 'lost').length;
+  }
+
+  function renderOutreachLeads() {
+    if (!outreachLeadsList) return;
+
+    let filtered = outreachLeads;
+
+    // Фильтр по статусу
+    if (outreachStatusFilter !== 'all') {
+      filtered = filtered.filter(l => l.status === outreachStatusFilter);
+    }
+
+    // Фильтр по поисковой строке
+    if (outreachSearchQuery.trim() !== '') {
+      const q = outreachSearchQuery.toLowerCase();
+      filtered = filtered.filter(l =>
+        (l.company_name || '').toLowerCase().includes(q) ||
+        (l.website_url || '').toLowerCase().includes(q) ||
+        (l.lpr_name || '').toLowerCase().includes(q) ||
+        (l.niche || '').toLowerCase().includes(q)
+      );
+    }
+
+    if (filtered.length === 0) {
+      outreachLeadsList.innerHTML = `
+        <div class="module-placeholder-box" style="padding: 40px 20px;">
+          <div class="box-icon">🔍</div>
+          <h3>Лиды не найдены</h3>
+          <p>По вашему фильтру нет целевых сайтов. Запустите квалификацию нового URL выше или сбросьте фильтр.</p>
+        </div>
+      `;
+      return;
+    }
+
+    outreachLeadsList.innerHTML = filtered.map(lead => {
+      const score = Number(lead.deal_score) || 5;
+      const isHigh = score >= 8;
+      const statusTitle = getLeadStatusTitle(lead.status);
+
+      return `
+        <div class="scout-lead-card" id="leadCard-${lead.id}" data-lead-id="${lead.id}">
+          <!-- Свернутая строка карточки -->
+          <div class="lead-card-header" onclick="toggleLeadCard(${lead.id})">
+            <div class="lead-header-left">
+              <span class="score-pill ${isHigh ? 'score-high' : 'score-med'}">
+                ${isHigh ? '★' : '●'} ${score}/10 ${isHigh ? 'ВЫСОКИЙ ШАНС' : 'СРЕДНИЙ ШАНС'}
+              </span>
+              <div class="lead-title-box">
+                <span class="lead-company-name">${escapeHtml(lead.company_name || 'Проект')}</span>
+                <a href="${escapeHtml(lead.website_url)}" target="_blank" class="lead-website-link" onclick="event.stopPropagation()">
+                  ${escapeHtml((lead.website_url || '').replace(/^https?:\/\//, ''))} ↗
+                </a>
+              </div>
+              <span class="niche-badge">${escapeHtml(lead.niche || 'B2B')}</span>
+            </div>
+            <div class="lead-header-right">
+              <span class="ps-score-pill ${lead.pagespeed_score >= 50 ? 'ps-warn' : 'ps-bad'}">
+                ⚡ ${lead.pagespeed_score}/100 (${lead.load_time_sec}с)
+              </span>
+              <span class="lpr-preview-chip">👤 ${escapeHtml(lead.lpr_name || 'ЛПР')}</span>
+              <span class="status-pill status-${lead.status}" id="statusPill-${lead.id}">${statusTitle}</span>
+              <span class="accordion-toggle-arrow">▼</span>
+            </div>
+          </div>
+
+          <!-- Раскрывающийся подробный дашборд лида -->
+          <div class="lead-card-body" id="leadBody-${lead.id}" style="display: none;">
+            <div class="lead-details-grid">
+              <!-- Колонка 1: ЛПР и Контакты -->
+              <div class="lead-detail-col">
+                <h4 class="col-title">👤 Контакты ЛПР и Соцсети</h4>
+                <div class="detail-field">
+                  <label>Имя и должность:</label>
+                  <div class="field-value highlight">${escapeHtml(lead.lpr_name || 'Не указано')}</div>
+                </div>
+                <div class="detail-field">
+                  <label>Прямой контакт (TG / WA / Тел):</label>
+                  <div class="field-value">${renderContactLink(lead.lpr_contact)}</div>
+                </div>
+                <div class="detail-field">
+                  <label>Соцсети проекта:</label>
+                  <div class="social-tags-list">${renderSocialLinks(lead.social_links)}</div>
+                </div>
+                <div class="detail-field" style="margin-top: 14px;">
+                  <label>Статус воронки:</label>
+                  <select class="input-tech select-lead-status" onchange="updateLeadStatus(${lead.id}, this.value)">
+                    <option value="qualified" ${lead.status === 'qualified' ? 'selected' : ''}>Квалифицирован</option>
+                    <option value="sent" ${lead.status === 'sent' ? 'selected' : ''}>Отправлен</option>
+                    <option value="replied" ${lead.status === 'replied' ? 'selected' : ''}>Ответил</option>
+                    <option value="won" ${lead.status === 'won' ? 'selected' : ''}>Won (Сделка закрыта)</option>
+                    <option value="lost" ${lead.status === 'lost' ? 'selected' : ''}>Lost (Срыв сделки)</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Колонка 2: Технический и Дизайн аудит -->
+              <div class="lead-detail-col">
+                <h4 class="col-title">⚡ Технический &amp; Дизайн аудит</h4>
+                <div class="audit-speed-row">
+                  <div class="speed-box">
+                    <span class="speed-num ${lead.pagespeed_score >= 50 ? 'text-amber' : 'text-crimson'}">${lead.pagespeed_score}/100</span>
+                    <span class="speed-lbl">PageSpeed v5</span>
+                  </div>
+                  <div class="speed-box">
+                    <span class="speed-num">${lead.load_time_sec} сек</span>
+                    <span class="speed-lbl">Мобильный FCP</span>
+                  </div>
+                </div>
+                <div class="audit-bullets-box">
+                  <span class="bullet-lbl">Технические проблемы:</span>
+                  <pre class="audit-pre">${escapeHtml(lead.tech_findings || 'Не зафиксировано')}</pre>
+                </div>
+                <div class="audit-bullets-box">
+                  <span class="bullet-lbl">Ошибки первого экрана &amp; UI:</span>
+                  <pre class="audit-pre">${escapeHtml(lead.design_critique || 'Не зафиксировано')}</pre>
+                </div>
+                ${lead.screenshot_url ? `<div class="audit-screenshot-box"><img src="${lead.screenshot_url}" alt="Screenshot" class="audit-screenshot-img"></div>` : ''}
+              </div>
+
+              <!-- Колонка 3: Бизнес-анализ и стратегия -->
+              <div class="lead-detail-col">
+                <h4 class="col-title">📊 Бизнес-анализ &amp; Стратегия</h4>
+                <div class="biz-analysis-box pros">
+                  <span class="biz-lbl">✓ Почему бизнес согласится:</span>
+                  <p class="biz-text">${escapeHtml(lead.pros_analysis || '')}</p>
+                </div>
+                <div class="biz-analysis-box cons">
+                  <span class="biz-lbl">⚠ Возможные возражения:</span>
+                  <p class="biz-text">${escapeHtml(lead.cons_analysis || '')}</p>
+                </div>
+                <div class="biz-analysis-box strategy">
+                  <span class="biz-lbl">🎯 Стратегия захода:</span>
+                  <p class="biz-text">${escapeHtml(lead.pitch_strategy || '')}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Блок готового питча -->
+            <div class="lead-pitch-card">
+              <div class="pitch-card-header">
+                <div class="pitch-title-wrap">
+                  <span class="pitch-kicker">PERSONALIZED PITCH</span>
+                  <h4>Готовый персонализированный питч в Telegram</h4>
+                </div>
+                <button type="button" class="btn-tech-outline btn-xs btn-copy-pitch" onclick="copyPitchText(${lead.id})">
+                  <span class="btn-icon">📋</span> Копировать питч
+                </button>
+              </div>
+              <div class="pitch-text-content" id="pitchText-${lead.id}">${escapeHtml(lead.generated_pitch || '')}</div>
+            </div>
+
+            <!-- Блок Win/Loss самообучения (Self-Learning Loop) -->
+            <div class="lead-winloss-card">
+              <div class="winloss-header">
+                <div class="winloss-title-wrap">
+                  <span class="winloss-kicker">AGENT MEMORY &amp; SELF-LEARNING LOOP</span>
+                  <h4>🧠 Win/Loss Аналитика переписки</h4>
+                </div>
+                <span class="winloss-hint">ИИ зафиксирует выводы в память агента (agent_memory) и Базу Знаний</span>
+              </div>
+              <p class="winloss-desc">
+                Вставьте сюда текст диалога после отправки питча и общения с клиентом. Нажмите соответствующую кнопку для запуска обратной связи.
+              </p>
+              <div class="winloss-form">
+                <textarea id="chatHistory-${lead.id}" class="input-tech chat-history-textarea" rows="4" placeholder="Вставьте историю сообщений из Telegram...">${escapeHtml(lead.chat_history || '')}</textarea>
+                <div class="winloss-actions-row">
+                  <button type="button" class="btn-tech-primary btn-win-deal" onclick="submitWinLoss(${lead.id}, 'won')">
+                    <span class="btn-icon">✅</span> Сделка закрыта (Won) -> Зафиксировать успех
+                  </button>
+                  <button type="button" class="btn-tech-outline btn-loss-deal" onclick="submitWinLoss(${lead.id}, 'lost')">
+                    <span class="btn-icon">❌</span> Срыв сделки (Lost) -> Разобрать ошибку
+                  </button>
+                  <button type="button" class="btn-tech-outline btn-delete-lead" onclick="deleteOutreachLead(${lead.id})" title="Удалить лида">
+                    🗑
+                  </button>
+                </div>
+              </div>
+              <div class="winloss-status-box" id="winLossStatus-${lead.id}" style="${lead.deal_outcome ? 'display: block;' : 'display: none;'}">
+                ${lead.deal_outcome ? `<strong>✓ Итог зафиксирован (${escapeHtml(lead.deal_outcome)}):</strong> статус сохранен в памяти.` : ''}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function getLeadStatusTitle(status) {
+    switch (status) {
+      case 'qualified': return 'Квалифицирован';
+      case 'sent': return 'Отправлен';
+      case 'replied': return 'Ответил';
+      case 'won': return 'Won (Сделка)';
+      case 'lost': return 'Lost (Отказ)';
+      default: return status || 'Новый';
+    }
+  }
+
+  function renderContactLink(contact) {
+    if (!contact) return '<span style="color:#888e99;">Не найден</span>';
+    if (contact.startsWith('https://t.me/') || contact.startsWith('t.me/')) {
+      const url = contact.startsWith('http') ? contact : `https://${contact}`;
+      return `<a href="${escapeHtml(url)}" target="_blank" class="lead-website-link">✈ ${escapeHtml(contact)} ↗</a>`;
+    }
+    if (contact.startsWith('https://wa.me/') || contact.startsWith('wa.me/')) {
+      const url = contact.startsWith('http') ? contact : `https://${contact}`;
+      return `<a href="${escapeHtml(url)}" target="_blank" class="lead-website-link" style="color:#22c55e;">💬 WhatsApp ↗</a>`;
+    }
+    if (contact.startsWith('+7') || contact.startsWith('8')) {
+      const cleanPhone = contact.replace(/[^0-9+]/g, '');
+      return `<a href="tel:${cleanPhone}" class="lead-website-link">📞 ${escapeHtml(contact)}</a>`;
+    }
+    return escapeHtml(contact);
+  }
+
+  function renderSocialLinks(linksStr) {
+    if (!linksStr) return '<span style="color:#888e99;font-size:11px;">Не найдены</span>';
+    const links = linksStr.split(',').map(s => s.trim()).filter(Boolean);
+    if (links.length === 0) return '<span style="color:#888e99;font-size:11px;">Не найдены</span>';
+    return links.map(l => {
+      let icon = '🔗';
+      let label = 'Ссылка';
+      if (l.includes('vk.com')) { icon = '🔷'; label = 'VK'; }
+      else if (l.includes('t.me')) { icon = '✈'; label = 'TG'; }
+      else if (l.includes('instagram.com')) { icon = '📸'; label = 'Instagram'; }
+      return `<a href="${escapeHtml(l)}" target="_blank" class="social-tag-link">${icon} ${label} ↗</a>`;
+    }).join(' ');
+  }
+
+  // Экспорт глобальных функций для аккордеона и интерактивных кнопок
+  window.toggleLeadCard = function(id) {
+    const card = document.getElementById(`leadCard-${id}`);
+    const body = document.getElementById(`leadBody-${id}`);
+    if (!card || !body) return;
+
+    const isOpen = card.classList.contains('open');
+    if (isOpen) {
+      card.classList.remove('open');
+      body.style.display = 'none';
+    } else {
+      card.classList.add('open');
+      body.style.display = 'block';
+    }
+  };
+
+  window.copyPitchText = function(id) {
+    const lead = outreachLeads.find(l => l.id == id);
+    if (!lead || !lead.generated_pitch) {
+      showToast('Текст питча отсутствует', 'error');
+      return;
+    }
+
+    navigator.clipboard.writeText(lead.generated_pitch).then(() => {
+      showToast('Текст питча скопирован в буфер обмена!', 'success');
+    }).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = lead.generated_pitch;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast('Текст питча скопирован в буфер обмена!', 'success');
+    });
+  };
+
+  window.updateLeadStatus = async function(id, newStatus) {
+    try {
+      const res = await fetch('api/outreach.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update_status', id, status: newStatus })
+      });
+      const data = await res.json();
+      if (!res.ok || data.status !== 'success') {
+        throw new Error(data.message || 'Ошибка обновления статуса');
+      }
+
+      const lead = outreachLeads.find(l => l.id == id);
+      if (lead) {
+        lead.status = newStatus;
+        const pill = document.getElementById(`statusPill-${id}`);
+        if (pill) {
+          pill.className = `status-pill status-${newStatus}`;
+          pill.textContent = getLeadStatusTitle(newStatus);
+        }
+      }
+      updateOutreachFilterCounts();
+      showToast('Статус лида обновлен', 'success');
+    } catch (err) {
+      showToast(`Ошибка: ${err.message}`, 'error');
+    }
+  };
+
+  window.submitWinLoss = async function(id, outcome) {
+    const historyEl = document.getElementById(`chatHistory-${id}`);
+    const statusBox = document.getElementById(`winLossStatus-${id}`);
+    if (!historyEl) return;
+
+    const chatText = historyEl.value.trim();
+    if (!chatText) {
+      showToast('Вставьте текст переписки с клиентом для проведения Win/Loss анализа', 'warning');
+      historyEl.focus();
+      return;
+    }
+
+    if (statusBox) {
+      statusBox.style.display = 'block';
+      statusBox.innerHTML = '<span style="color:#00E5B8;">⏳ ИИ анализирует диалог и формулирует гипотезы...</span>';
+    }
+
+    try {
+      const res = await fetch('api/outreach.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'win_loss_analysis',
+          lead_id: id,
+          chat_history: chatText,
+          deal_outcome: outcome
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || data.status !== 'success') {
+        throw new Error(data.message || 'Ошибка Win/Loss анализа');
+      }
+
+      const lead = outreachLeads.find(l => l.id == id);
+      if (lead) {
+        lead.status = (outcome === 'won') ? 'won' : 'lost';
+        lead.deal_outcome = outcome;
+        lead.chat_history = chatText;
+        const pill = document.getElementById(`statusPill-${id}`);
+        if (pill) {
+          pill.className = `status-pill status-${lead.status}`;
+          pill.textContent = getLeadStatusTitle(lead.status);
+        }
+      }
+      updateOutreachFilterCounts();
+
+      if (statusBox) {
+        statusBox.innerHTML = `
+          <div style="line-height: 1.5;">
+            <div style="font-weight: 700; margin-bottom: 4px; color: #fff;">
+              ${outcome === 'won' ? '✅ Сделка закрыта (Успех)' : '❌ Срыв сделки (Отказ)'} -> Вывод сохранен в память агента:
+            </div>
+            <p style="margin: 0 0 6px 0; color: #00E5B8;">«${escapeHtml(data.hypothesis)}»</p>
+            <span class="tech-tag" style="font-size: 10px;">${escapeHtml(data.metric)}</span>
+          </div>
+        `;
+      }
+
+      showToast('Win/Loss анализ завершен! Вывод сохранен в память агента и Базу Знаний', 'success');
+
+    } catch (err) {
+      if (statusBox) {
+        statusBox.innerHTML = `<span style="color:#F87171;">Ошибка анализа: ${escapeHtml(err.message)}</span>`;
+      }
+      showToast(`Ошибка: ${err.message}`, 'error');
+    }
+  };
+
+  window.deleteOutreachLead = async function(id) {
+    if (!confirm('Удалить лида из базы аутрича?')) return;
+    try {
+      const res = await fetch('api/outreach.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', id })
+      });
+      const data = await res.json();
+      if (!res.ok || data.status !== 'success') {
+        throw new Error(data.message || 'Ошибка удаления');
+      }
+
+      outreachLeads = outreachLeads.filter(l => l.id != id);
+      updateOutreachFilterCounts();
+      renderOutreachLeads();
+      showToast('Лид удален', 'info');
+    } catch (err) {
+      showToast(`Ошибка: ${err.message}`, 'error');
+    }
+  };
+
+  async function startLeadScout() {
+    if (isOutreachScanning) return;
+    if (!scoutUrlInput) return;
+
+    const targetUrl = scoutUrlInput.value.trim();
+    if (!targetUrl) {
+      showToast('Введите URL целевого сайта или название компании', 'warning');
+      scoutUrlInput.focus();
+      return;
+    }
+
+    isOutreachScanning = true;
+    if (scoutStartBtn) scoutStartBtn.disabled = true;
+
+    // Показываем баннер прогресса сканирования
+    if (scoutScannerBanner) {
+      scoutScannerBanner.style.display = 'flex';
+      if (scanStep1) scanStep1.className = 'step-chip active';
+      if (scanStep2) scanStep2.className = 'step-chip';
+      if (scanStep3) scanStep3.className = 'step-chip';
+      if (scoutScannerTitle) scoutScannerTitle.textContent = `Сканирование: ${targetUrl}...`;
+    }
+
+    const t1 = setTimeout(() => {
+      if (scanStep1) scanStep1.className = 'step-chip';
+      if (scanStep2) scanStep2.className = 'step-chip active';
+      if (scoutScannerTitle) scoutScannerTitle.textContent = 'Этап 1: Flash-Lite анализирует контакты ЛПР...';
+    }, 600);
+
+    const t2 = setTimeout(() => {
+      if (scanStep2) scanStep2.className = 'step-chip';
+      if (scanStep3) scanStep3.className = 'step-chip active';
+      if (scoutScannerTitle) scoutScannerTitle.textContent = 'Этап 2: Flash Heavy рассчитывает вероятность сделки и питч...';
+    }, 1400);
+
+    try {
+      const res = await fetch('api/outreach.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'analyze_target', url: targetUrl })
+      });
+      const data = await res.json();
+
+      clearTimeout(t1);
+      clearTimeout(t2);
+
+      if (data.status === 'success') {
+        showToast(data.message || 'Лид успешно квалифицирован!', 'success');
+        scoutUrlInput.value = '';
+        await loadOutreachLeads(true);
+        if (data.lead && data.lead.id) {
+          setTimeout(() => toggleLeadCard(data.lead.id), 200);
+        }
+      } else if (data.status === 'rejected') {
+        showToast(data.message || 'Лид отбракован: оценка ниже 5/10', 'warning');
+      } else if (data.status === 'exists') {
+        showToast(data.message || 'Этот сайт уже в базе', 'info');
+      } else {
+        throw new Error(data.message || 'Ошибка обработки сайта');
+      }
+    } catch (err) {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      showToast(`Ошибка: ${err.message}`, 'error');
+    } finally {
+      isOutreachScanning = false;
+      if (scoutStartBtn) scoutStartBtn.disabled = false;
+      if (scoutScannerBanner) scoutScannerBanner.style.display = 'none';
+    }
+  }
+
+  // Обработчики кнопок поиска и фильтров скаута
+  if (scoutStartBtn) {
+    scoutStartBtn.addEventListener('click', () => startLeadScout());
+  }
+
+  if (scoutUrlInput) {
+    scoutUrlInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        startLeadScout();
+      }
+    });
+  }
+
+  if (scoutRefreshBtn) {
+    scoutRefreshBtn.addEventListener('click', () => {
+      loadOutreachLeads(true);
+      showToast('Список лидов обновлен', 'info');
+    });
+  }
+
+  if (scoutSearchInput) {
+    scoutSearchInput.addEventListener('input', (e) => {
+      outreachSearchQuery = e.target.value;
+      renderOutreachLeads();
+    });
+  }
+
+  if (scoutStatusFilters) {
+    scoutStatusFilters.querySelectorAll('.filter-pill').forEach(btn => {
+      btn.addEventListener('click', () => {
+        scoutStatusFilters.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        outreachStatusFilter = btn.getAttribute('data-status') || 'all';
+        renderOutreachLeads();
+      });
     });
   }
 

@@ -774,6 +774,15 @@
                   <textarea id="kbContentInput" class="tech-textarea code-font" rows="18" placeholder="Markdown-контекст категории..."></textarea>
                 </div>
 
+                <!-- Динамический виджет квалифицированных лидов (для leads_archive) -->
+                <div id="kbLeadsDynamicPreview" class="kb-leads-preview-box" style="display: none; margin-top: 16px;">
+                  <div class="kb-preview-header">
+                    <span class="preview-title">🎯 Живой реестр квалифицированных B2B-лидов из скаута</span>
+                    <a href="#outbound" class="btn-tech-outline btn-xs" style="text-decoration: none;">Перейти в Холодный скаут ↗</a>
+                  </div>
+                  <div id="kbLeadsPreviewList" class="kb-leads-cards-mini"></div>
+                </div>
+
                 <div class="kb-footer-bar">
                   <span class="kb-notice-text">💡 Совет: Форматируйте смыслы четкими пунктами, цифрами и формулировками. Это повышает точность генераций нейросети.</span>
                   <span id="kbUpdatedTimestamp" class="kb-timestamp">Синхронизировано</span>
@@ -783,43 +792,76 @@
           </div>
         </section>
 
-        <!-- 4. Холодный аутрич -->
+        <!-- 4. Холодный аутрич и B2B-скаут (Sprint 4) -->
         <section class="tab-pane" id="pane-outbound">
           <div class="module-hero-card">
             <div class="module-card-header">
               <div class="module-title-wrap">
-                <span class="module-kicker">OUTBOUND AUDIT &amp; PITCH ENGINE</span>
-                <h2>Холодный аутрич</h2>
+                <span class="module-kicker">B2B LEAD SCOUT &amp; OUTREACH ENGINE</span>
+                <h2>Холодный аутрич и B2B-скаут</h2>
               </div>
-              <span class="badge-accent">VISION + PAGESPEED</span>
+              <div class="header-badges-row">
+                <span class="badge-accent" id="scoutQuotaBadge">Отобрано сегодня: 3 из 3</span>
+                <span class="tech-tag">2-СТУПЕНЧАТЫЙ ИИ КОНВЕЙЕР</span>
+              </div>
             </div>
             <p class="module-desc">
-              Автоматический технический аудит по PageSpeed Insights REST API + визуальный анализ первого экрана через
-              Multimodal Vision (Gemini 1.5) с генерацией персонализированного питча.
+              Автоматический поиск прямых контактов ЛПР, технический замер скорости Google PageSpeed Insights v5,
+              оценка вероятности закрытия сделки (1-10) с жестким фильтром неликвида и генерацией индивидуального питча в Telegram.
             </p>
 
-            <div class="tech-grid-3">
-              <div class="tech-metric-card">
-                <span class="metric-num">API v5</span>
-                <span class="metric-label">Google PageSpeed</span>
-                <span class="metric-hint">Оценка + скриншот base64 без браузера</span>
+            <!-- 1. Панель запуска квалификации лида -->
+            <div class="scout-input-panel">
+              <div class="scout-input-row">
+                <div class="scout-input-wrap">
+                  <span class="input-icon">🎯</span>
+                  <input type="text" id="scoutUrlInput" class="input-tech" placeholder="Вставьте URL сайта (например: https://example.ru) или название компании..." autocomplete="off">
+                </div>
+                <button type="button" class="btn-tech-primary" id="scoutStartBtn">
+                  <span class="btn-icon">⚡</span> Запустить квалификацию (Lead Scout)
+                </button>
               </div>
-              <div class="tech-metric-card">
-                <span class="metric-num">Vision</span>
-                <span class="metric-label">Gemini Multimodal</span>
-                <span class="metric-hint">Аудит типографики, композиции и UI</span>
-              </div>
-              <div class="tech-metric-card">
-                <span class="metric-num">1-Click</span>
-                <span class="metric-label">Генерация питча</span>
-                <span class="metric-hint">Фактические аргументы для звонка/письма</span>
+              <div class="scout-input-hint">
+                <span class="hint-bullet">● Этап 1 (Flash-Lite):</span> замер PageSpeed v5, скриншот первого экрана, парсинг сайта и поиск ЛПР (TG, WA, телефон).
+                <span class="hint-bullet" style="margin-left: 12px;">● Этап 2 (Flash Heavy):</span> экспертный скоринг 1-10. Порог входа &gt;= 5 баллов (лиды &lt; 5 отбраковываются).
               </div>
             </div>
 
-            <div class="module-placeholder-box">
-              <div class="box-icon">🎯</div>
-              <h3>Модуль аудита сайтов лидов подготовлен</h3>
-              <p>Форма ввода URL, автоматический опрос PageSpeed API и вывод результатов сгенерированного питча.</p>
+            <!-- 2. Прогресс-бар сканирования (скрыт по умолчанию) -->
+            <div class="scout-scanner-banner" id="scoutScannerBanner" style="display: none;">
+              <div class="scanner-spinner"></div>
+              <div class="scanner-info">
+                <div class="scanner-title" id="scoutScannerTitle">Сканирование целевого сайта...</div>
+                <div class="scanner-steps" id="scoutScannerSteps">
+                  <span class="step-chip active" id="scanStep1">1. PageSpeed v5 &amp; Scrape</span>
+                  <span class="step-chip" id="scanStep2">2. Flash-Lite: Поиск ЛПР</span>
+                  <span class="step-chip" id="scanStep3">3. Flash Heavy: Скоринг 1-10 &amp; Питч</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. Панель фильтров и поиска -->
+            <div class="scout-toolbar-row">
+              <div class="scout-filters-pills" id="scoutStatusFilters">
+                <button type="button" class="filter-pill active" data-status="all">Все (<span id="countAllLeads">0</span>)</button>
+                <button type="button" class="filter-pill" data-status="qualified">Квалифицирован (<span id="countQualLeads">0</span>)</button>
+                <button type="button" class="filter-pill" data-status="sent">Отправлен (<span id="countSentLeads">0</span>)</button>
+                <button type="button" class="filter-pill" data-status="replied">Ответил (<span id="countRepliedLeads">0</span>)</button>
+                <button type="button" class="filter-pill" data-status="won">Won (Сделка) (<span id="countWonLeads">0</span>)</button>
+                <button type="button" class="filter-pill" data-status="lost">Lost (Отказ) (<span id="countLostLeads">0</span>)</button>
+              </div>
+              <div class="scout-search-wrap">
+                <input type="text" id="scoutSearchInput" class="input-tech input-sm" placeholder="Поиск по компании, нише или URL...">
+                <button type="button" class="btn-tech-outline btn-xs" id="scoutRefreshBtn" title="Обновить список">↺</button>
+              </div>
+            </div>
+
+            <!-- 4. Список лидов (Аккордеон-карточки) -->
+            <div class="scout-leads-accordion" id="outreachLeadsList">
+              <div class="module-placeholder-box" style="padding: 30px;">
+                <div class="box-icon">⏳</div>
+                <h3>Загрузка лидов скаута...</h3>
+              </div>
             </div>
           </div>
         </section>

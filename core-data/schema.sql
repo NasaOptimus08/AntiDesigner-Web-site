@@ -70,18 +70,28 @@ CREATE TABLE IF NOT EXISTS leads (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- 7. Холодный аутрич и Аудит сайтов (PageSpeed + Vision-аналитика)
+-- 7. Холодный аутрич и B2B-скаут лидов (PageSpeed + Vision-аналитика + Flash 2.0 Deal Score)
 CREATE TABLE IF NOT EXISTS cold_outreach (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     company_name TEXT NOT NULL,
     website_url TEXT NOT NULL,
-    contact_info TEXT,
-    screenshot_url TEXT,
-    pagespeed_score INTEGER,
-    tech_findings TEXT,
-    design_critique TEXT,
-    generated_pitch TEXT,
-    status TEXT DEFAULT 'found',
+    niche TEXT,                      -- Ниша/сфера бизнеса
+    lpr_name TEXT,                   -- Имя директора/владельца (ЛПР)
+    lpr_contact TEXT,                -- Прямой контакт ЛПР (TG, WhatsApp, личный телефон)
+    social_links TEXT,               -- Ссылки на соцсети (VK, TG, Inst)
+    screenshot_url TEXT,             -- Скриншот первого экрана (base64)
+    pagespeed_score INTEGER,         -- Скорость сайта (0-100)
+    load_time_sec REAL,              -- Время загрузки в секундах
+    tech_findings TEXT,              -- Технические ошибки сайта
+    design_critique TEXT,            -- Разбор визуала и ошибок 1 экрана
+    deal_score INTEGER NOT NULL,     -- Оценка вероятности сделки от 1 до 10
+    pros_analysis TEXT,              -- Плюсы (+) почему лид согласится
+    cons_analysis TEXT,              -- Минусы (-) риски и барьеры
+    pitch_strategy TEXT,             -- Как правильно подать себя этому клиенту
+    generated_pitch TEXT,            -- Готовый персонализированный текст сообщения
+    chat_history TEXT,               -- История переписки с лидом для анализа
+    deal_outcome TEXT,               -- 'won' (сделка), 'lost' (отказ), 'in_progress'
+    status TEXT DEFAULT 'qualified', -- 'qualified', 'pitched', 'responded', 'won', 'lost'
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

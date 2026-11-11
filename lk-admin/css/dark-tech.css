@@ -3325,3 +3325,735 @@ html, body {
   color: #F87171;
 }
 
+/* =============================================================================
+ * SECTION 11: SPRINT 4 - B2B LEAD SCOUT & OUTREACH ENGINE
+ * ============================================================================= */
+
+/* 1. Панель ввода URL для скаутинга */
+.scout-input-panel {
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-card);
+  padding: 22px 24px;
+  margin-bottom: 20px;
+}
+
+.scout-input-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.scout-input-wrap {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.scout-input-wrap .input-icon {
+  position: absolute;
+  left: 14px;
+  font-size: 16px;
+  pointer-events: none;
+}
+
+.scout-input-wrap .input-tech {
+  width: 100%;
+  padding-left: 42px;
+}
+
+.scout-input-hint {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: 10px;
+  line-height: 1.5;
+}
+
+.scout-input-hint .hint-bullet {
+  color: #a3a8b5;
+  font-weight: 500;
+}
+
+/* 2. Баннер прогресса сканирования */
+.scout-scanner-banner {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  background: rgba(0, 229, 184, 0.05);
+  border: 1px solid rgba(0, 229, 184, 0.3);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+}
+
+.scanner-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(0, 229, 184, 0.2);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: scoutSpin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes scoutSpin {
+  to { transform: rotate(360deg); }
+}
+
+.scanner-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.scanner-title {
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.scanner-steps {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.step-chip {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-text-muted);
+  transition: all 0.2s ease;
+}
+
+.step-chip.active {
+  background: rgba(0, 229, 184, 0.15);
+  color: var(--color-accent);
+  border: 1px solid rgba(0, 229, 184, 0.3);
+}
+
+/* 3. Тулбар фильтров и поиска */
+.scout-toolbar-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.scout-filters-pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-pill {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 100px;
+  border: 1px solid var(--color-border-card);
+  background: rgba(255, 255, 255, 0.03);
+  color: #a3a8b5;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-pill:hover {
+  border-color: rgba(0, 229, 184, 0.4);
+  color: #fff;
+}
+
+.filter-pill.active {
+  background: rgba(0, 229, 184, 0.15);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.scout-search-wrap {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* 4. Аккордеон лидов аутрича */
+.scout-leads-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.scout-lead-card {
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-border-card);
+  border-radius: 16px;
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.scout-lead-card:hover {
+  border-color: rgba(0, 229, 184, 0.25);
+}
+
+.scout-lead-card.open {
+  border-color: rgba(0, 229, 184, 0.4);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.lead-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 24px;
+  cursor: pointer;
+  user-select: none;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.lead-header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.lead-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.score-pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 100px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.score-pill.score-high {
+  background: rgba(0, 229, 184, 0.15);
+  color: var(--color-accent);
+  border: 1px solid rgba(0, 229, 184, 0.4);
+}
+
+.score-pill.score-med {
+  background: rgba(245, 158, 11, 0.15);
+  color: #F59E0B;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.lead-title-box {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.lead-company-name {
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.lead-website-link {
+  font-size: 12px;
+  color: var(--color-accent);
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.lead-website-link:hover {
+  text-decoration: underline;
+}
+
+.niche-badge {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 3px 10px;
+  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #b4b9c5;
+}
+
+.ps-score-pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 8px;
+}
+
+.ps-score-pill.ps-bad {
+  background: rgba(239, 68, 68, 0.15);
+  color: #EF4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.ps-score-pill.ps-warn {
+  background: rgba(245, 158, 11, 0.15);
+  color: #F59E0B;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.lpr-preview-chip {
+  font-size: 12px;
+  color: #d1d5db;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 4px 10px;
+  border-radius: 8px;
+}
+
+.status-pill {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+.status-pill.status-qualified {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60A5FA;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.status-pill.status-sent {
+  background: rgba(168, 85, 247, 0.15);
+  color: #C084FC;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.status-pill.status-replied {
+  background: rgba(245, 158, 11, 0.15);
+  color: #FBBF24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.status-pill.status-won {
+  background: rgba(0, 229, 184, 0.2);
+  color: var(--color-accent);
+  border: 1px solid rgba(0, 229, 184, 0.5);
+}
+
+.status-pill.status-lost {
+  background: rgba(239, 68, 68, 0.15);
+  color: #F87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.accordion-toggle-arrow {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.scout-lead-card.open .accordion-toggle-arrow {
+  transform: rotate(180deg);
+  color: var(--color-accent);
+}
+
+/* 5. Раскрывающийся подробный дашборд лида */
+.lead-card-body {
+  padding: 0 24px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.lead-details-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  padding-top: 20px;
+  margin-bottom: 20px;
+}
+
+.lead-detail-col {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.col-title {
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: 8px;
+}
+
+.detail-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.detail-field label {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.detail-field .field-value {
+  font-size: 13px;
+  color: #e5e7eb;
+}
+
+.detail-field .field-value.highlight {
+  font-weight: 600;
+  color: var(--color-accent);
+}
+
+.social-tags-list {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.social-tag-link {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #93c5fd;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.social-tag-link:hover {
+  background: rgba(255, 255, 255, 0.12);
+  text-decoration: underline;
+}
+
+.audit-speed-row {
+  display: flex;
+  gap: 12px;
+}
+
+.speed-box {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+}
+
+.speed-box .speed-num {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.speed-box .speed-lbl {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.text-amber {
+  color: #F59E0B;
+}
+
+.text-crimson {
+  color: #EF4444;
+}
+
+.audit-bullets-box {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.bullet-lbl {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.audit-pre {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: #cbd5e1;
+  white-space: pre-wrap;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 8px 10px;
+  border-radius: 6px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.audit-screenshot-box {
+  margin-top: 6px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.audit-screenshot-img {
+  width: 100%;
+  display: block;
+  max-height: 160px;
+  object-fit: cover;
+}
+
+.biz-analysis-box {
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.biz-analysis-box.pros {
+  background: rgba(0, 229, 184, 0.05);
+  border-left: 3px solid var(--color-accent);
+}
+
+.biz-analysis-box.cons {
+  background: rgba(239, 68, 68, 0.05);
+  border-left: 3px solid #EF4444;
+}
+
+.biz-analysis-box.strategy {
+  background: rgba(59, 130, 246, 0.05);
+  border-left: 3px solid #3B82F6;
+}
+
+.biz-lbl {
+  font-weight: 700;
+  display: block;
+  margin-bottom: 4px;
+  color: #e5e7eb;
+}
+
+.biz-text {
+  margin: 0;
+  color: #d1d5db;
+  white-space: pre-wrap;
+}
+
+/* 6. Карточка готового питча */
+.lead-pitch-card {
+  background: rgba(0, 229, 184, 0.03);
+  border: 1px solid rgba(0, 229, 184, 0.2);
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-bottom: 18px;
+}
+
+.pitch-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.pitch-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pitch-kicker {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--color-accent);
+  letter-spacing: 0.08em;
+}
+
+.pitch-card-header h4 {
+  font-family: var(--font-heading);
+  font-size: 14px;
+  color: #fff;
+  margin: 0;
+}
+
+.pitch-text-content {
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.6;
+  color: #f3f4f6;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 14px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  white-space: pre-wrap;
+}
+
+/* 7. Карточка Win/Loss самообучения */
+.lead-winloss-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 18px 20px;
+}
+
+.winloss-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.winloss-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.winloss-kicker {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: #a78bfa;
+  letter-spacing: 0.08em;
+}
+
+.winloss-header h4 {
+  font-family: var(--font-heading);
+  font-size: 13px;
+  color: #fff;
+  margin: 0;
+}
+
+.winloss-hint {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.winloss-desc {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-bottom: 12px;
+}
+
+.chat-history-textarea {
+  width: 100%;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.winloss-actions-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.btn-win-deal {
+  background: var(--color-accent);
+  color: #111;
+  font-weight: 700;
+}
+
+.btn-loss-deal {
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #EF4444;
+}
+
+.btn-loss-deal:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.winloss-status-box {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: rgba(0, 229, 184, 0.08);
+  border: 1px solid rgba(0, 229, 184, 0.3);
+  font-size: 12px;
+  color: var(--color-accent);
+}
+
+/* 8. Динамический виджет в Базе Знаний */
+.kb-leads-preview-box {
+  background: rgba(0, 229, 184, 0.03);
+  border: 1px solid rgba(0, 229, 184, 0.2);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.kb-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.kb-preview-header .preview-title {
+  font-family: var(--font-heading);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-accent);
+}
+
+.kb-leads-cards-mini {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.kb-lead-mini-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.kb-lead-mini-card .mini-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.kb-lead-mini-card .mini-company {
+  font-weight: 600;
+  color: #fff;
+  font-size: 13px;
+}
+
+.kb-lead-mini-card .mini-niche {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.kb-lead-mini-card .mini-stats {
+  display: flex;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+}
+
+/* Адаптивность для мобильных экранов */
+@media (max-width: 900px) {
+  .lead-details-grid {
+    grid-template-columns: 1fr;
+  }
+  .scout-input-row {
+    flex-direction: column;
+  }
+}
+
