@@ -9,6 +9,9 @@ declare(strict_types=1);
  */
 
 header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
 header('X-Content-Type-Options: nosniff');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
@@ -199,8 +202,13 @@ MD
         }
     };
 
-    if ($method === 'GET') {
+    // Авто-сидинг дефолтных категорий выполняется СТРОГО один раз, если таблица абсолютно пуста
+    $kbCount = (int)$pdo->query('SELECT COUNT(*) FROM knowledge_base')->fetchColumn();
+    if ($kbCount === 0) {
         $seedCategories($pdo);
+    }
+
+    if ($method === 'GET') {
 
         $category = isset($_GET['category']) ? trim((string)$_GET['category']) : '';
         if ($category !== '') {

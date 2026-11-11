@@ -9,6 +9,9 @@ declare(strict_types=1);
  */
 
 header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
 header('X-Content-Type-Options: nosniff');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
@@ -142,9 +145,9 @@ try {
     }
 
     // -------------------------------------------------------------------------
-    // 2. action = save
+    // 2. action = save / create
     // -------------------------------------------------------------------------
-    if ($action === 'save') {
+    if ($action === 'save' || $action === 'create') {
         $id = (int)($input['id'] ?? 0);
         $title = trim((string)($input['title'] ?? ''));
         $description = trim((string)($input['description'] ?? ''));

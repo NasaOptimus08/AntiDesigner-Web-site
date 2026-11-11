@@ -15,6 +15,13 @@ declare(strict_types=1);
  */
 
 header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
+header('X-Content-Type-Options: nosniff');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, Accept, X-Requested-With');
 
 try {
     require_once __DIR__ . '/db.php';

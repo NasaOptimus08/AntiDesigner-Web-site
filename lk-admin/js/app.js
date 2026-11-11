@@ -482,17 +482,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const kbUpdatedTimestampEl = document.getElementById('kbUpdatedTimestamp');
   const kbFileInput = document.getElementById('kbFileInput');
 
-  async function initKnowledgeTab() {
-    if (isKbLoaded) return;
+  async function initKnowledgeTab(force = false) {
+    if (isKbLoaded && !force) return;
     await loadKnowledge();
   }
 
   async function loadKnowledge() {
     try {
-      const res = await fetch('api/knowledge.php', {
+      const res = await fetch('api/knowledge.php?nocache=' + Date.now(), {
         method: 'GET',
         cache: 'no-store',
-        headers: { 'Accept': 'application/json' }
+        headers: {
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
       });
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -550,7 +554,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const listEl = document.getElementById('kbLeadsPreviewList');
     if (!listEl) return;
     try {
-      const res = await fetch('api/outreach.php?action=list');
+      const res = await fetch('api/outreach.php?action=list&nocache=' + Date.now(), { cache: 'no-store' });
       const data = await res.json();
       if (data && data.status === 'success' && Array.isArray(data.leads)) {
         if (data.leads.length === 0) {
@@ -1074,7 +1078,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function loadKanbanData() {
     try {
-      const res = await fetch(`api/crm.php?action=kanban&period=${crmCurrentPeriod}`);
+      const res = await fetch(`api/crm.php?action=kanban&period=${crmCurrentPeriod}&nocache=${Date.now()}`, { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.status !== 'success') throw new Error(data.message || 'Ошибка загрузки CRM');
@@ -1185,7 +1189,7 @@ document.addEventListener('DOMContentLoaded', () => {
   async function loadPlatformAnalytics(platform = currentPlatformFilter) {
     currentPlatformFilter = platform;
     try {
-      const res = await fetch(`api/crm.php?action=platform_analytics&period=${crmCurrentPeriod}&platform=${platform}`);
+      const res = await fetch(`api/crm.php?action=platform_analytics&period=${crmCurrentPeriod}&platform=${platform}&nocache=${Date.now()}`, { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.status !== 'success') throw new Error(data.message);
@@ -1273,7 +1277,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function loadSiteAnalytics() {
     try {
-      const res = await fetch(`api/site_analytics.php?period=${crmCurrentPeriod}`);
+      const res = await fetch(`api/site_analytics.php?period=${crmCurrentPeriod}&nocache=${Date.now()}`, { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.status !== 'success') throw new Error(data.message);
@@ -1549,7 +1553,7 @@ document.addEventListener('DOMContentLoaded', () => {
   async function loadSmmTable() {
     if (!smmTableBody) return;
     try {
-      const res = await fetch('api/calendar.php?action=list');
+      const res = await fetch('api/calendar.php?action=list&nocache=' + Date.now(), { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.status !== 'success') throw new Error(data.message);
@@ -1909,7 +1913,7 @@ document.addEventListener('DOMContentLoaded', () => {
   async function loadRubrics() {
     if (!rubricatorCardsGrid) return;
     try {
-      const res = await fetch('api/rubrics.php?action=list');
+      const res = await fetch('api/rubrics.php?action=list&nocache=' + Date.now(), { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.status !== 'success') throw new Error(data.message);
@@ -2010,7 +2014,7 @@ document.addEventListener('DOMContentLoaded', () => {
   async function loadCalendarItems() {
     if (!calendarGridCells) return;
     try {
-      const response = await fetch('api/content.php?action=calendar_list');
+      const response = await fetch('api/content.php?action=calendar_list&nocache=' + Date.now(), { cache: 'no-store' });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
 
@@ -2281,7 +2285,7 @@ document.addEventListener('DOMContentLoaded', () => {
     botLeadsList.innerHTML = '<div class="messenger-loading-hint">Загрузка диалогов...</div>';
 
     try {
-      const res = await fetch('api/bot.php?action=leads_list');
+      const res = await fetch('api/bot.php?action=leads_list&nocache=' + Date.now(), { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.status !== 'success') throw new Error(data.message);
@@ -2348,7 +2352,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (chatCorrectionDrawer) chatCorrectionDrawer.style.display = 'none';
 
     try {
-      const res = await fetch(`api/bot.php?action=messages&lead_id=${leadId}`);
+      const res = await fetch(`api/bot.php?action=messages&lead_id=${leadId}&nocache=${Date.now()}`, { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.status !== 'success') throw new Error(data.message);
@@ -2566,7 +2570,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function loadVpsConfig() {
     try {
-      const res = await fetch('api/bot.php?action=get_config');
+      const res = await fetch('api/bot.php?action=get_config&nocache=' + Date.now(), { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.status === 'success' && data.config) {
@@ -2717,7 +2721,8 @@ document.addEventListener('DOMContentLoaded', () => {
   async function loadOutreachLeads(force = false) {
     if (isOutreachLoaded && !force) return;
     try {
-      const res = await fetch('api/outreach.php?action=list', {
+      const res = await fetch('api/outreach.php?action=list&nocache=' + Date.now(), {
+        cache: 'no-store',
         headers: { 'Accept': 'application/json' }
       });
       const data = await res.json();
@@ -3304,7 +3309,7 @@ document.addEventListener('DOMContentLoaded', () => {
     container.innerHTML = '<div style="color: var(--color-text-muted); font-size: 13px; padding: 20px; text-align: center;">Загрузка инфоповодов радара...</div>';
 
     try {
-      const resp = await fetch(`api/trends.php?action=list&filter=${currentTrendsFilter}`);
+      const resp = await fetch(`api/trends.php?action=list&filter=${currentTrendsFilter}&nocache=${Date.now()}`, { cache: 'no-store' });
       const data = await resp.json();
 
       if (data.status !== 'success' || !data.trends || data.trends.length === 0) {

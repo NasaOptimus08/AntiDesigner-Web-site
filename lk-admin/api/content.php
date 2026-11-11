@@ -9,6 +9,9 @@ declare(strict_types=1);
  */
 
 header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
 header('X-Content-Type-Options: nosniff');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
@@ -295,8 +298,8 @@ try {
         // Проверяем наличие запланированных записей
         $count = (int)$pdo->query("SELECT COUNT(*) FROM content_items WHERE scheduled_for IS NOT NULL")->fetchColumn();
         
-        // Автоматический сид 30 дней, если сетка пуста
-        if ($count < 15) {
+        // Автоматический сид 30 дней СТРОГО один раз, если сетка абсолютно пуста
+        if ($count === 0) {
             $planSeed = [
                 ['format' => 'tg_post',     'status' => 'published', 'topic' => 'Почему конструкторы Tilda и Elementor режут конверсию на смартфонах: замер TTFB и LCP'],
                 ['format' => 'reels_hook',   'status' => 'published', 'topic' => 'Тест скорости: Tilda 4.8 секунды против Чистого кода 0.35 секунды в сети 4G'],

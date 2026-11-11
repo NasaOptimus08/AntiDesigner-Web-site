@@ -185,3 +185,4 @@ try {
         'message' => 'Ошибка обработки вебхука: ' . $e->getMessage()
     ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 }
+
