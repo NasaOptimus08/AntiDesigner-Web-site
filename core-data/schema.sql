@@ -94,8 +94,81 @@ CREATE TABLE IF NOT EXISTS agent_memory (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- =============================================================================
+-- СПРИНТ 3: Воронка конверсий, CRM, Аналитика, Контент-план SMM и ТГ-Бот
+-- =============================================================================
+
+-- 9. Посещения сайта и глубина скролла
+CREATE TABLE IF NOT EXISTS site_visits (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ip_hash TEXT,
+    device_type TEXT,          -- 'mobile', 'desktop'
+    max_scroll_depth INTEGER,  -- 25, 50, 75, 100
+    referrer TEXT,
+    visited_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 10. Клики по целевым кнопкам сайта
+CREATE TABLE IF NOT EXISTS site_button_clicks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    button_name TEXT NOT NULL, -- 'cta_order', 'btn_tariffs', 'tg_contact'
+    device_type TEXT,
+    clicked_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 11. Расширенный контент-план (структура таблицы SMM Memory Stones)
+CREATE TABLE IF NOT EXISTS content_plan (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    day_label TEXT,            -- '1 день', '2 день' или календарная дата
+    format TEXT NOT NULL,      -- 'article', 'post_tg', 'reels', 'carousel', 'lead_magnet', 'poll'
+    rubric TEXT NOT NULL,      -- Название рубрики из Рубрикатора
+    title TEXT NOT NULL,       -- Название темы
+    comment TEXT,              -- Пояснение / ТЗ
+    status TEXT DEFAULT 'idea',-- 'idea' (Банк идей), 'in_progress', 'ready', 'published'
+    platform_tg INTEGER DEFAULT 0,
+    platform_vc INTEGER DEFAULT 0,
+    platform_habr INTEGER DEFAULT 0,
+    platform_inst INTEGER DEFAULT 0,
+    platform_site INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 12. Переписка для Telegram-мессенджера
+CREATE TABLE IF NOT EXISTS bot_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    lead_id INTEGER NOT NULL,
+    sender TEXT NOT NULL,      -- 'user', 'bot', 'operator'
+    text TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(lead_id) REFERENCES leads(id)
+);
+
+-- 13. База обучения бота на ошибках (RLHF)
+CREATE TABLE IF NOT EXISTS bot_training_examples (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_prompt TEXT NOT NULL,
+    bad_bot_response TEXT,
+    human_correction TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 14. Трекер кликов по коротким ссылкам
+CREATE TABLE IF NOT EXISTS link_clicks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    slug TEXT NOT NULL,
+    target_url TEXT NOT NULL,
+    referrer TEXT,
+    clicked_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Индексы для оптимизации поиска и фильтрации
 CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
 CREATE INDEX IF NOT EXISTS idx_content_status ON content_items(status);
 CREATE INDEX IF NOT EXISTS idx_trends_approved ON trends(is_approved);
+CREATE INDEX IF NOT EXISTS idx_site_visits_date ON site_visits(visited_at);
+CREATE INDEX IF NOT EXISTS idx_site_clicks_btn ON site_button_clicks(button_name);
+CREATE INDEX IF NOT EXISTS idx_content_plan_status ON content_plan(status);
+CREATE INDEX IF NOT EXISTS idx_bot_messages_lead ON bot_messages(lead_id);
+CREATE INDEX IF NOT EXISTS idx_link_clicks_slug ON link_clicks(slug);
+
 

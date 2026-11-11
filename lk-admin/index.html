@@ -310,39 +310,310 @@
           <div class="module-hero-card">
             <div class="module-card-header">
               <div class="module-title-wrap">
-                <span class="module-kicker">LEAD PIPELINE &amp; ATTRIBUTION</span>
-                <h2>CRM и Воронка Лидов</h2>
+                <span class="module-kicker">LEAD PIPELINE &amp; MULTI-PLATFORM ANALYTICS</span>
+                <h2>CRM, Воронка и Веб-аналитика</h2>
               </div>
-              <span class="badge-accent">SQLITE WAL</span>
+              <span class="badge-accent">SQLITE WAL FASTCGI</span>
             </div>
             <p class="module-desc">
-              Канбан-доска статусов: <code class="tech-code">new</code> → <code class="tech-code">qualified</code> →
-              <code class="tech-code">hot</code> → <code class="tech-code">deal_closed</code> → <code
-                class="tech-code">archived</code> с точной UTM-атрибуцией статьи или поста, приведшего клиента.
+              Канбан-воронка лидов, сквозная атрибуция источников контента, учет бюджетов и веб-аналитика поведения на сайте (скролл, устройства, клики).
             </p>
 
-            <div class="tech-grid-3">
-              <div class="tech-metric-card">
-                <span class="metric-num">3</span>
-                <span class="metric-label">Тарифных коридора</span>
-                <span class="metric-hint">18к–25к · 25к–35к · 35к+</span>
+            <!-- Сквозной фильтр периода -->
+            <div class="crm-toolbar-row">
+              <div class="period-filter-group" id="crmPeriodFilter">
+                <span class="filter-label">Период:</span>
+                <button type="button" class="period-btn" data-period="day">Сегодня</button>
+                <button type="button" class="period-btn" data-period="week">7 дней</button>
+                <button type="button" class="period-btn" data-period="month">Месяц</button>
+                <button type="button" class="period-btn active" data-period="all">Все время</button>
               </div>
-              <div class="tech-metric-card">
-                <span class="metric-num">100%</span>
-                <span class="metric-label">Атрибуция UTM</span>
-                <span class="metric-hint">Сквозной трекинг источников</span>
+
+              <!-- Переключатель 3 подвкладок CRM -->
+              <div class="crm-subtabs-nav" id="crmSubtabsNav">
+                <button type="button" class="crm-subtab-btn active" data-subtab="kanban">
+                  <span class="subtab-icon">👥</span> Канбан лидов
+                </button>
+                <button type="button" class="crm-subtab-btn" data-subtab="platforms">
+                  <span class="subtab-icon">📊</span> Аналитика платформ
+                </button>
+                <button type="button" class="crm-subtab-btn" data-subtab="site">
+                  <span class="subtab-icon">📱</span> Поведение на сайте
+                </button>
               </div>
-              <div class="tech-metric-card">
-                <span class="metric-num">0 ms</span>
-                <span class="metric-label">Задержка записи</span>
-                <span class="metric-hint">Транзакции WAL без дедлоков</span>
+
+              <button type="button" id="crmAddLeadBtn" class="btn-tech-primary btn-sm">
+                <span class="btn-icon">+</span> Новый лид
+              </button>
+            </div>
+
+            <!-- ПОДВКЛАДКА 1: Канбан-доска лидов -->
+            <div class="crm-subpane active" id="crmSubpaneKanban">
+              <div class="kanban-board-grid">
+                <!-- 1. Новый -->
+                <div class="kanban-column" data-status="new">
+                  <div class="kanban-col-header">
+                    <div class="col-title-wrap">
+                      <span class="col-dot status-new"></span>
+                      <span class="col-name">Новые</span>
+                    </div>
+                    <span class="col-count-badge" id="kanbanCountNew">0</span>
+                  </div>
+                  <div class="kanban-cards-list" id="kanbanColNew"></div>
+                </div>
+
+                <!-- 2. Квалифицирован -->
+                <div class="kanban-column" data-status="qualified">
+                  <div class="kanban-col-header">
+                    <div class="col-title-wrap">
+                      <span class="col-dot status-qualified"></span>
+                      <span class="col-name">Квалифицированы</span>
+                    </div>
+                    <span class="col-count-badge" id="kanbanCountQualified">0</span>
+                  </div>
+                  <div class="kanban-cards-list" id="kanbanColQualified"></div>
+                </div>
+
+                <!-- 3. Горячий -->
+                <div class="kanban-column" data-status="hot">
+                  <div class="kanban-col-header">
+                    <div class="col-title-wrap">
+                      <span class="col-dot status-hot"></span>
+                      <span class="col-name">Горячие</span>
+                    </div>
+                    <span class="col-count-badge" id="kanbanCountHot">0</span>
+                  </div>
+                  <div class="kanban-cards-list" id="kanbanColHot"></div>
+                </div>
+
+                <!-- 4. Сделка закрыта -->
+                <div class="kanban-column" data-status="deal_closed">
+                  <div class="kanban-col-header">
+                    <div class="col-title-wrap">
+                      <span class="col-dot status-deal"></span>
+                      <span class="col-name">Сделка закрыта</span>
+                    </div>
+                    <span class="col-count-badge" id="kanbanCountDeal">0</span>
+                  </div>
+                  <div class="kanban-cards-list" id="kanbanColDeal"></div>
+                </div>
+
+                <!-- 5. Архив -->
+                <div class="kanban-column" data-status="archived">
+                  <div class="kanban-col-header">
+                    <div class="col-title-wrap">
+                      <span class="col-dot status-archive"></span>
+                      <span class="col-name">Архив</span>
+                    </div>
+                    <span class="col-count-badge" id="kanbanCountArchived">0</span>
+                  </div>
+                  <div class="kanban-cards-list" id="kanbanColArchived"></div>
+                </div>
               </div>
             </div>
 
-            <div class="module-placeholder-box">
-              <div class="box-icon">👥</div>
-              <h3>Канбан-доска и учет заявок готовы к интеграции</h3>
-              <p>Интерфейс перемещения карточек лидов, фиксация выданных магнитов и контактов Telegram.</p>
+            <!-- ПОДВКЛАДКА 2: Общая аналитика платформ -->
+            <div class="crm-subpane" id="crmSubpanePlatforms" style="display: none;">
+              <div class="tech-grid-5" id="platformMetricsCards">
+                <div class="tech-metric-card">
+                  <span class="metric-num" id="paViewsTotal">0</span>
+                  <span class="metric-label">Всего просмотров</span>
+                  <span class="metric-hint">Охват во всех каналах</span>
+                </div>
+                <div class="tech-metric-card">
+                  <span class="metric-num" id="paLikesTotal">0</span>
+                  <span class="metric-label">Лайки и реакции</span>
+                  <span class="metric-hint">Вовлечение аудитории</span>
+                </div>
+                <div class="tech-metric-card">
+                  <span class="metric-num" id="paCommentsTotal">0</span>
+                  <span class="metric-label">Комментарии</span>
+                  <span class="metric-hint">Диалоги на VC и Habr</span>
+                </div>
+                <div class="tech-metric-card">
+                  <span class="metric-num sys-green" id="paClicksTotal">0</span>
+                  <span class="metric-label">Клики по ссылкам</span>
+                  <span class="metric-hint">Переходы из постов (r/)</span>
+                </div>
+                <div class="tech-metric-card">
+                  <span class="metric-num sys-accent" id="paLeadsTotal">0</span>
+                  <span class="metric-label">Новых лидов в CRM</span>
+                  <span class="metric-hint" id="paConvHint">Конверсия 0%</span>
+                </div>
+              </div>
+
+              <!-- Таблица детализации по каналам -->
+              <div class="analytics-table-card">
+                <div class="table-card-header">
+                  <h3>Детализация эффективности по каналам дистрибуции</h3>
+                  <span class="tech-badge">ATTRIBUTION MATRIX</span>
+                </div>
+                <div class="table-responsive">
+                  <table class="tech-data-table" id="paBreakdownTable">
+                    <thead>
+                      <tr>
+                        <th>Канал / Платформа</th>
+                        <th>Охват (просмотры)</th>
+                        <th>Реакции</th>
+                        <th>Клики по ссылкам</th>
+                        <th>Лиды в CRM</th>
+                        <th>Конверсия</th>
+                      </tr>
+                    </thead>
+                    <tbody id="paTableBody">
+                      <tr><td colspan="6" class="text-center">Загрузка данных...</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- ПОДВКЛАДКА 3: Поведение на сайте (Веб-аналитика) -->
+            <div class="crm-subpane" id="crmSubpaneSite" style="display: none;">
+              <div class="site-analytics-grid">
+                <!-- Устройства: Mobile vs Desktop -->
+                <div class="analytics-card">
+                  <div class="card-header-compact">
+                    <h4>📱 Устройства (Mobile vs Desktop)</h4>
+                    <span id="siteTotalVisitsBadge" class="tech-tag">0 визитов</span>
+                  </div>
+                  <div class="device-split-container">
+                    <div class="split-bar-track">
+                      <div class="split-bar-mobile" id="siteMobileBar" style="width: 50%;"></div>
+                      <div class="split-bar-desktop" id="siteDesktopBar" style="width: 50%;"></div>
+                    </div>
+                    <div class="split-legend-row">
+                      <div class="split-legend-item">
+                        <span class="legend-color-dot mobile-color"></span>
+                        <span class="legend-name">Mobile:</span>
+                        <strong id="siteMobilePct">0%</strong>
+                        <span class="legend-count" id="siteMobileCount">(0)</span>
+                      </div>
+                      <div class="split-legend-item">
+                        <span class="legend-color-dot desktop-color"></span>
+                        <span class="legend-name">Desktop:</span>
+                        <strong id="siteDesktopPct">0%</strong>
+                        <span class="legend-count" id="siteDesktopCount">(0)</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Воронка глубины скролла -->
+                <div class="analytics-card">
+                  <div class="card-header-compact">
+                    <h4>📜 Воронка глубины скролла</h4>
+                    <span class="tech-tag">SCROLL DEPTH</span>
+                  </div>
+                  <div class="funnel-bars-list" id="siteScrollFunnel">
+                    <div class="funnel-row">
+                      <span class="funnel-tier-label">25% страницы</span>
+                      <div class="funnel-bar-track">
+                        <div class="funnel-bar-fill" id="funnelFill25" style="width: 100%;"></div>
+                      </div>
+                      <span class="funnel-pct" id="funnelPct25">100%</span>
+                    </div>
+                    <div class="funnel-row">
+                      <span class="funnel-tier-label">50% (Кейсы)</span>
+                      <div class="funnel-bar-track">
+                        <div class="funnel-bar-fill" id="funnelFill50" style="width: 65%;"></div>
+                      </div>
+                      <span class="funnel-pct" id="funnelPct50">65%</span>
+                    </div>
+                    <div class="funnel-row">
+                      <span class="funnel-tier-label">75% (Тарифы)</span>
+                      <div class="funnel-bar-track">
+                        <div class="funnel-bar-fill" id="funnelFill75" style="width: 40%;"></div>
+                      </div>
+                      <span class="funnel-pct" id="funnelPct75">40%</span>
+                    </div>
+                    <div class="funnel-row">
+                      <span class="funnel-tier-label">100% (Футер)</span>
+                      <div class="funnel-bar-track">
+                        <div class="funnel-bar-fill" id="funnelFill100" style="width: 20%;"></div>
+                      </div>
+                      <span class="funnel-pct" id="funnelPct100">20%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Топ кликов по кнопкам -->
+              <div class="analytics-table-card" style="margin-top: 18px;">
+                <div class="table-card-header">
+                  <h4>🎯 Топ кликабельных целевых кнопок на сайте (CTA Clicks)</h4>
+                  <span class="tech-badge">BUTTON CLICKS</span>
+                </div>
+                <div class="table-responsive">
+                  <table class="tech-data-table">
+                    <thead>
+                      <tr>
+                        <th>Идентификатор кнопки (data-track)</th>
+                        <th>Всего кликов</th>
+                        <th>С телефонов</th>
+                        <th>С компьютеров</th>
+                        <th>Доля кликов</th>
+                      </tr>
+                    </thead>
+                    <tbody id="siteButtonsTableBody">
+                      <tr><td colspan="5" class="text-center">Загрузка данных...</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Модальное окно добавления нового лида -->
+            <div id="crmNewLeadModal" class="cal-modal-backdrop" style="display: none;">
+              <div class="cal-modal-box">
+                <div class="cal-modal-header">
+                  <h3>Добавить нового лида в CRM</h3>
+                  <button type="button" class="cal-modal-close" id="crmLeadModalClose">&times;</button>
+                </div>
+                <div class="cal-modal-body">
+                  <div class="form-group">
+                    <label class="tech-label" for="crmLeadName">Имя клиента / Компания</label>
+                    <input type="text" id="crmLeadName" class="tech-input" placeholder="Например: Роман (Автосервис)">
+                  </div>
+                  <div class="form-group">
+                    <label class="tech-label" for="crmLeadTg">Telegram Username</label>
+                    <input type="text" id="crmLeadTg" class="tech-input" placeholder="@username (без пробелов)">
+                  </div>
+                  <div class="form-row-2">
+                    <div class="form-group">
+                      <label class="tech-label" for="crmLeadStatus">Статус воронки</label>
+                      <select id="crmLeadStatus" class="tech-input">
+                        <option value="new">Новый</option>
+                        <option value="qualified">Квалифицирован</option>
+                        <option value="hot">Горячий</option>
+                        <option value="deal_closed">Сделка закрыта</option>
+                        <option value="archived">Архив</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label class="tech-label" for="crmLeadBudget">Бюджет</label>
+                      <select id="crmLeadBudget" class="tech-input">
+                        <option value="18к-25к">18к–25к (Лендинг)</option>
+                        <option value="25к-35к" selected>25к–35к (Сайт под ключ)</option>
+                        <option value="35к+">35к+ (Премиум / Многостраничник)</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label class="tech-label" for="crmLeadUtm">UTM Источник / Канал</label>
+                    <input type="text" id="crmLeadUtm" class="tech-input" placeholder="vc_case_speed, tg_post_tilda, website...">
+                  </div>
+                  <div class="form-group">
+                    <label class="tech-label" for="crmLeadNotes">Заметки по проекту</label>
+                    <textarea id="crmLeadNotes" class="tech-textarea" rows="3" placeholder="Что нужно клиенту, текущий сайт, боли..."></textarea>
+                  </div>
+                </div>
+                <div class="cal-modal-footer">
+                  <button type="button" id="crmSaveLeadBtn" class="btn-tech-primary">
+                    💾 Сохранить лида
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -496,38 +767,93 @@
           <div class="module-hero-card">
             <div class="module-card-header">
               <div class="module-title-wrap">
-                <span class="module-kicker">TELEGRAM BOT WEBHOOK ENGINE</span>
-                <h2>ТГ-Бот и лид-магниты</h2>
+                <span class="module-kicker">TELEGRAM BOT LIVE MESSENGER &amp; RLHF</span>
+                <h2>ТГ-Бот и Онлайн-Мессенджер</h2>
               </div>
-              <span class="badge-accent">FASTCGI WEBHOOK</span>
+              <div class="header-badges-row">
+                <span class="badge-accent">LIVE MESSENGER</span>
+                <span class="tech-tag" id="botUnreadTotalBadge">0 диалогов</span>
+              </div>
             </div>
             <p class="module-desc">
-              Автономный бот на Webhook. Выдает лид-магниты по кодовым словам из постов, квалифицирует лидов и
-              моментально шлет уведомление администратору при появлении горячего клиента.
+              Прямая переписка с лидами Telegram в реальном времени. Отвечайте от имени бота или оператора и обучайте модель на ошибках кнопкой «💡 Скорректировать ответ».
             </p>
 
-            <div class="tech-grid-3">
-              <div class="tech-metric-card">
-                <span class="metric-num">0.05с</span>
-                <span class="metric-label">Отклик вебхука</span>
-                <span class="metric-hint">Легковесный PHP без демонов</span>
+            <!-- Двухколоночный Live Messenger -->
+            <div class="bot-messenger-container">
+              <!-- Левая колонка: список лидов -->
+              <div class="messenger-sidebar">
+                <div class="messenger-sidebar-header">
+                  <span class="sidebar-title">Диалоги Telegram</span>
+                  <button type="button" class="btn-tech-outline btn-xs" id="botRefreshChatsBtn" title="Обновить список чатов">↺</button>
+                </div>
+                <div class="messenger-leads-list" id="botLeadsList">
+                  <div class="messenger-loading-hint">Загрузка диалогов...</div>
+                </div>
               </div>
-              <div class="tech-metric-card">
-                <span class="metric-num">2FA</span>
-                <span class="metric-label">Безопасность админки</span>
-                <span class="metric-hint">Одноразовый код входа в Telegram</span>
-              </div>
-              <div class="tech-metric-card">
-                <span class="metric-num">Auto</span>
-                <span class="metric-label">Квалификация</span>
-                <span class="metric-hint">Сбор контактов прямо в CRM</span>
-              </div>
-            </div>
 
-            <div class="module-placeholder-box">
-              <div class="box-icon">🤖</div>
-              <h3>Управление ботом и кодовыми словами лид-магнитов</h3>
-              <p>Настройка вебхука, статистика выдачи PDF и лог входящих обращений.</p>
+              <!-- Правая колонка: окно переписки -->
+              <div class="messenger-chat-window">
+                <!-- Шапка чата -->
+                <div class="chat-header-bar" id="chatHeaderBar">
+                  <div class="chat-user-info">
+                    <span class="chat-user-avatar">👤</span>
+                    <div>
+                      <h4 id="chatLeadName">Выберите диалог слева</h4>
+                      <span id="chatLeadMeta" class="chat-meta-text">Telegram клиент</span>
+                    </div>
+                  </div>
+                  <div class="chat-lead-actions">
+                    <span id="chatLeadStatusBadge" class="tech-tag">СТАТУС</span>
+                    <span id="chatLeadBudgetBadge" class="tech-tag sys-green">БЮДЖЕТ</span>
+                  </div>
+                </div>
+
+                <!-- Тело переписки (лента сообщений) -->
+                <div class="chat-messages-stream" id="chatMessagesStream">
+                  <div class="chat-empty-hint">Нажмите на любой контакт в списке слева, чтобы открыть переписку</div>
+                </div>
+
+                <!-- Блок быстрой коррекции ответа (RLHF) -->
+                <div class="chat-correction-drawer" id="chatCorrectionDrawer" style="display: none;">
+                  <div class="drawer-header">
+                    <span>💡 Обучение бота (RLHF): эталон правильного ответа</span>
+                    <button type="button" class="drawer-close-btn" id="closeCorrectionDrawerBtn">&times;</button>
+                  </div>
+                  <input type="hidden" id="correctionUserPrompt">
+                  <input type="hidden" id="correctionBadResponse">
+                  <div class="drawer-body">
+                    <div class="correction-preview-box">
+                      <span class="preview-label">Ответ бота с ошибкой:</span>
+                      <p id="correctionBadPreview" class="preview-text"></p>
+                    </div>
+                    <div class="form-group">
+                      <label class="tech-label">Как следовало ответить (эталон):</label>
+                      <textarea id="correctionInputText" class="tech-textarea" rows="2" placeholder="Напишите правильный ответ по регламенту AntiDesigner..."></textarea>
+                    </div>
+                    <button type="button" id="saveCorrectionBtn" class="btn-tech-primary btn-sm">
+                      💾 Сохранить в базу знаний (RLHF)
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Подвал ввода ответа -->
+                <div class="chat-composer-box">
+                  <div class="composer-quick-chips">
+                    <span class="chips-label">Шаблоны:</span>
+                    <button type="button" class="quick-chip" data-text="Тариф под ключ — от 25 000 руб за 5-7 дней без конструкторов. Включает чистый код, адаптив и PageSpeed 100/100.">💰 Тариф 25к</button>
+                    <button type="button" class="quick-chip" data-text="Давайте проведем бесплатный экспресс-аудит скорости вашего сайта! Напишите домен.">🏎 Аудит скорости</button>
+                    <button type="button" class="quick-chip" data-text="Держите PDF-гайд: 10 признаков того, что конструктор сливает рекламу. Прикрепил файл.">🧲 Лид-магнит</button>
+                    <button type="button" class="quick-chip" data-text="Для запуска работы достаточно аванса 50% и ссылки на текущие материалы. Готовы начинать?">🤝 Старт проекта</button>
+                  </div>
+                  <div class="composer-input-row">
+                    <textarea id="operatorMessageInput" class="tech-textarea" rows="2" placeholder="Напишите ответ клиенту от имени бота или оператора..."></textarea>
+                    <button type="button" id="sendOperatorMsgBtn" class="btn-tech-primary">
+                      <span class="btn-icon">✈️</span> Отправить
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -579,65 +905,133 @@
           <div class="module-hero-card">
             <div class="module-card-header">
               <div class="module-title-wrap">
-                <span class="module-kicker">MONTHLY CALENDAR GRID</span>
+                <span class="module-kicker">EXCEL SMM MEMORY STONES &amp; RUBRICATOR</span>
                 <h2>Интерактивный контент-план</h2>
               </div>
-              <span class="badge-accent">30 ДНЕЙ / FASTCGI SQLITE</span>
+              <div class="header-badges-row">
+                <div class="view-switch-tabs" id="calViewSwitcher">
+                  <button type="button" class="view-tab-btn active" data-view="table">
+                    <span class="btn-icon">📋</span> Таблица SMM (Excel)
+                  </button>
+                  <button type="button" class="view-tab-btn" data-view="grid">
+                    <span class="btn-icon">📅</span> Сетка на 30 дней
+                  </button>
+                </div>
+              </div>
             </div>
             <p class="module-desc">
-              Календарная сетка на 30 дней с автоматическим распределением форматов и целевых тем под боли ЦА.
-              Кликайте по любой теме для редактирования или переходите к мгновенной генерации через Контент-фабрику.
+              Интерактивная таблица контент-плана по структуре SMM Memory Stones: распределение по дням, форматам, рубрикам и платформам дистрибуции [TG, VC, Habr, Inst, Сайт] с мгновенным переносом в Контент-фабрику.
             </p>
 
-            <div class="tech-grid-3">
-              <div class="tech-metric-card">
-                <span class="metric-num" id="calStatTotal">30</span>
-                <span class="metric-label">Дней в сетке</span>
-                <span class="metric-hint">Охват всех 5 омни-форматов</span>
-              </div>
-              <div class="tech-metric-card">
-                <span class="metric-num sys-green" id="calStatReady">0</span>
-                <span class="metric-label">Готово / Опубликовано</span>
-                <span class="metric-hint">ready + published материалы</span>
-              </div>
-              <div class="tech-metric-card">
-                <span class="metric-num" id="calStatPlanned">30</span>
-                <span class="metric-label">Запланировано</span>
-                <span class="metric-hint">Темы в очереди на генерацию</span>
-              </div>
-            </div>
-
-            <!-- Инструменты управления календарем -->
-            <div class="calendar-controls-bar">
-              <div class="calendar-filter-pills" id="calendarFilterPills">
-                <button type="button" class="cal-filter-btn active" data-fmt="all">Все форматы</button>
-                <button type="button" class="cal-filter-btn" data-fmt="tg_post">💬 Telegram</button>
-                <button type="button" class="cal-filter-btn" data-fmt="vc_ru">📝 VC / Habr</button>
-                <button type="button" class="cal-filter-btn" data-fmt="reels_hook">📸 Reels</button>
-                <button type="button" class="cal-filter-btn" data-fmt="lead_magnet">🧲 Лид-магнит</button>
-                <button type="button" class="cal-filter-btn" data-fmt="site_geo">🌐 SEO</button>
-              </div>
-              <div class="calendar-actions-right">
-                <button type="button" id="calAddPostBtn" class="btn-tech-outline">
-                  <span class="btn-icon">+</span> Добавить тему
-                </button>
-                <button type="button" id="calGenerateAiBtn" class="btn-tech-primary">
-                  <span class="btn-icon">⚡</span> AI-план на 30 дней
+            <!-- ВИД 1: ИНТЕРАКТИВНАЯ ТАБЛИЦА SMM (EXCEL) -->
+            <div class="smm-table-container" id="smmTableViewContainer">
+              <!-- Фильтры по статусу -->
+              <div class="smm-toolbar-bar">
+                <div class="smm-status-pills" id="smmStatusFilterPills">
+                  <button type="button" class="smm-pill active" data-status="all">Все статусы</button>
+                  <button type="button" class="smm-pill" data-status="idea">⚪ Банк идей</button>
+                  <button type="button" class="smm-pill" data-status="in_progress">🟡 В работе</button>
+                  <button type="button" class="smm-pill" data-status="ready">🟢 Готово</button>
+                  <button type="button" class="smm-pill" data-status="published">🔵 Опубликовано</button>
+                </div>
+                <button type="button" id="smmTopAddRowBtn" class="btn-tech-primary btn-sm">
+                  <span class="btn-icon">+</span> Добавить строку
                 </button>
               </div>
+
+              <!-- Таблица контент-плана -->
+              <div class="smm-table-wrapper">
+                <table class="smm-plan-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 95px;">День / Дата</th>
+                      <th style="width: 145px;">Формат</th>
+                      <th style="width: 190px;">Рубрика</th>
+                      <th style="min-width: 240px;">Название / Тема</th>
+                      <th style="min-width: 180px;">Комментарий / ТЗ</th>
+                      <th style="width: 135px;">Статус</th>
+                      <th style="width: 175px;">Платформы</th>
+                      <th style="width: 110px; text-align: center;">Действия</th>
+                    </tr>
+                  </thead>
+                  <tbody id="smmTableBody">
+                    <tr><td colspan="8" class="text-center">Загрузка контент-плана...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="smm-table-bottom-bar">
+                <button type="button" id="smmAddRowBtn" class="btn-tech-outline btn-sm">
+                  <span class="btn-icon">+</span> Добавить строку в план
+                </button>
+                <span class="auto-save-hint">✓ Все изменения строк автоматически сохраняются в базу SQLite</span>
+              </div>
+
+              <!-- НИЖНЯЯ ЧАСТЬ: ИНТЕРАКТИВНЫЙ РУБРИКАТОР -->
+              <div class="rubricator-box">
+                <div class="rubricator-header">
+                  <div>
+                    <span class="module-kicker">CONTENT STRATEGY &amp; RUBRICS</span>
+                    <h3 class="rubricator-title">Интерактивный Рубрикатор AntiDesigner</h3>
+                    <p class="rubricator-subtitle">Нажмите «+ В план» на любой теме, чтобы добавить готовый экспертный пост в таблицу контент-плана</p>
+                  </div>
+                  <span class="tech-tag">5 СМЫСЛОВЫХ РУБРИК</span>
+                </div>
+                <div class="rubricator-cards-grid" id="rubricatorCardsGrid">
+                  <!-- Карточки рубрик генерируются динамически -->
+                </div>
+              </div>
             </div>
 
-            <!-- Интерактивная 30-дневная сетка -->
-            <div class="calendar-board-wrap">
-              <div class="calendar-weekdays-bar">
-                <span>ПН</span><span>ВТ</span><span>СР</span><span>ЧТ</span><span>ПТ</span><span>СБ</span><span>ВС</span>
+            <!-- ВИД 2: КАЛЕНДАРНАЯ СЕТКА НА 30 ДНЕЙ -->
+            <div class="calendar-grid-container" id="calendarGridContainer" style="display: none;">
+              <div class="tech-grid-3" style="margin-bottom: 16px;">
+                <div class="tech-metric-card">
+                  <span class="metric-num" id="calStatTotal">30</span>
+                  <span class="metric-label">Дней в сетке</span>
+                  <span class="metric-hint">Охват всех 5 омни-форматов</span>
+                </div>
+                <div class="tech-metric-card">
+                  <span class="metric-num sys-green" id="calStatReady">0</span>
+                  <span class="metric-label">Готово / Опубликовано</span>
+                  <span class="metric-hint">ready + published материалы</span>
+                </div>
+                <div class="tech-metric-card">
+                  <span class="metric-num" id="calStatPlanned">30</span>
+                  <span class="metric-label">Запланировано</span>
+                  <span class="metric-hint">Темы в очереди на генерацию</span>
+                </div>
               </div>
-              <div class="calendar-grid-cells" id="calendarGridCells">
-                <div class="calendar-loading-hint">Загрузка сетки контент-плана...</div>
+
+              <!-- Инструменты фильтрации сетки -->
+              <div class="calendar-controls-bar">
+                <div class="calendar-filter-pills" id="calendarFilterPills">
+                  <button type="button" class="cal-filter-btn active" data-fmt="all">Все форматы</button>
+                  <button type="button" class="cal-filter-btn" data-fmt="tg_post">💬 Telegram</button>
+                  <button type="button" class="cal-filter-btn" data-fmt="vc_ru">📝 VC / Habr</button>
+                  <button type="button" class="cal-filter-btn" data-fmt="reels_hook">📸 Reels</button>
+                  <button type="button" class="cal-filter-btn" data-fmt="lead_magnet">🧲 Лид-магнит</button>
+                  <button type="button" class="cal-filter-btn" data-fmt="site_geo">🌐 SEO</button>
+                </div>
+                <div class="calendar-actions-right">
+                  <button type="button" id="calAddPostBtn" class="btn-tech-outline">
+                    <span class="btn-icon">+</span> Добавить тему
+                  </button>
+                </div>
+              </div>
+
+              <!-- Интерактивная 30-дневная сетка -->
+              <div class="calendar-board-wrap">
+                <div class="calendar-weekdays-bar">
+                  <span>ПН</span><span>ВТ</span><span>СР</span><span>ЧТ</span><span>ПТ</span><span>СБ</span><span>ВС</span>
+                </div>
+                <div class="calendar-grid-cells" id="calendarGridCells">
+                  <div class="calendar-loading-hint">Загрузка сетки контент-плана...</div>
+                </div>
               </div>
             </div>
 
-            <!-- Модальное окно создания/редактирования публикации -->
+            <!-- Модальное окно редактирования публикации сетки -->
             <div id="calEditModal" class="cal-modal-backdrop" style="display: none;">
               <div class="cal-modal-box">
                 <div class="cal-modal-header">

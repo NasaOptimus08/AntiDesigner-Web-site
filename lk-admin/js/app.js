@@ -19,7 +19,8 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     crm: {
       title: '👥 CRM и Лиды',
-      breadcrumb: 'CRM'
+      breadcrumb: 'CRM',
+      onActivate: () => initCrmTab()
     },
     knowledge: {
       title: '🧠 База знаний',
@@ -32,7 +33,8 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     bot: {
       title: '🤖 ТГ-Бот и магниты',
-      breadcrumb: 'BOT'
+      breadcrumb: 'BOT',
+      onActivate: () => initBotTab()
     },
     trends: {
       title: '📡 Тренды',
@@ -962,21 +964,325 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ===========================================================================
-  // 7. МОДУЛЬ: 📅 ИНТЕРАКТИВНЫЙ КОНТЕНТ-ПЛАН (#calendar)
+  // 6. МОДУЛЬ: 👥 CRM, ВОРОНКА И АНАЛИТИКА (#crm)
   // ===========================================================================
+  let crmCurrentPeriod = 'all';
+  let crmCurrentSubtab = 'kanban';
+  let isCrmLoaded = false;
+
+  const crmPeriodFilter = document.getElementById('crmPeriodFilter');
+  const crmSubtabsNav = document.getElementById('crmSubtabsNav');
+  const crmSubpaneKanban = document.getElementById('crmSubpaneKanban');
+  const crmSubpanePlatforms = document.getElementById('crmSubpanePlatforms');
+  const crmSubpaneSite = document.getElementById('crmSubpaneSite');
+  const crmAddLeadBtn = document.getElementById('crmAddLeadBtn');
+
+  // Modal New Lead
+  const crmNewLeadModal = document.getElementById('crmNewLeadModal');
+  const crmLeadModalClose = document.getElementById('crmLeadModalClose');
+  const crmSaveLeadBtn = document.getElementById('crmSaveLeadBtn');
+  const crmLeadName = document.getElementById('crmLeadName');
+  const crmLeadTg = document.getElementById('crmLeadTg');
+  const crmLeadStatus = document.getElementById('crmLeadStatus');
+  const crmLeadBudget = document.getElementById('crmLeadBudget');
+  const crmLeadUtm = document.getElementById('crmLeadUtm');
+  const crmLeadNotes = document.getElementById('crmLeadNotes');
+
+  async function initCrmTab(forceReload = false) {
+    if (isCrmLoaded && !forceReload) return;
+    isCrmLoaded = true;
+    await refreshActiveCrmSubtab();
+  }
+
+  async function refreshActiveCrmSubtab() {
+    if (crmCurrentSubtab === 'kanban') {
+      await loadKanbanData();
+    } else if (crmCurrentSubtab === 'platforms') {
+      await loadPlatformAnalytics();
+    } else if (crmCurrentSubtab === 'site') {
+      await loadSiteAnalytics();
+    }
+  }
+
+  async function loadKanbanData() {
+    try {
+      const res = await fetch(`api/crm.php?action=kanban&period=${crmCurrentPeriod}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.status !== 'success') throw new Error(data.message || 'Ошибка загрузки CRM');
+
+      renderKanbanColumns(data.columns || {}, data.counts || {});
+    } catch (err) {
+      showToast(`Ошибка CRM: ${err.message}`, 'error');
+    }
+  }
+
+  function renderKanbanColumns(columns, counts) {
+    const colIds = {
+      new: { list: document.getElementById('kanbanColNew'), badge: document.getElementById('kanbanCountNew') },
+      qualified: { list: document.getElementById('kanbanColQualified'), badge: document.getElementById('kanbanCountQualified') },
+      hot: { list: document.getElementById('kanbanColHot'), badge: document.getElementById('kanbanCountHot') },
+      deal_closed: { list: document.getElementById('kanbanColDeal'), badge: document.getElementById('kanbanCountDeal') },
+      archived: { list: document.getElementById('kanbanColArchived'), badge: document.getElementById('kanbanCountArchived') }
+    };
+
+    Object.keys(colIds).forEach(status => {
+      const col = colIds[status];
+      if (col.badge) col.badge.textContent = counts[status] || 0;
+      if (!col.list) return;
+
+      const leads = columns[status] || [];
+      if (leads.length === 0) {
+        col.list.innerHTML = '<div style="font-size:11.5px;color:var(--color-text-subtle);text-align:center;padding:24px 0;">Нет лидов</div>';
+        return;
+      }
+
+      col.list.innerHTML = leads.map(lead => `
+        <div class="kanban-card" data-lead-id="${lead.id}">
+          <div class="card-lead-name">${escapeHtml(lead.full_name || 'Без имени')}</div>
+          ${lead.telegram_username ? `<a href="https://t.me/${escapeHtml(lead.telegram_username)}" target="_blank" class="card-lead-tg">@${escapeHtml(lead.telegram_username)}</a>` : ''}
+          <div class="card-chips-row">
+            ${lead.utm_source ? `<span class="chip-utm">UTM: ${escapeHtml(lead.utm_source)}</span>` : ''}
+            ${lead.budget_range ? `<span class="chip-budget">${escapeHtml(lead.budget_range)}</span>` : ''}
+          </div>
+          ${lead.notes ? `<div class="card-notes-text">${escapeHtml(lead.notes)}</div>` : ''}
+          <select class="card-status-select" data-id="${lead.id}">
+            <option value="new" ${lead.status === 'new' ? 'selected' : ''}>Новый</option>
+            <option value="qualified" ${lead.status === 'qualified' ? 'selected' : ''}>Квалифицирован</option>
+            <option value="hot" ${lead.status === 'hot' ? 'selected' : ''}>Горячий</option>
+            <option value="deal_closed" ${lead.status === 'deal_closed' ? 'selected' : ''}>Сделка закрыта</option>
+            <option value="archived" ${lead.status === 'archived' ? 'selected' : ''}>В архиве</option>
+          </select>
+        </div>
+      `).join('');
+    });
+
+    // Привязываем слушатели смены статуса
+    document.querySelectorAll('.card-status-select').forEach(sel => {
+      sel.addEventListener('change', async () => {
+        const id = parseInt(sel.getAttribute('data-id'), 10);
+        const newStatus = sel.value;
+        try {
+          const res = await fetch('api/crm.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'update_lead_status', id, status: newStatus })
+          });
+          const data = await res.json();
+          if (!res.ok || data.status !== 'success') throw new Error(data.message || 'Ошибка обновления');
+          showToast('Статус лида обновлен', 'success');
+          await loadKanbanData();
+        } catch (err) {
+          showToast(`Ошибка: ${err.message}`, 'error');
+        }
+      });
+    });
+  }
+
+  async function loadPlatformAnalytics() {
+    try {
+      const res = await fetch(`api/crm.php?action=platform_analytics&period=${crmCurrentPeriod}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.status !== 'success') throw new Error(data.message);
+
+      const elViews = document.getElementById('paViewsTotal');
+      const elLikes = document.getElementById('paLikesTotal');
+      const elComments = document.getElementById('paCommentsTotal');
+      const elClicks = document.getElementById('paClicksTotal');
+      const elLeads = document.getElementById('paLeadsTotal');
+      const elConvHint = document.getElementById('paConvHint');
+      const elTableBody = document.getElementById('paTableBody');
+
+      if (elViews) elViews.textContent = (data.total_views || 0).toLocaleString('ru-RU');
+      if (elLikes) elLikes.textContent = (data.total_likes || 0).toLocaleString('ru-RU');
+      if (elComments) elComments.textContent = (data.total_comments || 0).toLocaleString('ru-RU');
+      if (elClicks) elClicks.textContent = (data.total_link_clicks || 0).toLocaleString('ru-RU');
+      if (elLeads) elLeads.textContent = (data.total_leads || 0).toLocaleString('ru-RU');
+      if (elConvHint) elConvHint.textContent = `Конверсия в лид ${data.conversion_pct || 0}%`;
+
+      if (elTableBody && Array.isArray(data.platforms)) {
+        elTableBody.innerHTML = data.platforms.map(p => `
+          <tr>
+            <td><strong>${p.icon} ${escapeHtml(p.name)}</strong></td>
+            <td>${p.views.toLocaleString('ru-RU')}</td>
+            <td>${p.reactions.toLocaleString('ru-RU')}</td>
+            <td><span class="sys-green">${p.link_clicks.toLocaleString('ru-RU')}</span></td>
+            <td><strong class="sys-accent">${p.leads}</strong></td>
+            <td><span class="tech-tag">${p.conv_pct}</span></td>
+          </tr>
+        `).join('');
+      }
+    } catch (err) {
+      showToast(`Ошибка аналитики платформ: ${err.message}`, 'error');
+    }
+  }
+
+  async function loadSiteAnalytics() {
+    try {
+      const res = await fetch(`api/site_analytics.php?period=${crmCurrentPeriod}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.status !== 'success') throw new Error(data.message);
+
+      // Устройства
+      const elBadge = document.getElementById('siteTotalVisitsBadge');
+      const elMBar = document.getElementById('siteMobileBar');
+      const elDBar = document.getElementById('siteDesktopBar');
+      const elMPct = document.getElementById('siteMobilePct');
+      const elDPct = document.getElementById('siteDesktopPct');
+      const elMCount = document.getElementById('siteMobileCount');
+      const elDCount = document.getElementById('siteDesktopCount');
+
+      if (elBadge) elBadge.textContent = `${data.total_visits || 0} визитов`;
+      if (elMBar) elMBar.style.width = `${data.devices.mobile_pct || 50}%`;
+      if (elDBar) elDBar.style.width = `${data.devices.desktop_pct || 50}%`;
+      if (elMPct) elMPct.textContent = `${data.devices.mobile_pct || 0}%`;
+      if (elDPct) elDPct.textContent = `${data.devices.desktop_pct || 0}%`;
+      if (elMCount) elMCount.textContent = `(${data.devices.mobile || 0})`;
+      if (elDCount) elDCount.textContent = `(${data.devices.desktop || 0})`;
+
+      // Воронка скролла
+      const sf = data.scroll_funnel || {};
+      ['25', '50', '75', '100'].forEach(tier => {
+        const item = sf[`depth_${tier}`] || { count: 0, pct: 0 };
+        const fill = document.getElementById(`funnelFill${tier}`);
+        const pct = document.getElementById(`funnelPct${tier}`);
+        if (fill) fill.style.width = `${item.pct}%`;
+        if (pct) pct.textContent = `${item.pct}% (${item.count})`;
+      });
+
+      // Топ кликов
+      const elBtnBody = document.getElementById('siteButtonsTableBody');
+      if (elBtnBody && Array.isArray(data.top_buttons)) {
+        if (data.top_buttons.length === 0) {
+          elBtnBody.innerHTML = '<tr><td colspan="5" class="text-center">Нет кликов за выбранный период</td></tr>';
+        } else {
+          const totalClicks = data.top_buttons.reduce((acc, b) => acc + (b.clicks_count || 0), 0);
+          elBtnBody.innerHTML = data.top_buttons.map(b => {
+            const share = totalClicks > 0 ? Math.round((b.clicks_count / totalClicks) * 100) : 0;
+            return `
+              <tr>
+                <td><code class="tech-code">${escapeHtml(b.button_name)}</code></td>
+                <td><strong>${b.clicks_count}</strong></td>
+                <td><span style="color:#00E5B8;">${b.mobile_clicks || 0}</span></td>
+                <td><span style="color:#3867d6;">${b.desktop_clicks || 0}</span></td>
+                <td><span class="tech-tag">${share}%</span></td>
+              </tr>
+            `;
+          }).join('');
+        }
+      }
+    } catch (err) {
+      showToast(`Ошибка веб-аналитики: ${err.message}`, 'error');
+    }
+  }
+
+  // Слушатели периодов
+  if (crmPeriodFilter) {
+    crmPeriodFilter.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.period-btn');
+      if (!btn) return;
+      crmPeriodFilter.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      crmCurrentPeriod = btn.getAttribute('data-period') || 'all';
+      await refreshActiveCrmSubtab();
+    });
+  }
+
+  // Слушатели подвкладок CRM
+  if (crmSubtabsNav) {
+    crmSubtabsNav.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.crm-subtab-btn');
+      if (!btn) return;
+      crmSubtabsNav.querySelectorAll('.crm-subtab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      crmCurrentSubtab = btn.getAttribute('data-subtab') || 'kanban';
+
+      if (crmSubpaneKanban) crmSubpaneKanban.style.display = crmCurrentSubtab === 'kanban' ? 'block' : 'none';
+      if (crmSubpanePlatforms) crmSubpanePlatforms.style.display = crmCurrentSubtab === 'platforms' ? 'block' : 'none';
+      if (crmSubpaneSite) crmSubpaneSite.style.display = crmCurrentSubtab === 'site' ? 'block' : 'none';
+
+      await refreshActiveCrmSubtab();
+    });
+  }
+
+  // Добавление лида
+  if (crmAddLeadBtn) {
+    crmAddLeadBtn.addEventListener('click', () => {
+      if (crmNewLeadModal) crmNewLeadModal.style.display = 'flex';
+    });
+  }
+  if (crmLeadModalClose) {
+    crmLeadModalClose.addEventListener('click', () => {
+      if (crmNewLeadModal) crmNewLeadModal.style.display = 'none';
+    });
+  }
+  if (crmSaveLeadBtn) {
+    crmSaveLeadBtn.addEventListener('click', async () => {
+      const name = crmLeadName ? crmLeadName.value.trim() : '';
+      const tg = crmLeadTg ? crmLeadTg.value.trim() : '';
+      const status = crmLeadStatus ? crmLeadStatus.value : 'new';
+      const budget = crmLeadBudget ? crmLeadBudget.value : '25к-35к';
+      const utm = crmLeadUtm ? crmLeadUtm.value.trim() : 'direct';
+      const notes = crmLeadNotes ? crmLeadNotes.value.trim() : '';
+
+      if (!name) {
+        showToast('Укажите имя клиента или компанию', 'error');
+        return;
+      }
+
+      try {
+        crmSaveLeadBtn.disabled = true;
+        const res = await fetch('api/crm.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'create_lead', full_name: name, telegram_username: tg, status, budget_range: budget, utm_source: utm, notes })
+        });
+        const data = await res.json();
+        if (!res.ok || data.status !== 'success') throw new Error(data.message || 'Ошибка создания лида');
+
+        showToast('Лид добавлен в воронку', 'success');
+        if (crmNewLeadModal) crmNewLeadModal.style.display = 'none';
+        if (crmLeadName) crmLeadName.value = '';
+        if (crmLeadTg) crmLeadTg.value = '';
+        if (crmLeadNotes) crmLeadNotes.value = '';
+        await loadKanbanData();
+      } catch (err) {
+        showToast(`Ошибка: ${err.message}`, 'error');
+      } finally {
+        crmSaveLeadBtn.disabled = false;
+      }
+    });
+  }
+
+  // ===========================================================================
+  // 7. МОДУЛЬ: 📅 ИНТЕРАКТИВНЫЙ КОНТЕНТ-ПЛАН ПО EXCEL & РУБРИКАТОР (#calendar)
+  // ===========================================================================
+  let smmPlanItems = [];
+  let smmStatusFilter = 'all';
   let calendarItems = [];
   let currentCalFilter = 'all';
   let isCalendarLoaded = false;
+  let activeCalView = 'table';
 
+  // SMM Table & Rubricator elements
+  const calViewSwitcher = document.getElementById('calViewSwitcher');
+  const smmTableViewContainer = document.getElementById('smmTableViewContainer');
+  const calendarGridContainer = document.getElementById('calendarGridContainer');
+  const smmTableBody = document.getElementById('smmTableBody');
+  const smmStatusFilterPills = document.getElementById('smmStatusFilterPills');
+  const smmAddRowBtn = document.getElementById('smmAddRowBtn');
+  const smmTopAddRowBtn = document.getElementById('smmTopAddRowBtn');
+  const rubricatorCardsGrid = document.getElementById('rubricatorCardsGrid');
+
+  // Calendar Grid elements
   const calStatTotal = document.getElementById('calStatTotal');
   const calStatReady = document.getElementById('calStatReady');
   const calStatPlanned = document.getElementById('calStatPlanned');
   const calendarFilterPills = document.getElementById('calendarFilterPills');
   const calendarGridCells = document.getElementById('calendarGridCells');
   const calAddPostBtn = document.getElementById('calAddPostBtn');
-  const calGenerateAiBtn = document.getElementById('calGenerateAiBtn');
-
-  // Modal elements
   const calEditModal = document.getElementById('calEditModal');
   const calModalTitle = document.getElementById('calModalTitle');
   const calModalClose = document.getElementById('calModalClose');
@@ -988,6 +1294,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const calModalSaveBtn = document.getElementById('calModalSaveBtn');
   const calModalDeleteBtn = document.getElementById('calModalDeleteBtn');
   const calModalGoFactoryBtn = document.getElementById('calModalGoFactoryBtn');
+
+  const SMM_FORMATS = [
+    { key: 'post_tg', name: '💬 Текстовый пост' },
+    { key: 'article', name: '📝 Статья' },
+    { key: 'reels', name: '📹 Видео/Reels' },
+    { key: 'carousel', name: '🖼 Карусель' },
+    { key: 'lead_magnet', name: '🧲 Лид-магнит' },
+    { key: 'poll', name: '💬 Опрос' }
+  ];
+
+  const SMM_RUBRICS = [
+    '🏎 Скорость и чистый код',
+    '🛠 Кейсы и До/После',
+    '💰 Бизнес и Конверсия',
+    '🎯 Тарифы и Условия',
+    '❓ FAQ и Отработка возражений'
+  ];
 
   const FMT_NAMES = {
     tg_post: { label: 'TG', name: 'Telegram' },
@@ -1002,13 +1325,314 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function initCalendarTab(forceReload = false) {
     if (isCalendarLoaded && !forceReload) return;
-    await loadCalendarItems();
+    isCalendarLoaded = true;
+    await Promise.all([loadSmmTable(), loadRubrics(), loadCalendarItems()]);
   }
 
+  // Переключатель видов (Таблица SMM vs Сетка 30 дней)
+  if (calViewSwitcher) {
+    calViewSwitcher.addEventListener('click', (e) => {
+      const btn = e.target.closest('.view-tab-btn');
+      if (!btn) return;
+      calViewSwitcher.querySelectorAll('.view-tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeCalView = btn.getAttribute('data-view') || 'table';
+
+      if (smmTableViewContainer) smmTableViewContainer.style.display = activeCalView === 'table' ? 'block' : 'none';
+      if (calendarGridContainer) calendarGridContainer.style.display = activeCalView === 'grid' ? 'block' : 'none';
+    });
+  }
+
+  // 1. ЗАГРУЗКА И ОТРИСОВКА SMM ТАБЛИЦЫ (EXCEL SMM MEMORY STONES)
+  async function loadSmmTable() {
+    if (!smmTableBody) return;
+    try {
+      const res = await fetch('api/calendar.php?action=list');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.status !== 'success') throw new Error(data.message);
+
+      smmPlanItems = data.items || [];
+      renderSmmTable();
+    } catch (err) {
+      smmTableBody.innerHTML = `<tr><td colspan="8" class="text-center" style="color:#eb3b5a;">Ошибка: ${escapeHtml(err.message)}</td></tr>`;
+    }
+  }
+
+  function renderSmmTable() {
+    if (!smmTableBody) return;
+
+    const filtered = smmStatusFilter === 'all'
+      ? smmPlanItems
+      : smmPlanItems.filter(i => i.status === smmStatusFilter);
+
+    if (filtered.length === 0) {
+      smmTableBody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding:24px;color:var(--color-text-subtle);">Нет строк по выбранному статусу</td></tr>';
+      return;
+    }
+
+    smmTableBody.innerHTML = filtered.map(row => {
+      const id = row.id;
+
+      const formatOptions = SMM_FORMATS.map(f =>
+        `<option value="${f.key}" ${row.format === f.key ? 'selected' : ''}>${f.name}</option>`
+      ).join('');
+
+      const rubricOptions = SMM_RUBRICS.map(r =>
+        `<option value="${r}" ${row.rubric === r ? 'selected' : ''}>${r}</option>`
+      ).join('');
+
+      return `
+        <tr data-row-id="${id}">
+          <td>
+            <input type="text" class="smm-input-clean smm-field" data-id="${id}" data-key="day_label" value="${escapeHtml(row.day_label || '')}" placeholder="1 день">
+          </td>
+          <td>
+            <select class="smm-select-clean smm-field" data-id="${id}" data-key="format">
+              ${formatOptions}
+            </select>
+          </td>
+          <td>
+            <select class="smm-select-clean smm-field" data-id="${id}" data-key="rubric">
+              ${rubricOptions}
+            </select>
+          </td>
+          <td>
+            <input type="text" class="smm-input-clean smm-field" data-id="${id}" data-key="title" value="${escapeHtml(row.title || '')}" placeholder="Тема публикации...">
+          </td>
+          <td>
+            <input type="text" class="smm-input-clean smm-field" data-id="${id}" data-key="comment" value="${escapeHtml(row.comment || '')}" placeholder="Пояснение / ТЗ...">
+          </td>
+          <td>
+            <select class="smm-select-clean smm-field" data-id="${id}" data-key="status">
+              <option value="idea" ${row.status === 'idea' ? 'selected' : ''}>⚪ Банк идей</option>
+              <option value="in_progress" ${row.status === 'in_progress' ? 'selected' : ''}>🟡 В работе</option>
+              <option value="ready" ${row.status === 'ready' ? 'selected' : ''}>🟢 Готово</option>
+              <option value="published" ${row.status === 'published' ? 'selected' : ''}>🔵 Опубликовано</option>
+            </select>
+          </td>
+          <td>
+            <div class="smm-platforms-cell">
+              <label class="smm-chk-label" title="Telegram">
+                <input type="checkbox" class="smm-chk-field" data-id="${id}" data-key="platform_tg" ${row.platform_tg ? 'checked' : ''}>
+                <span>TG</span>
+              </label>
+              <label class="smm-chk-label" title="VC.ru">
+                <input type="checkbox" class="smm-chk-field" data-id="${id}" data-key="platform_vc" ${row.platform_vc ? 'checked' : ''}>
+                <span>VC</span>
+              </label>
+              <label class="smm-chk-label" title="Habr">
+                <input type="checkbox" class="smm-chk-field" data-id="${id}" data-key="platform_habr" ${row.platform_habr ? 'checked' : ''}>
+                <span>Habr</span>
+              </label>
+              <label class="smm-chk-label" title="Instagram">
+                <input type="checkbox" class="smm-chk-field" data-id="${id}" data-key="platform_inst" ${row.platform_inst ? 'checked' : ''}>
+                <span>Inst</span>
+              </label>
+              <label class="smm-chk-label" title="Сайт">
+                <input type="checkbox" class="smm-chk-field" data-id="${id}" data-key="platform_site" ${row.platform_site ? 'checked' : ''}>
+                <span>Сайт</span>
+              </label>
+            </div>
+          </td>
+          <td>
+            <div class="smm-actions-cell">
+              <button type="button" class="btn-smm-factory" data-id="${id}" title="Перенести тему в Контент-фабрику">⚡ В фабрику</button>
+              <button type="button" class="btn-smm-del" data-id="${id}" title="Удалить строку">&times;</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    // Привязываем слушатели автосохранения ячеек
+    smmTableBody.querySelectorAll('.smm-field').forEach(input => {
+      input.addEventListener('change', async () => {
+        const id = parseInt(input.getAttribute('data-id'), 10);
+        const key = input.getAttribute('data-key');
+        const val = input.value;
+        await saveSmmField(id, { [key]: val });
+      });
+    });
+
+    smmTableBody.querySelectorAll('.smm-chk-field').forEach(chk => {
+      chk.addEventListener('change', async () => {
+        const id = parseInt(chk.getAttribute('data-id'), 10);
+        const key = chk.getAttribute('data-key');
+        const val = chk.checked ? 1 : 0;
+        await saveSmmField(id, { [key]: val });
+      });
+    });
+
+    // Кнопка переноса в фабрику
+    smmTableBody.querySelectorAll('.btn-smm-factory').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = parseInt(btn.getAttribute('data-id'), 10);
+        const row = smmPlanItems.find(r => r.id === id);
+        if (row) {
+          transferSmmToFactory(row);
+        }
+      });
+    });
+
+    // Кнопка удаления строки
+    smmTableBody.querySelectorAll('.btn-smm-del').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = parseInt(btn.getAttribute('data-id'), 10);
+        if (!confirm('Удалить эту строку из контент-плана?')) return;
+        try {
+          const res = await fetch('api/calendar.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'delete', id })
+          });
+          const data = await res.json();
+          if (!res.ok || data.status !== 'success') throw new Error(data.message);
+          showToast('Строка удалена', 'info');
+          await loadSmmTable();
+        } catch (err) {
+          showToast(`Ошибка: ${err.message}`, 'error');
+        }
+      });
+    });
+  }
+
+  async function saveSmmField(id, patch) {
+    try {
+      const payload = Object.assign({ action: 'update', id }, patch);
+      const res = await fetch('api/calendar.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok || data.status !== 'success') throw new Error(data.message);
+
+      // Обновляем локальный кэш
+      const local = smmPlanItems.find(i => i.id === id);
+      if (local) Object.assign(local, patch);
+    } catch (err) {
+      showToast(`Ошибка сохранения: ${err.message}`, 'error');
+    }
+  }
+
+  function transferSmmToFactory(row) {
+    if (!row) return;
+
+    if (factoryTopicInput) {
+      factoryTopicInput.value = row.title || '';
+    }
+
+    const fmtMap = {
+      post_tg: 'telegram',
+      article: 'article',
+      reels: 'instagram',
+      lead_magnet: 'lead_magnet'
+    };
+    const targetMode = fmtMap[row.format] || 'all';
+
+    const modeBtn = document.querySelector(`.mode-tab-btn[data-mode="${targetMode}"]`);
+    if (modeBtn) modeBtn.click();
+
+    switchTab('factory');
+    showToast(`Тема «${(row.title || '').substring(0, 35)}...» перенесена в Контент-фабрику`, 'info');
+  }
+
+  async function addSmmRow(preset = {}) {
+    try {
+      const defaultDay = `${smmPlanItems.length + 1} день`;
+      const payload = Object.assign({
+        action: 'create',
+        day_label: defaultDay,
+        format: 'post_tg',
+        rubric: '🏎 Скорость и чистый код',
+        title: 'Новая тема публикации',
+        comment: '',
+        status: 'idea',
+        platform_tg: 1
+      }, preset);
+
+      const res = await fetch('api/calendar.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok || data.status !== 'success') throw new Error(data.message);
+
+      showToast('Строка добавлена в контент-план', 'success');
+      await loadSmmTable();
+    } catch (err) {
+      showToast(`Ошибка: ${err.message}`, 'error');
+    }
+  }
+
+  if (smmAddRowBtn) smmAddRowBtn.addEventListener('click', () => addSmmRow());
+  if (smmTopAddRowBtn) smmTopAddRowBtn.addEventListener('click', () => addSmmRow());
+
+  // Фильтры статуса в SMM таблице
+  if (smmStatusFilterPills) {
+    smmStatusFilterPills.addEventListener('click', (e) => {
+      const btn = e.target.closest('.smm-pill');
+      if (!btn) return;
+      smmStatusFilterPills.querySelectorAll('.smm-pill').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      smmStatusFilter = btn.getAttribute('data-status') || 'all';
+      renderSmmTable();
+    });
+  }
+
+  // 2. ЗАГРУЗКА РУБРИКАТОРА
+  async function loadRubrics() {
+    if (!rubricatorCardsGrid) return;
+    try {
+      const res = await fetch('api/calendar.php?action=rubrics');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.status !== 'success') throw new Error(data.message);
+
+      const rubrics = data.rubrics || [];
+      rubricatorCardsGrid.innerHTML = rubrics.map(r => `
+        <div class="rubric-card">
+          <div class="rubric-card-header">
+            <span class="rubric-card-name">${escapeHtml(r.name)}</span>
+            <span class="tech-tag">${escapeHtml(r.tag)}</span>
+          </div>
+          <p class="rubric-card-desc">${escapeHtml(r.desc)}</p>
+          <div class="rubric-examples-list">
+            ${(r.examples || []).map(ex => `
+              <div class="rubric-example-item">
+                <span>${escapeHtml(ex)}</span>
+                <button type="button" class="rubric-add-btn" data-rubric="${escapeHtml(r.name)}" data-title="${escapeHtml(ex)}">+ В план</button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `).join('');
+
+      rubricatorCardsGrid.querySelectorAll('.rubric-add-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const rub = btn.getAttribute('data-rubric');
+          const title = btn.getAttribute('data-title');
+          await addSmmRow({
+            rubric: rub,
+            title: title,
+            day_label: `${smmPlanItems.length + 1} день`,
+            status: 'in_progress',
+            platform_tg: 1,
+            platform_vc: 1
+          });
+          window.scrollTo({ top: smmTableViewContainer.offsetTop - 80, behavior: 'smooth' });
+        });
+      });
+    } catch (err) {
+      console.warn('Rubrics load warning:', err.message);
+    }
+  }
+
+  // 3. СЕТКА 30 ДНЕЙ (МЕСЯЦ)
   async function loadCalendarItems() {
     if (!calendarGridCells) return;
-    calendarGridCells.innerHTML = '<div class="calendar-loading-hint">Синхронизация с базой данных SQLite...</div>';
-
     try {
       const response = await fetch('api/content.php?action=calendar_list');
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -1016,21 +1640,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (data.status === 'success') {
         calendarItems = data.items || [];
-        isCalendarLoaded = true;
         renderCalendarGrid();
-      } else {
-        throw new Error(data.message || 'Ошибка загрузки сетки');
       }
     } catch (err) {
-      calendarGridCells.innerHTML = `<div class="calendar-loading-hint" style="color: #eb3b5a;">Ошибка: ${escapeHtml(err.message)}</div>`;
-      showToast(`Ошибка календаря: ${err.message}`, 'error');
+      calendarGridCells.innerHTML = `<div class="calendar-loading-hint" style="color:#eb3b5a;">Ошибка: ${escapeHtml(err.message)}</div>`;
     }
   }
 
   function renderCalendarGrid() {
     if (!calendarGridCells) return;
 
-    // Считаем метрики
     const total = calendarItems.length;
     const readyOrPublished = calendarItems.filter(i => i.status === 'ready' || i.status === 'published').length;
     const planned = calendarItems.filter(i => i.status === 'planned').length;
@@ -1039,7 +1658,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (calStatReady) calStatReady.textContent = readyOrPublished;
     if (calStatPlanned) calStatPlanned.textContent = planned;
 
-    // Фильтрация по формату
     const filtered = currentCalFilter === 'all'
       ? calendarItems
       : calendarItems.filter(i => i.format === currentCalFilter);
@@ -1055,7 +1673,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const isToday = item.scheduled_for === todayStr;
       const fmtInfo = FMT_NAMES[item.format] || { label: 'DOC', name: item.format };
 
-      // Форматируем дату красиво
       let dateLabel = item.scheduled_for || '';
       let wdayLabel = '';
       if (item.scheduled_for) {
@@ -1094,7 +1711,6 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
     }).join('');
 
-    // Привязываем события клика на карточки
     calendarGridCells.querySelectorAll('.cal-card-box').forEach(card => {
       card.addEventListener('click', (e) => {
         if (e.target.closest('.cal-btn-factory')) return;
@@ -1104,7 +1720,6 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
 
-    // Кнопка быстрого перехода в фабрику
     calendarGridCells.querySelectorAll('.cal-btn-factory').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -1117,7 +1732,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function openCalModal(item = null, defaultDate = null) {
     if (!calEditModal) return;
-
     if (item) {
       if (calModalTitle) calModalTitle.textContent = 'Редактирование публикации';
       if (calModalItemId) calModalItemId.value = item.id;
@@ -1137,7 +1751,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (calModalDeleteBtn) calModalDeleteBtn.style.display = 'none';
       if (calModalGoFactoryBtn) calModalGoFactoryBtn.style.display = 'none';
     }
-
     calEditModal.style.display = 'flex';
   }
 
@@ -1159,27 +1772,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       calModalSaveBtn.disabled = true;
-      calModalSaveBtn.textContent = 'Сохранение...';
-
       let url = 'api/content.php';
-      let payload = {};
-
-      if (id > 0) {
-        payload = { action: 'calendar_update', id, topic, scheduled_for: date, format, status };
-      } else {
-        payload = { action: 'calendar_create', topic, scheduled_for: date, format, status };
-      }
+      let payload = id > 0
+        ? { action: 'calendar_update', id, topic, scheduled_for: date, format, status }
+        : { action: 'calendar_create', topic, scheduled_for: date, format, status };
 
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-
       const data = await res.json();
-      if (!res.ok || data.status !== 'success') {
-        throw new Error(data.message || 'Ошибка сохранения');
-      }
+      if (!res.ok || data.status !== 'success') throw new Error(data.message);
 
       showToast(id > 0 ? 'Публикация обновлена' : 'Публикация добавлена', 'success');
       closeCalModal();
@@ -1188,15 +1792,13 @@ document.addEventListener('DOMContentLoaded', () => {
       showToast(`Ошибка: ${err.message}`, 'error');
     } finally {
       calModalSaveBtn.disabled = false;
-      calModalSaveBtn.textContent = '💾 Сохранить';
     }
   }
 
   async function deleteCalModalItem() {
     const id = calModalItemId ? parseInt(calModalItemId.value, 10) : 0;
     if (id <= 0) return;
-
-    if (!confirm('Удалить эту публикацию из контент-плана?')) return;
+    if (!confirm('Удалить эту публикацию?')) return;
 
     try {
       calModalDeleteBtn.disabled = true;
@@ -1206,10 +1808,7 @@ document.addEventListener('DOMContentLoaded', () => {
         body: JSON.stringify({ action: 'calendar_delete', id })
       });
       const data = await res.json();
-      if (!res.ok || data.status !== 'success') {
-        throw new Error(data.message || 'Ошибка удаления');
-      }
-
+      if (!res.ok || data.status !== 'success') throw new Error(data.message);
       showToast('Публикация удалена', 'info');
       closeCalModal();
       await loadCalendarItems();
@@ -1223,13 +1822,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function transferToFactory(item) {
     if (!item) return;
     closeCalModal();
+    if (factoryTopicInput) factoryTopicInput.value = item.topic;
 
-    // 1. Заполняем тему
-    if (factoryTopicInput) {
-      factoryTopicInput.value = item.topic;
-    }
-
-    // 2. Переключаем режим фабрики под формат
     const formatModeMap = {
       tg_post: 'telegram',
       vc_ru: 'article',
@@ -1237,47 +1831,28 @@ document.addEventListener('DOMContentLoaded', () => {
       lead_magnet: 'lead_magnet'
     };
     const targetMode = formatModeMap[item.format] || 'all';
-
     const modeBtn = document.querySelector(`.mode-tab-btn[data-mode="${targetMode}"]`);
-    if (modeBtn) {
-      modeBtn.click();
-    }
+    if (modeBtn) modeBtn.click();
 
-    // 3. Переключаемся на таб фабрики
     switchTab('factory');
     showToast(`Тема «${item.topic.substring(0, 35)}...» перенесена в Контент-фабрику`, 'info');
   }
 
-  // Фильтры календаря
   if (calendarFilterPills) {
     calendarFilterPills.addEventListener('click', (e) => {
       const btn = e.target.closest('.cal-filter-btn');
       if (!btn) return;
-
       calendarFilterPills.querySelectorAll('.cal-filter-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-
       currentCalFilter = btn.getAttribute('data-fmt') || 'all';
       renderCalendarGrid();
     });
   }
 
-  if (calAddPostBtn) {
-    calAddPostBtn.addEventListener('click', () => openCalModal(null));
-  }
-
-  if (calModalClose) {
-    calModalClose.addEventListener('click', closeCalModal);
-  }
-
-  if (calModalSaveBtn) {
-    calModalSaveBtn.addEventListener('click', saveCalModalItem);
-  }
-
-  if (calModalDeleteBtn) {
-    calModalDeleteBtn.addEventListener('click', deleteCalModalItem);
-  }
-
+  if (calAddPostBtn) calAddPostBtn.addEventListener('click', () => openCalModal(null));
+  if (calModalClose) calModalClose.addEventListener('click', closeCalModal);
+  if (calModalSaveBtn) calModalSaveBtn.addEventListener('click', saveCalModalItem);
+  if (calModalDeleteBtn) calModalDeleteBtn.addEventListener('click', deleteCalModalItem);
   if (calModalGoFactoryBtn) {
     calModalGoFactoryBtn.addEventListener('click', () => {
       const id = calModalItemId ? parseInt(calModalItemId.value, 10) : 0;
@@ -1286,35 +1861,279 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  if (calGenerateAiBtn) {
-    calGenerateAiBtn.addEventListener('click', async () => {
-      if (!confirm('Сгенерировать новый 30-дневный контент-план через нейросеть Gemini на основе Базы Знаний?')) return;
+  // ===========================================================================
+  // 8. МОДУЛЬ: 🤖 ТГ-БОТ & LIVE MESSENGER (#bot)
+  // ===========================================================================
+  let activeBotLeadId = null;
+  let botLeadsData = [];
+  let isBotLoaded = false;
+
+  const botLeadsList = document.getElementById('botLeadsList');
+  const botRefreshChatsBtn = document.getElementById('botRefreshChatsBtn');
+  const botUnreadTotalBadge = document.getElementById('botUnreadTotalBadge');
+  const chatLeadName = document.getElementById('chatLeadName');
+  const chatLeadMeta = document.getElementById('chatLeadMeta');
+  const chatLeadStatusBadge = document.getElementById('chatLeadStatusBadge');
+  const chatLeadBudgetBadge = document.getElementById('chatLeadBudgetBadge');
+  const chatMessagesStream = document.getElementById('chatMessagesStream');
+  const chatCorrectionDrawer = document.getElementById('chatCorrectionDrawer');
+  const closeCorrectionDrawerBtn = document.getElementById('closeCorrectionDrawerBtn');
+  const correctionBadPreview = document.getElementById('correctionBadPreview');
+  const correctionInputText = document.getElementById('correctionInputText');
+  const correctionUserPrompt = document.getElementById('correctionUserPrompt');
+  const correctionBadResponse = document.getElementById('correctionBadResponse');
+  const saveCorrectionBtn = document.getElementById('saveCorrectionBtn');
+  const operatorMessageInput = document.getElementById('operatorMessageInput');
+  const sendOperatorMsgBtn = document.getElementById('sendOperatorMsgBtn');
+
+  async function initBotTab(forceReload = false) {
+    if (isBotLoaded && !forceReload) return;
+    isBotLoaded = true;
+    await loadBotLeads();
+  }
+
+  async function loadBotLeads() {
+    if (!botLeadsList) return;
+    botLeadsList.innerHTML = '<div class="messenger-loading-hint">Загрузка диалогов...</div>';
+
+    try {
+      const res = await fetch('api/bot.php?action=leads_list');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.status !== 'success') throw new Error(data.message);
+
+      botLeadsData = data.leads || [];
+      if (botUnreadTotalBadge) {
+        botUnreadTotalBadge.textContent = `${botLeadsData.length} диалогов`;
+      }
+
+      if (botLeadsData.length === 0) {
+        botLeadsList.innerHTML = '<div class="messenger-loading-hint">Нет активных диалогов</div>';
+        return;
+      }
+
+      botLeadsList.innerHTML = botLeadsData.map(lead => {
+        const isActive = activeBotLeadId === lead.id;
+        const timeStr = lead.last_message_at ? lead.last_message_at.substring(11, 16) : '';
+        return `
+          <div class="messenger-lead-item ${isActive ? 'active' : ''}" data-lead-id="${lead.id}">
+            <div class="mli-top">
+              <span class="mli-name">${escapeHtml(lead.full_name || 'Клиент')}</span>
+              <span class="mli-time">${timeStr}</span>
+            </div>
+            <div class="mli-snippet">${escapeHtml(lead.last_message || 'Нет сообщений')}</div>
+          </div>
+        `;
+      }).join('');
+
+      // Привязываем клики по диалогам
+      botLeadsList.querySelectorAll('.messenger-lead-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const id = parseInt(item.getAttribute('data-lead-id'), 10);
+          selectBotLead(id);
+        });
+      });
+
+      // Автоматически открываем первый диалог, если ничего не выбрано
+      if (!activeBotLeadId && botLeadsData.length > 0) {
+        selectBotLead(botLeadsData[0].id);
+      }
+    } catch (err) {
+      botLeadsList.innerHTML = `<div class="messenger-loading-hint" style="color:#eb3b5a;">Ошибка: ${escapeHtml(err.message)}</div>`;
+    }
+  }
+
+  async function selectBotLead(leadId) {
+    activeBotLeadId = leadId;
+
+    if (botLeadsList) {
+      botLeadsList.querySelectorAll('.messenger-lead-item').forEach(el => {
+        if (parseInt(el.getAttribute('data-lead-id'), 10) === leadId) {
+          el.classList.add('active');
+        } else {
+          el.classList.remove('active');
+        }
+      });
+    }
+
+    if (chatCorrectionDrawer) chatCorrectionDrawer.style.display = 'none';
+
+    try {
+      const res = await fetch(`api/bot.php?action=messages&lead_id=${leadId}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.status !== 'success') throw new Error(data.message);
+
+      const lead = data.lead || {};
+      if (chatLeadName) chatLeadName.textContent = lead.full_name || 'Клиент';
+      if (chatLeadMeta) chatLeadMeta.textContent = lead.telegram_username ? `@${lead.telegram_username} · UTM: ${lead.utm_source || 'direct'}` : 'Telegram контакт';
+      if (chatLeadStatusBadge) chatLeadStatusBadge.textContent = (lead.status || 'NEW').toUpperCase();
+      if (chatLeadBudgetBadge) chatLeadBudgetBadge.textContent = lead.budget_range || 'Тариф 25к';
+
+      renderChatMessages(data.messages || []);
+    } catch (err) {
+      showToast(`Ошибка загрузки сообщений: ${err.message}`, 'error');
+    }
+  }
+
+  function renderChatMessages(messages) {
+    if (!chatMessagesStream) return;
+
+    if (messages.length === 0) {
+      chatMessagesStream.innerHTML = '<div class="chat-empty-hint">История переписки пуста. Напишите первое сообщение клиенту.</div>';
+      return;
+    }
+
+    chatMessagesStream.innerHTML = messages.map(msg => {
+      const isUser = msg.sender === 'user';
+      const isBot = msg.sender === 'bot';
+      const isOperator = msg.sender === 'operator';
+      const time = msg.created_at ? msg.created_at.substring(11, 16) : '';
+
+      let senderClass = 'bubble-user';
+      let senderTitle = 'Клиент';
+      if (isBot) {
+        senderClass = 'bubble-bot';
+        senderTitle = 'Бот AntiDesigner';
+      } else if (isOperator) {
+        senderClass = 'bubble-operator';
+        senderTitle = 'Оператор Евгений';
+      }
+
+      return `
+        <div class="chat-bubble ${senderClass}">
+          <span class="bubble-sender-name">${senderTitle}</span>
+          <div class="bubble-text">${escapeHtml(msg.text)}</div>
+          <div class="bubble-meta">
+            ${isBot ? `<button type="button" class="btn-bubble-correct" data-bad="${escapeHtml(msg.text)}">💡 Скорректировать ответ</button>` : ''}
+            <span class="bubble-time">${time}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    chatMessagesStream.scrollTop = chatMessagesStream.scrollHeight;
+
+    // Слушатели кнопки коррекции ответа бота
+    chatMessagesStream.querySelectorAll('.btn-bubble-correct').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const badText = btn.getAttribute('data-bad') || '';
+        openCorrectionDrawer(badText);
+      });
+    });
+  }
+
+  function openCorrectionDrawer(badResponseText) {
+    if (!chatCorrectionDrawer) return;
+
+    // Ищем последнее сообщение пользователя перед этим
+    if (correctionUserPrompt) correctionUserPrompt.value = 'Запрос клиента';
+    if (correctionBadResponse) correctionBadResponse.value = badResponseText;
+    if (correctionBadPreview) correctionBadPreview.textContent = badResponseText;
+    if (correctionInputText) {
+      correctionInputText.value = '';
+      correctionInputText.focus();
+    }
+
+    chatCorrectionDrawer.style.display = 'flex';
+  }
+
+  if (closeCorrectionDrawerBtn) {
+    closeCorrectionDrawerBtn.addEventListener('click', () => {
+      if (chatCorrectionDrawer) chatCorrectionDrawer.style.display = 'none';
+    });
+  }
+
+  if (saveCorrectionBtn) {
+    saveCorrectionBtn.addEventListener('click', async () => {
+      const goodText = correctionInputText ? correctionInputText.value.trim() : '';
+      const badText = correctionBadResponse ? correctionBadResponse.value : '';
+      const promptText = correctionUserPrompt ? correctionUserPrompt.value : '';
+
+      if (!goodText) {
+        showToast('Введите эталонный правильный ответ', 'error');
+        return;
+      }
 
       try {
-        calGenerateAiBtn.disabled = true;
-        calGenerateAiBtn.innerHTML = '<span class="loader-spinner" style="width:14px;height:14px;border-width:2px;"></span> AI генерирует...';
-        showToast('Gemini анализирует боли ЦА и генерирует сетку на 30 дней...', 'info', 6000);
-
-        const res = await fetch('api/content.php', {
+        saveCorrectionBtn.disabled = true;
+        const res = await fetch('api/bot.php', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'calendar_generate_ai' })
+          body: JSON.stringify({
+            action: 'save_correction',
+            user_prompt: promptText,
+            bad_bot_response: badText,
+            human_correction: goodText
+          })
         });
 
         const data = await res.json();
-        if (!res.ok || data.status !== 'success') {
-          throw new Error(data.message || 'Ошибка AI-генерации');
-        }
+        if (!res.ok || data.status !== 'success') throw new Error(data.message);
 
-        showToast(data.message || 'Контент-план сгенерирован!', 'success');
-        await loadCalendarItems();
+        showToast('Эталон сохранен в RLHF-память бота!', 'success');
+        if (chatCorrectionDrawer) chatCorrectionDrawer.style.display = 'none';
       } catch (err) {
-        showToast(`Ошибка генерации: ${err.message}`, 'error');
+        showToast(`Ошибка: ${err.message}`, 'error');
       } finally {
-        calGenerateAiBtn.disabled = false;
-        calGenerateAiBtn.innerHTML = '<span class="btn-icon">⚡</span> AI-план на 30 дней';
+        saveCorrectionBtn.disabled = false;
       }
     });
+  }
+
+  // Быстрые шаблоны
+  document.querySelectorAll('.quick-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const text = chip.getAttribute('data-text');
+      if (operatorMessageInput && text) {
+        operatorMessageInput.value = text;
+        operatorMessageInput.focus();
+      }
+    });
+  });
+
+  // Отправка ответа оператора
+  if (sendOperatorMsgBtn) {
+    sendOperatorMsgBtn.addEventListener('click', async () => {
+      if (!activeBotLeadId) {
+        showToast('Сначала выберите диалог слева', 'error');
+        return;
+      }
+      const text = operatorMessageInput ? operatorMessageInput.value.trim() : '';
+      if (!text) {
+        showToast('Введите текст ответа', 'error');
+        return;
+      }
+
+      try {
+        sendOperatorMsgBtn.disabled = true;
+        const res = await fetch('api/bot.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'send',
+            lead_id: activeBotLeadId,
+            text: text,
+            sender: 'operator'
+          })
+        });
+        const data = await res.json();
+        if (!res.ok || data.status !== 'success') throw new Error(data.message);
+
+        if (operatorMessageInput) operatorMessageInput.value = '';
+        showToast('Ответ отправлен клиенту', 'success');
+        await selectBotLead(activeBotLeadId);
+        await loadBotLeads();
+      } catch (err) {
+        showToast(`Ошибка отправки: ${err.message}`, 'error');
+      } finally {
+        sendOperatorMsgBtn.disabled = false;
+      }
+    });
+  }
+
+  if (botRefreshChatsBtn) {
+    botRefreshChatsBtn.addEventListener('click', () => loadBotLeads());
   }
 
   // ---------------------------------------------------------------------------
