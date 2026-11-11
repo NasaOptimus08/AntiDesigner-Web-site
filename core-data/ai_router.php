@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 /**
  * =============================================================================
- * ANTIDESIGNER CORE — AI ROUTER (Dual-Tier Model & Budget Orchestrator)
+ * ANTIDESIGNER CORE - AI ROUTER (Dual-Tier Model & Budget Orchestrator)
  * Routes requests to Fast (Google AI Studio) or Heavy (Polza.ai / Gemini 3.8)
  * with strict cost controls and typography rules.
  * =============================================================================
@@ -120,6 +120,26 @@ class AIRouter
         }
 
         // 3. Постобработка: гарантия отсутствия длинных тире в готовом контенте
+        return str_replace(['—', '–'], '-', trim($generatedText));
+    }
+
+    /**
+     * Прямая генерация через конкретную модель (например, MODEL_FAST)
+     */
+    public function generateWithModel(string $model, string $systemInstruction, string $userPrompt): string
+    {
+        $typographyRule = "\n\nСТРОГИЕ ПРАВИЛА ТЕКСТА И ТИПОГРАФИКИ: " .
+            "Никогда не используй длинные тире (символ —). Заменяй их исключительно на стандартный дефис (-) или стрелки (->). " .
+            "Никаких штампов «в современном мире», «динамично развивающийся» и клише.";
+
+        $fullSystemInstruction = trim($systemInstruction) . $typographyRule;
+
+        if ($this->isPolzaModel($model)) {
+            $generatedText = $this->sendPolzaRequest($model, $fullSystemInstruction, $userPrompt);
+        } else {
+            $generatedText = $this->sendGoogleRequest($model, $fullSystemInstruction, $userPrompt);
+        }
+
         return str_replace(['—', '–'], '-', trim($generatedText));
     }
 
@@ -271,9 +291,9 @@ class AIRouter
     public function ping(string $model): string
     {
         if ($this->isPolzaModel($model)) {
-            return $this->sendPolzaRequest($model, 'Ты — помощник. Отвечай кратко.', 'Ответь одним словом: OK');
+            return $this->sendPolzaRequest($model, 'Ты - помощник. Отвечай кратко.', 'Ответь одним словом: OK');
         }
-        return $this->sendGoogleRequest($model, 'Ты — помощник. Отвечай кратко.', 'Ответь одним словом: OK');
+        return $this->sendGoogleRequest($model, 'Ты - помощник. Отвечай кратко.', 'Ответь одним словом: OK');
     }
 
     public function isFastKeyConfigured(): bool

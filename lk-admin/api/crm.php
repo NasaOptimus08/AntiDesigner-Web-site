@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 /**
  * =============================================================================
- * ANTIDESIGNER CORE — CRM & CONVERSION FUNNEL API
+ * ANTIDESIGNER CORE - CRM & CONVERSION FUNNEL API
  * Kanban, Platform Analytics & Attribution
  * =============================================================================
  */
@@ -361,6 +361,33 @@ try {
             'message' => 'Инсайты успешно экспортированы в Базу Знаний (раздел crm_memory)',
             'insights' => $insightsMarkdown
         ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        exit;
+    }
+
+    // -------------------------------------------------------------------------
+    // 6. action = delete_lead
+    // -------------------------------------------------------------------------
+    if ($action === 'delete_lead') {
+        $id = (int)($input['id'] ?? 0);
+        if ($id <= 0) {
+            http_response_code(400);
+            echo json_encode(['status' => 'error', 'message' => 'Некорректный ID лида'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        // Удаляем связанные сообщения в bot_messages
+        $stmtDelMsgs = $pdo->prepare("DELETE FROM bot_messages WHERE lead_id = :id");
+        $stmtDelMsgs->execute([':id' => $id]);
+
+        // Удаляем самого лида
+        $stmtDelLead = $pdo->prepare("DELETE FROM leads WHERE id = :id");
+        $stmtDelLead->execute([':id' => $id]);
+
+        echo json_encode([
+            'status'  => 'success',
+            'message' => 'Лид успешно удален',
+            'id'      => $id
+        ], JSON_UNESCAPED_UNICODE);
         exit;
     }
 

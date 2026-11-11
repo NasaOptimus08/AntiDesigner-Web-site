@@ -1121,9 +1121,14 @@
                   <button type="button" class="smm-pill" data-status="ready">🟢 Готово</button>
                   <button type="button" class="smm-pill" data-status="published">🔵 Опубликовано</button>
                 </div>
-                <button type="button" id="smmTopAddRowBtn" class="btn-tech-primary btn-sm">
-                  <span class="btn-icon">+</span> Добавить строку
-                </button>
+                <div class="smm-toolbar-actions">
+                  <button type="button" id="smmAutoPlanBtn" class="btn-tech-primary btn-sm">
+                    <span class="btn-icon">🤖</span> Спроектировать план на 1-2 дня (AI)
+                  </button>
+                  <button type="button" id="smmTopAddRowBtn" class="btn-tech-outline btn-sm">
+                    <span class="btn-icon">+</span> Добавить строку
+                  </button>
+                </div>
               </div>
 
               <!-- Таблица контент-плана -->
@@ -1162,7 +1167,12 @@
                     <h3 class="rubricator-title">Интерактивный Рубрикатор AntiDesigner</h3>
                     <p class="rubricator-subtitle">Нажмите «+ В план» на любой теме, чтобы добавить готовый экспертный пост в таблицу контент-плана</p>
                   </div>
-                  <span class="tech-tag">5 СМЫСЛОВЫХ РУБРИК</span>
+                  <div class="rubricator-header-actions">
+                    <button type="button" id="openCreateRubricModalBtn" class="btn-tech-primary btn-sm">
+                      <span class="btn-icon">+</span> Создать новую рубрику
+                    </button>
+                    <span class="tech-tag" id="rubricsCountBadge">5 СМЫСЛОВЫХ РУБРИК</span>
+                  </div>
                 </div>
                 <div class="rubricator-cards-grid" id="rubricatorCardsGrid">
                   <!-- Карточки рубрик генерируются динамически -->
@@ -1264,6 +1274,39 @@
                   </button>
                   <button type="button" id="calModalSaveBtn" class="btn-tech-primary">
                     💾 Сохранить
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Модальное окно создания / редактирования рубрики -->
+            <div id="rubricModal" class="cal-modal-backdrop" style="display: none;">
+              <div class="cal-modal-box">
+                <div class="cal-modal-header">
+                  <h3 id="rubricModalHeading">Создать новую рубрику</h3>
+                  <button type="button" class="cal-modal-close" id="rubricModalClose">&times;</button>
+                </div>
+                <div class="cal-modal-body">
+                  <input type="hidden" id="rubricModalId" value="0">
+                  <div class="form-group">
+                    <label class="tech-label" for="rubricModalTitle">Название рубрики</label>
+                    <input type="text" id="rubricModalTitle" class="tech-input" placeholder="Например: 🏎 Скорость и чистый код vs Конструкторы">
+                  </div>
+                  <div class="form-group">
+                    <label class="tech-label" for="rubricModalDesc">Описание рубрики / Смысловой посыл</label>
+                    <textarea id="rubricModalDesc" class="tech-textarea" rows="2" placeholder="О чем рубрика, какие боли закрывает..."></textarea>
+                  </div>
+                  <div class="form-group">
+                    <label class="tech-label" for="rubricModalExamples">Примеры тем для быстрого добавления (по одной на строку)</label>
+                    <textarea id="rubricModalExamples" class="tech-textarea" rows="4" placeholder="Тема 1&#10;Тема 2&#10;Тема 3..."></textarea>
+                  </div>
+                </div>
+                <div class="cal-modal-footer">
+                  <button type="button" id="rubricModalCancelBtn" class="btn-tech-outline" style="margin-right: auto;">
+                    Отмена
+                  </button>
+                  <button type="button" id="rubricModalSaveBtn" class="btn-tech-primary">
+                    💾 Сохранить рубрику
                   </button>
                 </div>
               </div>

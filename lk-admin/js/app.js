@@ -1091,7 +1091,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
       col.list.innerHTML = leads.map(lead => `
         <div class="kanban-card" data-lead-id="${lead.id}">
-          <div class="card-lead-name">${escapeHtml(lead.full_name || 'Без имени')}</div>
+          <div class="card-header-row">
+            <div class="card-lead-name">${escapeHtml(lead.full_name || 'Без имени')}</div>
+            <button type="button" class="btn-delete-lead" data-id="${lead.id}" data-name="${escapeHtml(lead.full_name || 'Лид')}" title="Удалить лида">🗑</button>
+          </div>
           ${lead.telegram_username ? `<a href="https://t.me/${escapeHtml(lead.telegram_username)}" target="_blank" class="card-lead-tg">@${escapeHtml(lead.telegram_username)}</a>` : ''}
           <div class="card-chips-row">
             ${lead.utm_source ? `<span class="chip-utm">UTM: ${escapeHtml(lead.utm_source)}</span>` : ''}
@@ -1107,6 +1110,30 @@ document.addEventListener('DOMContentLoaded', () => {
           </select>
         </div>
       `).join('');
+    });
+
+    // Привязываем слушатели удаления лидов
+    document.querySelectorAll('.btn-delete-lead').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = parseInt(btn.getAttribute('data-id'), 10);
+        const name = btn.getAttribute('data-name') || 'лида';
+        if (!confirm(`Удалить лида «${name}»? Связанные сообщения чата также будут удалены.`)) return;
+
+        try {
+          const res = await fetch('api/crm.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'delete_lead', id })
+          });
+          const data = await res.json();
+          if (!res.ok || data.status !== 'success') throw new Error(data.message || 'Ошибка удаления');
+          showToast(`Лид «${name}» удален`, 'info');
+          await loadKanbanData();
+        } catch (err) {
+          showToast(`Ошибка: ${err.message}`, 'error');
+        }
+      });
     });
 
     // Привязываем слушатели смены статуса
@@ -1412,7 +1439,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const smmStatusFilterPills = document.getElementById('smmStatusFilterPills');
   const smmAddRowBtn = document.getElementById('smmAddRowBtn');
   const smmTopAddRowBtn = document.getElementById('smmTopAddRowBtn');
+  const smmAutoPlanBtn = document.getElementById('smmAutoPlanBtn');
   const rubricatorCardsGrid = document.getElementById('rubricatorCardsGrid');
+  const openCreateRubricModalBtn = document.getElementById('openCreateRubricModalBtn');
+  const rubricsCountBadge = document.getElementById('rubricsCountBadge');
+
+  // Rubric Modal elements
+  const rubricModal = document.getElementById('rubricModal');
+  const rubricModalHeading = document.getElementById('rubricModalHeading');
+  const rubricModalClose = document.getElementById('rubricModalClose');
+  const rubricModalId = document.getElementById('rubricModalId');
+  const rubricModalTitle = document.getElementById('rubricModalTitle');
+  const rubricModalDesc = document.getElementById('rubricModalDesc');
+  const rubricModalExamples = document.getElementById('rubricModalExamples');
+  const rubricModalCancelBtn = document.getElementById('rubricModalCancelBtn');
+  const rubricModalSaveBtn = document.getElementById('rubricModalSaveBtn');
 
   // Calendar Grid elements
   const calStatTotal = document.getElementById('calStatTotal');
@@ -1443,8 +1484,8 @@ document.addEventListener('DOMContentLoaded', () => {
     { key: 'poll', name: '💬 Опрос' }
   ];
 
-  const SMM_RUBRICS = [
-    '🏎 Скорость и чистый код',
+  let SMM_RUBRICS = [
+    '🏎 Скорость и чистый код vs Конструкторы',
     '🛠 Кейсы и До/После',
     '💰 Бизнес и Конверсия',
     '🎯 Тарифы и Условия',
@@ -1662,12 +1703,15 @@ document.addEventListener('DOMContentLoaded', () => {
   function transferSmmToFactory(row) {
     if (!row) return;
 
-    if (factoryTopicInput) {
+    if (factoryTopicInputEl) {
+      factoryTopicInputEl.value = row.title || '';
+    } else if (factoryTopicInput) {
       factoryTopicInput.value = row.title || '';
     }
 
     const fmtMap = {
       post_tg: 'telegram',
+      post_setka: 'setka',
       article: 'article',
       reels: 'instagram',
       lead_magnet: 'lead_magnet'
@@ -1679,6 +1723,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     switchTab('factory');
     showToast(`Тема «${(row.title || '').substring(0, 35)}...» перенесена в Контент-фабрику`, 'info');
+
+    // Автоматический запуск генерации
+    const startBtn = document.getElementById('generateBtn') || document.getElementById('startGenerationBtn');
+    if (startBtn && !startBtn.disabled) {
+      setTimeout(() => {
+        startBtn.click();
+      }, 150);
+    }
   }
 
   async function addSmmRow(preset = {}) {
@@ -1688,7 +1740,7 @@ document.addEventListener('DOMContentLoaded', () => {
         action: 'create',
         day_label: defaultDay,
         format: 'post_tg',
-        rubric: '🏎 Скорость и чистый код',
+        rubric: SMM_RUBRICS[0] || '🏎 Скорость и чистый код',
         title: 'Новая тема публикации',
         comment: '',
         status: 'idea',
@@ -1713,6 +1765,33 @@ document.addEventListener('DOMContentLoaded', () => {
   if (smmAddRowBtn) smmAddRowBtn.addEventListener('click', () => addSmmRow());
   if (smmTopAddRowBtn) smmTopAddRowBtn.addEventListener('click', () => addSmmRow());
 
+  // Авто-проектирование плана на 1-2 дня через Flash-Lite
+  if (smmAutoPlanBtn) {
+    smmAutoPlanBtn.addEventListener('click', async () => {
+      const originalHtml = smmAutoPlanBtn.innerHTML;
+      smmAutoPlanBtn.disabled = true;
+      smmAutoPlanBtn.innerHTML = '<span class="btn-icon">↺</span> ИИ анализирует тренды и собирает сетку на 1-2 дня...';
+
+      try {
+        const res = await fetch('api/calendar.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'auto_plan' })
+        });
+        const data = await res.json();
+        if (!res.ok || data.status !== 'success') throw new Error(data.message || 'Ошибка генерации авто-плана');
+
+        showToast(`Спроектировано ${data.count || 0} публикаций на 1-2 дня!`, 'success');
+        await loadSmmTable();
+      } catch (err) {
+        showToast(`Ошибка авто-плана: ${err.message}`, 'error');
+      } finally {
+        smmAutoPlanBtn.disabled = false;
+        smmAutoPlanBtn.innerHTML = originalHtml;
+      }
+    });
+  }
+
   // Фильтры статуса в SMM таблице
   if (smmStatusFilterPills) {
     smmStatusFilterPills.addEventListener('click', (e) => {
@@ -1725,34 +1804,124 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  let currentRubricsList = [];
+
+  function openRubricModal(rubric = null) {
+    if (!rubricModal) return;
+    if (rubric) {
+      if (rubricModalHeading) rubricModalHeading.textContent = 'Редактировать рубрику';
+      if (rubricModalId) rubricModalId.value = rubric.id || 0;
+      if (rubricModalTitle) rubricModalTitle.value = rubric.title || rubric.name || '';
+      if (rubricModalDesc) rubricModalDesc.value = rubric.description || rubric.desc || '';
+      if (rubricModalExamples) {
+        const exs = Array.isArray(rubric.examples) ? rubric.examples : [];
+        rubricModalExamples.value = exs.join('\n');
+      }
+    } else {
+      if (rubricModalHeading) rubricModalHeading.textContent = 'Создать новую рубрику';
+      if (rubricModalId) rubricModalId.value = '0';
+      if (rubricModalTitle) rubricModalTitle.value = '';
+      if (rubricModalDesc) rubricModalDesc.value = '';
+      if (rubricModalExamples) rubricModalExamples.value = '';
+    }
+    rubricModal.style.display = 'flex';
+  }
+
+  function closeRubricModal() {
+    if (rubricModal) rubricModal.style.display = 'none';
+  }
+
+  if (openCreateRubricModalBtn) {
+    openCreateRubricModalBtn.addEventListener('click', () => openRubricModal());
+  }
+  if (rubricModalClose) {
+    rubricModalClose.addEventListener('click', closeRubricModal);
+  }
+  if (rubricModalCancelBtn) {
+    rubricModalCancelBtn.addEventListener('click', closeRubricModal);
+  }
+
+  if (rubricModalSaveBtn) {
+    rubricModalSaveBtn.addEventListener('click', async () => {
+      const id = parseInt(rubricModalId ? rubricModalId.value : '0', 10);
+      const title = rubricModalTitle ? rubricModalTitle.value.trim() : '';
+      const description = rubricModalDesc ? rubricModalDesc.value.trim() : '';
+      const rawExamples = rubricModalExamples ? rubricModalExamples.value.trim() : '';
+
+      if (!title) {
+        showToast('Укажите название рубрики', 'error');
+        if (rubricModalTitle) rubricModalTitle.focus();
+        return;
+      }
+
+      const examples = rawExamples
+        ? rawExamples.split('\n').map(s => s.trim()).filter(s => s.length > 0)
+        : [];
+
+      rubricModalSaveBtn.disabled = true;
+      try {
+        const res = await fetch('api/rubrics.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'save', id, title, description, examples })
+        });
+        const data = await res.json();
+        if (!res.ok || data.status !== 'success') throw new Error(data.message || 'Ошибка сохранения рубрики');
+
+        showToast(id > 0 ? 'Рубрика обновлена' : 'Рубрика создана', 'success');
+        closeRubricModal();
+        await loadRubrics();
+        renderSmmTable();
+      } catch (err) {
+        showToast(`Ошибка: ${err.message}`, 'error');
+      } finally {
+        rubricModalSaveBtn.disabled = false;
+      }
+    });
+  }
+
   // 2. ЗАГРУЗКА РУБРИКАТОРА
   async function loadRubrics() {
     if (!rubricatorCardsGrid) return;
     try {
-      const res = await fetch('api/calendar.php?action=rubrics');
+      const res = await fetch('api/rubrics.php?action=list');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.status !== 'success') throw new Error(data.message);
 
       const rubrics = data.rubrics || [];
+      currentRubricsList = rubrics;
+
+      if (rubrics.length > 0) {
+        SMM_RUBRICS = rubrics.map(r => r.title || r.name);
+      }
+
+      if (rubricsCountBadge) {
+        rubricsCountBadge.textContent = `${rubrics.length} СМЫСЛОВЫХ РУБРИК`;
+      }
+
       rubricatorCardsGrid.innerHTML = rubrics.map(r => `
-        <div class="rubric-card">
+        <div class="rubric-card" data-rubric-id="${r.id}">
           <div class="rubric-card-header">
-            <span class="rubric-card-name">${escapeHtml(r.name)}</span>
-            <span class="tech-tag">${escapeHtml(r.tag)}</span>
+            <span class="rubric-card-name">${escapeHtml(r.title || r.name)}</span>
+            <div class="rubric-header-actions">
+              <button type="button" class="btn-rubric-action btn-rubric-edit" data-id="${r.id}" title="Редактировать рубрику">✏️</button>
+              <button type="button" class="btn-rubric-action btn-rubric-del" data-id="${r.id}" data-title="${escapeHtml(r.title || r.name)}" title="Удалить рубрику">🗑</button>
+            </div>
           </div>
-          <p class="rubric-card-desc">${escapeHtml(r.desc)}</p>
+          <p class="rubric-card-desc">${escapeHtml(r.description || r.desc || '')}</p>
           <div class="rubric-examples-list">
             ${(r.examples || []).map(ex => `
               <div class="rubric-example-item">
                 <span>${escapeHtml(ex)}</span>
-                <button type="button" class="rubric-add-btn" data-rubric="${escapeHtml(r.name)}" data-title="${escapeHtml(ex)}">+ В план</button>
+                <button type="button" class="rubric-add-btn" data-rubric="${escapeHtml(r.title || r.name)}" data-title="${escapeHtml(ex)}">+ В план</button>
               </div>
             `).join('')}
           </div>
         </div>
       `).join('');
 
+      // Кнопки добавления темы в контент-план
       rubricatorCardsGrid.querySelectorAll('.rubric-add-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
           const rub = btn.getAttribute('data-rubric');
@@ -1765,9 +1934,48 @@ document.addEventListener('DOMContentLoaded', () => {
             platform_tg: 1,
             platform_vc: 1
           });
-          window.scrollTo({ top: smmTableViewContainer.offsetTop - 80, behavior: 'smooth' });
+          if (smmTableViewContainer) {
+            window.scrollTo({ top: smmTableViewContainer.offsetTop - 80, behavior: 'smooth' });
+          }
         });
       });
+
+      // Кнопки редактирования рубрики
+      rubricatorCardsGrid.querySelectorAll('.btn-rubric-edit').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = parseInt(btn.getAttribute('data-id'), 10);
+          const rub = currentRubricsList.find(item => item.id === id);
+          if (rub) {
+            openRubricModal(rub);
+          }
+        });
+      });
+
+      // Кнопки удаления рубрики
+      rubricatorCardsGrid.querySelectorAll('.btn-rubric-del').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = parseInt(btn.getAttribute('data-id'), 10);
+          const title = btn.getAttribute('data-title') || 'рубрику';
+          if (!confirm(`Удалить рубрику «${title}»?`)) return;
+
+          try {
+            const res = await fetch('api/rubrics.php', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'delete', id })
+            });
+            const data = await res.json();
+            if (!res.ok || data.status !== 'success') throw new Error(data.message || 'Ошибка удаления');
+
+            showToast(`Рубрика «${title}» удалена`, 'info');
+            await loadRubrics();
+            renderSmmTable();
+          } catch (err) {
+            showToast(`Ошибка: ${err.message}`, 'error');
+          }
+        });
+      });
+
     } catch (err) {
       console.warn('Rubrics load warning:', err.message);
     }
@@ -1965,7 +2173,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function transferToFactory(item) {
     if (!item) return;
     closeCalModal();
-    if (factoryTopicInput) factoryTopicInput.value = item.topic;
+    if (factoryTopicInputEl) factoryTopicInputEl.value = item.topic;
+    else if (factoryTopicInput) factoryTopicInput.value = item.topic;
 
     const formatModeMap = {
       tg_post: 'telegram',
@@ -1979,6 +2188,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     switchTab('factory');
     showToast(`Тема «${item.topic.substring(0, 35)}...» перенесена в Контент-фабрику`, 'info');
+
+    const startBtn = document.getElementById('generateBtn') || document.getElementById('startGenerationBtn');
+    if (startBtn && !startBtn.disabled) {
+      setTimeout(() => {
+        startBtn.click();
+      }, 150);
+    }
   }
 
   if (calendarFilterPills) {

@@ -1,5 +1,5 @@
 -- =============================================================================
--- ANTIDESIGNER CORE — DDL SCHEMA (SQLite 3)
+-- ANTIDESIGNER CORE - DDL SCHEMA (SQLite 3)
 -- Sprint 1: Unified Architecture for Marketing, CRM & AI Agent Engine
 -- =============================================================================
 
@@ -199,6 +199,15 @@ CREATE TABLE IF NOT EXISTS link_clicks (
     clicked_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 17. Динамический рубрикатор контента
+CREATE TABLE IF NOT EXISTS rubrics (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    description TEXT,
+    examples TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Индексы для оптимизации поиска и фильтрации
 CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
 CREATE INDEX IF NOT EXISTS idx_content_status ON content_items(status);
@@ -209,5 +218,6 @@ CREATE INDEX IF NOT EXISTS idx_content_plan_status ON content_plan(status);
 CREATE INDEX IF NOT EXISTS idx_bot_messages_lead ON bot_messages(lead_id);
 CREATE INDEX IF NOT EXISTS idx_publication_platform ON publication_analytics(platform);
 CREATE INDEX IF NOT EXISTS idx_link_clicks_slug ON link_clicks(slug);
+CREATE INDEX IF NOT EXISTS idx_rubrics_title ON rubrics(title);
 
 

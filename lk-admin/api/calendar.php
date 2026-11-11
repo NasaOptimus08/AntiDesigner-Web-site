@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 /**
  * =============================================================================
- * ANTIDESIGNER CORE — SMM MEMORY STONES CONTENT PLAN & RUBRICATOR API
+ * ANTIDESIGNER CORE - SMM MEMORY STONES CONTENT PLAN & RUBRICATOR API
  * Table structure: Day, Format, Rubric, Title, Comment, Status, Platforms (TG/VC/Habr/Inst/Site)
  * =============================================================================
  */
@@ -291,57 +291,254 @@ try {
     // 5. action = rubrics
     // -------------------------------------------------------------------------
     if ($action === 'rubrics') {
-        $rubrics = [
-            [
-                'name'     => '🏎 Скорость и чистый код vs Конструкторы',
-                'tag'      => 'SPEED_VS_BUILDERS',
-                'desc'     => 'Разбор косяков Tilda/WordPress, потерянные миллионы из-за скорости загрузки',
-                'examples' => [
-                    'Почему сайты на Tilda теряют до 40% трафика из рекламы на первом экране',
-                    'Замер TTFB и LCP: сравниваем шаблонный сайт с сайтом на чистом коде'
-                ]
-            ],
-            [
-                'name'     => '🛠 Кейсы и До/После',
-                'tag'      => 'CASE_STUDIES',
-                'desc'     => 'Аудиты реальных сайтов, PageSpeed 98+, время загрузки 0.3 сек',
-                'examples' => [
-                    'Кейс: как мы разогнали сайт клиники до 100/100 и подняли конверсию на 38%',
-                    'Редизайн каталога запчастей: убрали 14 лишних скриптов и ускорили рендер'
-                ]
-            ],
-            [
-                'name'     => '💰 Бизнес и Конверсия',
-                'tag'      => 'CONVERSION_MATH',
-                'desc'     => 'Как скорость поднимает продажи на 20-40%, честное SEO без накруток',
-                'examples' => [
-                    'Калькулятор окупаемости сайта: считаем стоимость лида до и после оптимизации',
-                    'Почему поисковики Яндекс и Google отдают приоритет сайтам с чистым кодом'
-                ]
-            ],
-            [
-                'name'     => '🎯 Тарифы и Условия',
-                'tag'      => 'TARIFFS_OFFER',
-                'desc'     => 'Прозрачный прайс 18к–35к+, никакой абонентской платы и скрытых платежей',
-                'examples' => [
-                    'Что входит в тариф 25 000 рублей: сайт под ключ с гарантией скорости за 7 дней',
-                    'Почему у AntiDesigner нет абонентской платы за платформу'
-                ]
-            ],
-            [
-                'name'     => '❓ FAQ и Отработка возражений',
-                'tag'      => 'FAQ_OBJECTIONS',
-                'desc'     => 'Почему чистый код надежнее конструктора и как клиент сам меняет тексты',
-                'examples' => [
-                    '«А как я сам поменяю телефон на сайте?»: простая инструкция без программиста',
-                    'Безопасность сайта: почему чистый HTML нельзя взломать через плагины'
-                ]
-            ]
-        ];
+        // Убедимся, что таблица rubrics существует
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS rubrics (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                description TEXT,
+                examples TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE INDEX IF NOT EXISTS idx_rubrics_title ON rubrics(title);
+        ");
+
+        $stmtRub = $pdo->query("SELECT * FROM rubrics ORDER BY id ASC");
+        $dbRubrics = $stmtRub->fetchAll();
+
+        // Если таблица пуста, сидируем базовые
+        if (empty($dbRubrics)) {
+            require_once __DIR__ . '/rubrics.php';
+            exit;
+        }
+
+        $rubrics = [];
+        foreach ($dbRubrics as $r) {
+            $ex = $r['examples'] ?? '';
+            $parsedExamples = [];
+            if ($ex !== '') {
+                $decoded = json_decode($ex, true);
+                if (is_array($decoded)) {
+                    $parsedExamples = $decoded;
+                } else {
+                    $lines = array_map('trim', explode("\n", $ex));
+                    $parsedExamples = array_values(array_filter($lines));
+                }
+            }
+            $rubrics[] = [
+                'id'          => (int)$r['id'],
+                'name'        => $r['title'],
+                'title'       => $r['title'],
+                'tag'         => 'RUBRIC_' . $r['id'],
+                'desc'        => $r['description'] ?? '',
+                'description' => $r['description'] ?? '',
+                'examples'    => $parsedExamples
+            ];
+        }
 
         echo json_encode([
             'status'  => 'success',
+            'count'   => count($rubrics),
             'rubrics' => $rubrics
+        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        exit;
+    }
+
+    // -------------------------------------------------------------------------
+    // 6. action = auto_plan (Проектирование плана на 1-2 дня через Flash-Lite)
+    // -------------------------------------------------------------------------
+    if ($action === 'auto_plan') {
+        require_once dirname(__DIR__, 2) . '/core-data/ai_router.php';
+
+        // 1. Получаем активные тренды
+        $stmtTrends = $pdo->query("SELECT title, summary FROM trends WHERE is_approved = 1 ORDER BY id DESC LIMIT 5");
+        $trends = $stmtTrends->fetchAll();
+        if (empty($trends)) {
+            $stmtTrends = $pdo->query("SELECT title, summary FROM trends ORDER BY id DESC LIMIT 5");
+            $trends = $stmtTrends->fetchAll();
+        }
+
+        $trendsContext = "";
+        if (!empty($trends)) {
+            $trendsContext = "АКТУАЛЬНЫЕ ТРЕНДЫ И ИНФОПОВОДЫ:\n";
+            foreach ($trends as $idx => $t) {
+                $num = $idx + 1;
+                $trendsContext .= "{$num}. «{$t['title']}» - {$t['summary']}\n";
+            }
+        }
+
+        // 2. Получаем активные рубрики
+        $stmtRub = $pdo->query("SELECT id, title, description FROM rubrics ORDER BY id ASC");
+        $rubrics = $stmtRub->fetchAll();
+        $rubricsList = [];
+        $rubricsContext = "ДОСТУПНЫЕ РУБРИКИ:\n";
+        foreach ($rubrics as $r) {
+            $rubricsList[] = $r['title'];
+            $rubricsContext .= "- {$r['title']}: {$r['description']}\n";
+        }
+
+        // 3. Формируем системную инструкцию
+        $sysInstruction = <<<PROMPT
+Ты - главный SMM-стратег и контент-директор веб-студии AntiDesigner.
+УТП AntiDesigner: Разработка быстрых, конвертящих сайтов на чистом коде (HTML5, Vanilla JS, CSS3) с гарантией скорости 100/100 PageSpeed и загрузкой до 0.5 сек. Мы открыто разоблачаем медленные конструкторы (Tilda, WordPress, Elementor), которые грузят по 140 скриптов и сжигают 40% рекламного бюджета клиентов на мобильном трафике. Прайс: 18к-35к+, пожизненная собственность без абонентской платы.
+
+ЗАДАЧА:
+Спроектировать контент-план на ближайшие 1-2 дня (сегодня и завтра): ровно 3-4 ударных публикации.
+Материалы должны бить в боли предпринимателей и маркетологов, привлекать горячих лидов и мотивировать заказать аудит или сайт на чистом коде.
+
+{$rubricsContext}
+
+{$trendsContext}
+
+ФОРМАТ ОТВЕТА:
+Верни СТРОГО валидный JSON-массив без какого-либо вступительного текста, без markdown-разметки (или строго внутри ```json ```), содержащий объекты со следующими ключами:
+[
+  {
+    "day_label": "1 день (Сегодня)",
+    "format": "post_tg",
+    "rubric": "Название одной из доступных рубрик",
+    "title": "Хлесткий, кликабельный заголовок темы без штампов и без длинных тире",
+    "comment": "Краткое ТЗ / главная мысль публикации и призыв к действию",
+    "status": "idea",
+    "platform_tg": 1,
+    "platform_vc": 0,
+    "platform_habr": 0,
+    "platform_inst": 0,
+    "platform_setka": 0,
+    "platform_site": 0
+  }
+]
+
+ПРАВИЛА ТИПОГРАФИКИ:
+Никогда не используй длинные тире (символ —). Используй только дефис (-) или стрелки (->).
+PROMPT;
+
+        $userPrompt = "Сформируй 3-4 публикации на 1-2 дня с распределением по доступным рубрикам и форматам.";
+
+        $aiRouter = new AIRouter();
+        $rawResult = $aiRouter->generateWithModel(AIRouter::MODEL_FAST, $sysInstruction, $userPrompt);
+
+        // Извлекаем JSON из ответа
+        $cleanJson = trim($rawResult);
+        if (preg_match('/```(?:json)?\s*(\[[\s\S]*?\])\s*```/u', $cleanJson, $matches)) {
+            $cleanJson = trim($matches[1]);
+        } elseif (preg_match('/(\[[\s\S]*?\])/u', $cleanJson, $matches)) {
+            $cleanJson = trim($matches[1]);
+        }
+
+        $items = json_decode($cleanJson, true);
+        if (!is_array($items) || empty($items)) {
+            // Фолбэк на качественный набор, если ИИ вернул невалидный JSON
+            $items = [
+                [
+                    'day_label'     => '1 день (Сегодня)',
+                    'format'        => 'post_tg',
+                    'rubric'        => $rubricsList[0] ?? '🏎 Скорость и чистый код vs Конструкторы',
+                    'title'         => 'Куда уходят 40% бюджета с Директа: как Tilda режет мобильные переходы',
+                    'comment'       => 'Разбор LCP 4.2 сек на конструкторах и замер отказов в Метрике',
+                    'status'        => 'idea',
+                    'platform_tg'   => 1,
+                    'platform_vc'   => 0,
+                    'platform_habr' => 0,
+                    'platform_inst' => 0,
+                    'platform_setka'=> 1,
+                    'platform_site' => 0
+                ],
+                [
+                    'day_label'     => '1 день (Сегодня)',
+                    'format'        => 'reels',
+                    'rubric'        => $rubricsList[1] ?? '🛠 Кейсы и До/После',
+                    'title'         => 'Тест скорости 4G: чистый код 0.28 сек против шаблона 5.1 сек',
+                    'comment'       => 'Замер на слабом интернете в движении, демонстрация мгновенного первого экрана',
+                    'status'        => 'idea',
+                    'platform_tg'   => 1,
+                    'platform_vc'   => 0,
+                    'platform_habr' => 0,
+                    'platform_inst' => 1,
+                    'platform_setka'=> 0,
+                    'platform_site' => 0
+                ],
+                [
+                    'day_label'     => '2 день (Завтра)',
+                    'format'        => 'article',
+                    'rubric'        => $rubricsList[2] ?? '💰 Бизнес и Конверсия',
+                    'title'         => 'Математика скорости: как сокращение загрузки до 0.4 сек окупает сайт за 1 месяц',
+                    'comment'       => 'Кейс B2B-компании с графиками конверсий и ростом заявок на 32%',
+                    'status'        => 'idea',
+                    'platform_tg'   => 1,
+                    'platform_vc'   => 1,
+                    'platform_habr' => 1,
+                    'platform_inst' => 0,
+                    'platform_setka'=> 1,
+                    'platform_site' => 1
+                ],
+                [
+                    'day_label'     => '2 день (Завтра)',
+                    'format'        => 'post_setka',
+                    'rubric'        => $rubricsList[4] ?? '❓ FAQ и Отработка возражений',
+                    'title'         => '«А как я поменяю текст без конструктора?»: почему чистый код удобнее в 2026 году',
+                    'comment'       => 'Наглядный видео-пример редактирования контента через панель AntiDesigner Core',
+                    'status'        => 'idea',
+                    'platform_tg'   => 1,
+                    'platform_vc'   => 0,
+                    'platform_habr' => 0,
+                    'platform_inst' => 0,
+                    'platform_setka'=> 1,
+                    'platform_site' => 0
+                ]
+            ];
+        }
+
+        // Вставляем сгенерированные строки в content_plan со статусом idea
+        $stmtIns = $pdo->prepare("
+            INSERT INTO content_plan (day_label, format, rubric, title, comment, status, platform_tg, platform_vc, platform_habr, platform_inst, platform_setka, platform_site, created_at)
+            VALUES (:day, :fmt, :rub, :title, :comment, 'idea', :ptg, :pvc, :phabr, :pinst, :psetka, :psite, CURRENT_TIMESTAMP)
+        ");
+
+        $inserted = [];
+        foreach ($items as $item) {
+            $dayLabel = trim((string)($item['day_label'] ?? '1 день'));
+            $fmt      = trim((string)($item['format'] ?? 'post_tg'));
+            $rub      = trim((string)($item['rubric'] ?? ($rubricsList[0] ?? '🏎 Скорость и чистый код')));
+            $title    = str_replace(['—', '–'], '-', trim((string)($item['title'] ?? 'Новая публикация')));
+            $comment  = str_replace(['—', '–'], '-', trim((string)($item['comment'] ?? '')));
+            $ptg      = !empty($item['platform_tg']) ? 1 : 0;
+            $pvc      = !empty($item['platform_vc']) ? 1 : 0;
+            $phabr    = !empty($item['platform_habr']) ? 1 : 0;
+            $pinst    = !empty($item['platform_inst']) ? 1 : 0;
+            $psetka   = !empty($item['platform_setka']) ? 1 : 0;
+            $psite    = !empty($item['platform_site']) ? 1 : 0;
+
+            $stmtIns->execute([
+                ':day'     => $dayLabel,
+                ':fmt'     => $fmt,
+                ':rub'     => $rub,
+                ':title'   => $title,
+                ':comment' => $comment,
+                ':ptg'     => $ptg,
+                ':pvc'     => $pvc,
+                ':phabr'   => $phabr,
+                ':pinst'   => $pinst,
+                ':psetka'  => $psetka,
+                ':psite'   => $psite
+            ]);
+
+            $inserted[] = [
+                'id'        => (int)$pdo->lastInsertId(),
+                'day_label' => $dayLabel,
+                'format'    => $fmt,
+                'rubric'    => $rub,
+                'title'     => $title,
+                'comment'   => $comment,
+                'status'    => 'idea'
+            ];
+        }
+
+        echo json_encode([
+            'status'  => 'success',
+            'message' => 'Спроектировано ' . count($inserted) . ' публикаций на 1-2 дня',
+            'count'   => count($inserted),
+            'items'   => $inserted
         ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
         exit;
     }
