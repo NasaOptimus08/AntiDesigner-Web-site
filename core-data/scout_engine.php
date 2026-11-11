@@ -5,12 +5,19 @@ declare(strict_types=1);
  * =============================================================================
  * ANTIDESIGNER CORE - B2B SCOUT ENGINE
  * Two-stage qualification pipeline:
- *  - Stage 1: MODEL_FAST (Flash-Lite) + Google PageSpeed Insights + HTML Scraper
- *  - Stage 2: MODEL_HEAVY (Flash/Pro) + Deal Score (1-10) + Strategy & Pitch
+ *  - Stage 1: MODEL_FAST (Flash-Lite 3.5, key AQ...)
+ *             Uses tools: auditPageSpeed (v5) + extractLPRContacts + scrapeBusinessDirectory
+ *  - Stage 2: MODEL_HEAVY (Flash 3.8, key pza...)
+ *             Loads skills: cold_pitch + objections from SQLite
+ *             Deal Score (1-10) + Strategy & Pitch
  * Strict filter: deal_score < 5 -> rejected (not saved to DB)
  *                deal_score >= 5 -> status 'qualified', saved to cold_outreach
  * =============================================================================
  */
+
+require_once dirname(__DIR__) . '/core/tools/pagespeed_tool.php';
+require_once dirname(__DIR__) . '/core/tools/contact_extractor.php';
+require_once dirname(__DIR__) . '/core/tools/lead_scout_tool.php';
 
 class ScoutEngine
 {
@@ -26,7 +33,19 @@ class ScoutEngine
     }
 
     /**
-     * Analyze a single target website or company name
+     * Search business candidates by niche and city using Lead Scout tool
+     *
+     * @param string $niche
+     * @param string $city
+     * @return array
+     */
+    public function searchLeads(string $niche, string $city): array
+    {
+        return scrapeBusinessDirectory($niche, $city, $this->config);
+    }
+
+    /**
+     * Analyze a single target website or company name through the two-stage pipeline
      *
      * @param string $targetUrl
      * @param string $targetCompany
@@ -64,106 +83,34 @@ class ScoutEngine
         }
 
         // =====================================================================
-        // ЭТАП 1: ЧЕРНОВАЯ РАБОТА (MODEL_FAST / Flash-Lite + PageSpeed + Scrape)
+        // ЭТАП 1: ЧЕРНОВАЯ РАБОТА (MODEL_FAST / Flash-Lite + PageSpeed + Contact Scraper)
         // =====================================================================
 
-        // 1.1 Вызов Google PageSpeed Insights REST API v5
-        $pagespeedScore = 35;
-        $loadTimeSec = 4.8;
-        $screenshotBase64 = '';
+        // 1.1 Технический аудит и скриншот через инструмент auditPageSpeed
+        $psApiKey = trim((string)($this->config['pagespeed_api_key'] ?? ''));
+        $pageSpeedData = auditPageSpeed($targetUrl, $psApiKey, $this->config);
 
-        if ($targetUrl !== '') {
-            $psApiKey = trim((string)($this->config['pagespeed_api_key'] ?? ''));
-            $psApiUrl = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=" . urlencode($targetUrl) . "&strategy=mobile";
-            if ($psApiKey !== '') {
-                $psApiUrl .= "&key=" . urlencode($psApiKey);
-            }
+        $pagespeedScore   = (int)($pageSpeedData['pagespeed_score'] ?? 35);
+        $loadTimeSec      = (float)($pageSpeedData['load_time_sec'] ?? 4.8);
+        $screenshotBase64 = (string)($pageSpeedData['screenshot_base64'] ?? '');
+        $techFindingsList = (array)($pageSpeedData['tech_findings'] ?? []);
 
-            $ch = curl_init();
-            curl_setopt_array($ch, [
-                CURLOPT_URL            => $psApiUrl,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_TIMEOUT        => 12,
-                CURLOPT_SSL_VERIFYPEER => false,
-                CURLOPT_USERAGENT      => 'AntiDesigner-Scout/4.0'
-            ]);
-            $psRaw = curl_exec($ch);
-            $psHttpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
+        // 1.2 Парсинг контактов ЛПР через инструмент extractLPRContacts
+        $contactData = extractLPRContacts($targetUrl, $this->config);
+        $parsedTitle     = $targetCompany ?: 'Бизнес-проект';
+        $lprNameFound    = (string)($contactData['lpr_name'] ?? '');
+        $lprContactFound = (string)($contactData['lpr_contact'] ?? '');
+        $socialLinksArr  = (array)($contactData['social_links'] ?? []);
 
-            if ($psRaw && $psHttpCode === 200) {
-                $psData = json_decode((string)$psRaw, true);
-                if (isset($psData['lighthouseResult'])) {
-                    $lr = $psData['lighthouseResult'];
-                    $perf = (float)($lr['categories']['performance']['score'] ?? 0.35);
-                    $pagespeedScore = (int)round($perf * 100);
-                    $fcpMs = (float)($lr['audits']['first-contentful-paint']['numericValue'] ?? 4800);
-                    $loadTimeSec = round($fcpMs / 1000, 1);
-                    $screenshotBase64 = (string)($lr['audits']['final-screenshot']['details']['data'] ?? '');
-                }
-            } else {
-                // Реалистичная оценка для коммерческих сайтов на конструкторах
-                $pagespeedScore = rand(24, 42);
-                $loadTimeSec = round(rand(45, 68) / 10, 1);
-            }
-        }
-
-        // 1.2 Парсинг HTML-страницы и контактов ЛПР
-        $scrapedHtml = '';
-        $rawText = '';
-        $socialLinks = [];
-        $foundLprContact = '';
-        $parsedTitle = $targetCompany ?: 'Бизнес-проект';
-
-        if ($targetUrl !== '') {
-            $ch = curl_init();
-            curl_setopt_array($ch, [
-                CURLOPT_URL            => $targetUrl,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_TIMEOUT        => 8,
-                CURLOPT_FOLLOWLOCATION => true,
-                CURLOPT_SSL_VERIFYPEER => false,
-                CURLOPT_USERAGENT      => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-            ]);
-            $scrapedHtml = (string)curl_exec($ch);
-            curl_close($ch);
-
-            if ($scrapedHtml !== '') {
-                // Заголовок
-                if (preg_match('#<title[^>]*>(.*?)</title>#is', $scrapedHtml, $mTitle)) {
-                    $cleanTitle = trim(html_entity_decode(strip_tags($mTitle[1]), ENT_QUOTES, 'UTF-8'));
-                    if ($cleanTitle !== '') {
-                        $parsedTitle = explode('|', explode('—', explode('-', $cleanTitle)[0])[0])[0];
-                        $parsedTitle = trim($parsedTitle);
-                    }
-                }
-
-                // Поиск ссылок на соцсети
-                if (preg_match_all('#https?://(?:t\.me|vk\.com|instagram\.com)/[a-zA-Z0-9_.\-]+#i', $scrapedHtml, $mSoc)) {
-                    $socialLinks = array_unique($mSoc[0]);
-                }
-
-                // Поиск мессенджеров ЛПР (t.me, wa.me, whatsapp)
-                if (preg_match('#https?://(?:t\.me|wa\.me)/([a-zA-Z0-9_.\-]+)#i', $scrapedHtml, $mDirect)) {
-                    $foundLprContact = $mDirect[0];
-                }
-
-                // Текстовая выжимка
-                $rawText = strip_tags($scrapedHtml);
-                $rawText = preg_replace('/\s+/', ' ', $rawText);
-                $rawText = mb_substr((string)$rawText, 0, 4000, 'UTF-8');
-            }
-        }
-
-        // 1.3 Вызов MODEL_FAST (Flash-Lite) для структурирования первичных данных
+        // 1.3 Вызов MODEL_FAST (Flash-Lite 3.5, ключ AQ...) для сборки первичного пакета
         $stage1SysPrompt = <<<PROMPT
 Ты - черновой AI-аудитор B2B-скаута студии AntiDesigner.
-Твоя задача: на основе текста сайта, скорости (PageSpeed {$pagespeedScore}/100, загрузка {$loadTimeSec}с) и найденных контактов составить структурированный JSON первого этапа.
+Твоя задача: на основе переданных замеров скорости (PageSpeed {$pagespeedScore}/100, загрузка {$loadTimeSec}с), найденных контактов ЛПР и соцсетей сформировать чистый структурированный JSON первого этапа.
 
 Ищи прямые контакты владельца/директора/основателя (отсекай безликие горячие линии 8-800 и общие info@).
 Если имя ЛПР не указано прямо, выведи предполагаемую должность (например: "Руководитель проекта" или "Основатель клиники").
 
-ФОРМАТ ОТВЕТА СТРОГО В JSON (без markdown-оберток ```):
+ФОРМАТ ОТВЕТА СТРОГО В JSON (без markdown-оберток):
 {
   "company_name": "Точное название компании",
   "niche": "Сфера бизнеса и тип услуг",
@@ -175,7 +122,7 @@ class ScoutEngine
 }
 PROMPT;
 
-        $stage1UserPrompt = "САЙТ: {$targetUrl}\nНАЗВАНИЕ: {$parsedTitle}\nСКОРОСТЬ: {$pagespeedScore}/100 ({$loadTimeSec} сек)\nСОЦСЕТИ: " . implode(', ', array_slice($socialLinks, 0, 3)) . "\nВЫЖИМКА ТЕКСТА:\n{$rawText}";
+        $stage1UserPrompt = "САЙТ: {$targetUrl}\nНАЗВАНИЕ: {$parsedTitle}\nСКОРОСТЬ: {$pagespeedScore}/100 ({$loadTimeSec} сек)\nНАЙДЕННЫЙ ЛПР: {$lprNameFound}\nКОНТАКТ ЛПР: {$lprContactFound}\nСОЦСЕТИ: " . implode(', ', array_slice($socialLinksArr, 0, 3)) . "\nТЕХНИЧЕСКИЕ НАХОДКИ:\n" . implode("\n", $techFindingsList);
 
         $stage1Response = $this->aiRouter->call($stage1UserPrompt, $stage1SysPrompt, AIRouter::MODEL_FAST, 0.4);
 
@@ -186,21 +133,21 @@ PROMPT;
         $stage1Data = json_decode((string)$cleanJson1, true);
 
         if (!is_array($stage1Data)) {
-            // Фоллбэк структура, если модель вернула невалидный JSON
             $stage1Data = [
                 'company_name'   => $parsedTitle ?: 'Коммерческий проект',
                 'niche'          => 'Услуги и B2B продажи',
-                'lpr_name'       => 'Руководитель / Основатель',
-                'lpr_contact'    => $foundLprContact ?: '+7 (900) 000-00-00',
-                'social_links'   => implode(', ', array_slice($socialLinks, 0, 2)),
-                'tech_findings'  => "• Мобильная загрузка LCP = {$loadTimeSec} сек в 4G сети.\n• Перегруженность скриптами сторонних сервисов и конструктора.\n• Отсутствие сжатия современных форматов WebP/AVIF.",
+                'lpr_name'       => $lprNameFound ?: 'Руководитель / Основатель',
+                'lpr_contact'    => $lprContactFound ?: '+7 (900) 000-00-00',
+                'social_links'   => implode(', ', array_slice($socialLinksArr, 0, 2)),
+                'tech_findings'  => !empty($techFindingsList) ? "• " . implode("\n• ", $techFindingsList) : "• Мобильная загрузка LCP = {$loadTimeSec} сек в 4G сети.\n• Перегруженность скриптами сторонних сервисов и конструктора.\n• Отсутствие сжатия современных форматов WebP/AVIF.",
                 'design_critique'=> "• Размытое УТП на первом экране без конкретики по выгоде.\n• Визуальный шум и устаревшие шаблонные блоки.\n• Слабая адаптивность под современные смартфоны."
             ];
         }
 
         // =====================================================================
-        // ЭТАП 2: ЭКСПЕРТНЫЙ СИНТЕЗ И ФИЛЬТРАЦИЯ (MODEL_HEAVY / Gemini Flash 3.8)
+        // ЭТАП 2: ЭКСПЕРТНЫЙ СИНТЕЗ И ФИЛЬТРАЦИЯ (MODEL_HEAVY / Gemini Flash 3.8, ключ pza...)
         // Загрузка профильных скиллов cold_pitch и objections из базы данных
+        // Платный поиск отключен - модель получает строго очищенный JSON этапа 1
         // =====================================================================
         $pitchSkill = $this->aiRouter->loadSkill('cold_pitch');
         $objSkill   = $this->aiRouter->loadSkill('objections');
@@ -294,7 +241,7 @@ PROMPT;
             ':url'       => $targetUrl,
             ':niche'     => $stage1Data['niche'] ?? 'B2B услуги',
             ':lpr'       => $stage1Data['lpr_name'] ?? 'Руководитель',
-            ':contact'   => $stage1Data['lpr_contact'] ?? $foundLprContact,
+            ':contact'   => $stage1Data['lpr_contact'] ?? $lprContactFound,
             ':soc'       => $stage1Data['social_links'] ?? '',
             ':screen'    => $screenshotBase64,
             ':ps'        => $pagespeedScore,

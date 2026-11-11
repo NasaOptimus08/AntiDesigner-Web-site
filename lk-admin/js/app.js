@@ -39,7 +39,8 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     trends: {
       title: '📡 Тренды',
-      breadcrumb: 'TRENDS'
+      breadcrumb: 'TRENDS',
+      onActivate: () => initTrendsTab()
     },
     calendar: {
       title: '📅 Контент-план',
@@ -3221,6 +3222,207 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   }
+
+  // ===========================================================================
+  // МОДУЛЬ 6: РАДАР ТРЕНДОВ И ПОИСКОВОЙ ИНТЕЛЛЕКТ (TAVILY / TRENDS HUNTER)
+  // ===========================================================================
+  let currentTrendsFilter = 'all';
+
+  function initTrendsTab() {
+    loadTrendsList();
+    setupTrendsListeners();
+  }
+
+  function setupTrendsListeners() {
+    const fetchBtn = document.getElementById('btnFetchTrends');
+    const searchInput = document.getElementById('trendsSearchInput');
+    const filterPills = document.getElementById('trendsFilterPills');
+
+    if (fetchBtn && !fetchBtn.dataset.bound) {
+      fetchBtn.dataset.bound = 'true';
+      fetchBtn.addEventListener('click', async () => {
+        const query = searchInput ? searchInput.value.trim() : '';
+        await fetchNewTrends(query);
+      });
+      if (searchInput) {
+        searchInput.addEventListener('keydown', async (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            await fetchNewTrends(searchInput.value.trim());
+          }
+        });
+      }
+    }
+
+    if (filterPills && !filterPills.dataset.bound) {
+      filterPills.dataset.bound = 'true';
+      filterPills.querySelectorAll('.smm-pill').forEach(pill => {
+        pill.addEventListener('click', () => {
+          filterPills.querySelectorAll('.smm-pill').forEach(p => p.classList.remove('active'));
+          pill.classList.add('active');
+          currentTrendsFilter = pill.getAttribute('data-filter') || 'all';
+          loadTrendsList();
+        });
+      });
+    }
+  }
+
+  async function loadTrendsList() {
+    const container = document.getElementById('trendsListContainer');
+    if (!container) return;
+
+    container.innerHTML = '<div style="color: var(--color-text-muted); font-size: 13px; padding: 20px; text-align: center;">Загрузка инфоповодов радара...</div>';
+
+    try {
+      const resp = await fetch(`api/trends.php?action=list&filter=${currentTrendsFilter}`);
+      const data = await resp.json();
+
+      if (data.status !== 'success' || !data.trends || data.trends.length === 0) {
+        container.innerHTML = `
+          <div class="module-placeholder-box" style="margin: 0; padding: 30px;">
+            <div class="box-icon">📡</div>
+            <h3>Нет инфоповодов в текущей выборке</h3>
+            <p>Нажмите «Найти тренды» выше, чтобы запустить поиск актуальных новостей через Search Tool.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = data.trends.map(t => {
+        const isApproved = parseInt(t.is_approved) === 1;
+        const badgeClass = isApproved ? 'badge-accent' : 'badge-subtle';
+        const badgeText = isApproved ? '✅ Одобрен' : '🟡 Новый';
+
+        return `
+          <div class="trend-card" style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: 16px 20px; transition: border-color var(--transition-fast);">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 8px;">
+              <h3 style="margin: 0; font-size: 15px; color: var(--color-text-bright); line-height: 1.4;">${escapeHtml(t.title)}</h3>
+              <span class="${badgeClass}" style="white-space: nowrap; font-size: 11px;">${badgeText}</span>
+            </div>
+            <p style="margin: 0 0 12px 0; font-size: 13px; color: var(--color-text-muted); line-height: 1.5;">${escapeHtml(t.summary)}</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 12px;">
+              <div style="color: var(--color-text-muted); display: flex; gap: 12px; align-items: center;">
+                ${t.source_url ? `<a href="${escapeHtml(t.source_url)}" target="_blank" rel="noopener" style="color: var(--color-accent); text-decoration: none;">🔗 Источник</a>` : ''}
+                <span>📅 ${escapeHtml(t.created_at || '')}</span>
+              </div>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="sendTrendToContentPlan(${t.id})" title="Перенести тему в Контент-план">
+                  📅 В план
+                </button>
+                ${!isApproved ? `
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="approveTrendItem(${t.id})" style="color: var(--color-accent);">
+                    ✅ Одобрить
+                  </button>
+                ` : ''}
+                <button type="button" class="btn btn-secondary btn-sm" onclick="deleteTrendItem(${t.id})" style="color: #ef4444;" title="Удалить">
+                  🗑
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+    } catch (e) {
+      container.innerHTML = `<div style="color: #ef4444; padding: 20px;">Ошибка загрузки трендов: ${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  async function fetchNewTrends(query = '') {
+    const fetchBtn = document.getElementById('btnFetchTrends');
+    const summaryBox = document.getElementById('trendsSummaryBox');
+    const summaryText = document.getElementById('trendsSummaryText');
+
+    if (fetchBtn) {
+      fetchBtn.disabled = true;
+      fetchBtn.innerHTML = '<span class="btn-icon">⏳</span> Идет поиск...';
+    }
+
+    try {
+      const resp = await fetch('api/trends.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'fetch_new', query: query })
+      });
+      const data = await resp.json();
+
+      if (data.status === 'success') {
+        showToast(`Найдено инфоповодов: ${data.new_saved} новых сохранено в радар!`, 'success');
+        if (data.ai_summary && summaryBox && summaryText) {
+          summaryText.textContent = data.ai_summary;
+          summaryBox.style.display = 'block';
+        }
+        await loadTrendsList();
+      } else {
+        showToast(data.message || 'Ошибка поиска трендов', 'error');
+      }
+    } catch (e) {
+      showToast('Сетевая ошибка при поиске трендов: ' + e.message, 'error');
+    } finally {
+      if (fetchBtn) {
+        fetchBtn.disabled = false;
+        fetchBtn.innerHTML = '<span class="btn-icon">📡</span> Найти тренды';
+      }
+    }
+  }
+
+  window.approveTrendItem = async function(id) {
+    try {
+      const resp = await fetch('api/trends.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'approve', id: id })
+      });
+      const data = await resp.json();
+      if (data.status === 'success') {
+        showToast('Инфоповод одобрен!', 'success');
+        await loadTrendsList();
+      } else {
+        showToast(data.message || 'Ошибка', 'error');
+      }
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
+  };
+
+  window.deleteTrendItem = async function(id) {
+    if (!confirm('Удалить этот инфоповод из радара?')) return;
+    try {
+      const resp = await fetch('api/trends.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', id: id })
+      });
+      const data = await resp.json();
+      if (data.status === 'success') {
+        showToast('Инфоповод удален', 'info');
+        await loadTrendsList();
+      } else {
+        showToast(data.message || 'Ошибка', 'error');
+      }
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
+  };
+
+  window.sendTrendToContentPlan = async function(id) {
+    try {
+      const resp = await fetch('api/trends.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'send_to_plan', id: id })
+      });
+      const data = await resp.json();
+      if (data.status === 'success') {
+        showToast(`Тема «${data.title}» добавлена в Банк идей Контент-плана!`, 'success');
+        await loadTrendsList();
+      } else {
+        showToast(data.message || 'Ошибка', 'error');
+      }
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
+  };
 
   // ---------------------------------------------------------------------------
   // 8. СЛУШАТЕЛИ СОБЫТИЙ И ИНИЦИАЛИЗАЦИЯ

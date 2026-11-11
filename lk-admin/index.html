@@ -1078,11 +1078,30 @@
               </div>
             </div>
 
-            <div class="module-placeholder-box">
-              <div class="box-icon">📡</div>
-              <h3>Лента трендов и инфоповодов готова к подключению API</h3>
-              <p>Таблица <code class="tech-code">trends</code> подключена и проиндексирована по полю <code
-                  class="tech-code">is_approved</code>.</p>
+            <!-- ПАНЕЛЬ ПОИСКА И ФИЛЬТРОВ ТРЕНДОВ -->
+            <div class="smm-toolbar-bar" style="margin-top: 24px;">
+              <div style="display: flex; gap: 8px; flex: 1; max-width: 680px;">
+                <input type="text" id="trendsSearchInput" class="tech-input" placeholder="Поисковый запрос (например: Tilda сбои скорости, чистый код, алгоритмы Сетки...)" style="flex: 1;" />
+                <button type="button" class="btn btn-primary" id="btnFetchTrends">
+                  <span class="btn-icon">📡</span> Найти тренды
+                </button>
+              </div>
+              <div class="smm-status-pills" id="trendsFilterPills">
+                <button type="button" class="smm-pill active" data-filter="all">Все инфоповоды</button>
+                <button type="button" class="smm-pill" data-filter="approved">✅ Одобренные</button>
+                <button type="button" class="smm-pill" data-filter="pending">🟡 Новые</button>
+              </div>
+            </div>
+
+            <!-- БЛОК ВЫЖИМКИ ИИ -->
+            <div id="trendsSummaryBox" style="display: none; background: rgba(0, 229, 184, 0.06); border: 1px solid rgba(0, 229, 184, 0.25); border-radius: 8px; padding: 14px 18px; margin: 16px 0; font-size: 13px; line-height: 1.5;">
+              <div style="font-weight: 600; color: var(--color-accent); margin-bottom: 4px;">🧠 ВЫЖИМКА РАДАРА ТРЕНДОВ:</div>
+              <div id="trendsSummaryText" style="color: var(--color-text-main);"></div>
+            </div>
+
+            <!-- СПИСОК ТРЕНДОВ -->
+            <div id="trendsListContainer" style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
+              <!-- Карточки загружаются динамически через API -->
             </div>
           </div>
         </section>
