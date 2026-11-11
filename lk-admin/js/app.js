@@ -239,10 +239,14 @@ document.addEventListener('DOMContentLoaded', () => {
     skillsListEl.innerHTML = '<div class="skills-list-skeleton">Синхронизация скиллов с базой данных...</div>';
 
     try {
-      const res = await fetch('api/skills.php', {
+      const res = await fetch('api/skills.php?t=' + Date.now(), {
         method: 'GET',
         cache: 'no-store',
-        headers: { 'Accept': 'application/json' }
+        headers: {
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
       });
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -399,8 +403,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const skill = skillsData.find(s => s.id === activeSkillId);
     if (!skill) return;
 
-    const newTov = skillTovInputEl ? skillTovInputEl.value.trim() : '';
-    const newPrompt = skillPromptInputEl ? skillPromptInputEl.value.trim() : '';
+    const tovEl = skillTovInputEl || document.getElementById('skillTovInput') || document.getElementById('skill-tone');
+    const promptEl = skillPromptInputEl || document.getElementById('skillPromptInput') || document.getElementById('skill-prompt');
+
+    const newTov = tovEl ? tovEl.value.trim() : '';
+    const newPrompt = promptEl ? promptEl.value.trim() : '';
 
     if (!newPrompt) {
       showToast('Системный промпт не может быть пустым', 'error');
@@ -432,18 +439,21 @@ document.addEventListener('DOMContentLoaded', () => {
         throw new Error(data.message || 'Ошибка сохранения');
       }
 
+      // Обновляем локальный стейт в JS, чтобы переключение между скиллами не сбрасывало текст
       skill.tone_of_voice = newTov;
       skill.system_prompt = newPrompt;
       if (data.skill && data.skill.updated_at) {
         skill.updated_at = data.skill.updated_at;
-        if (skillUpdatedTimestampEl) skillUpdatedTimestampEl.textContent = `Обновлено: ${skill.updated_at}`;
+      }
+      if (skillUpdatedTimestampEl) {
+        skillUpdatedTimestampEl.textContent = skill.updated_at ? `Обновлено: ${skill.updated_at}` : 'Синхронизировано';
       }
 
       renderSkillsList();
-      showToast(`Скилл «${skill.title}» успешно сохранен!`, 'success');
-      if (skillSaveStatusEl) skillSaveStatusEl.textContent = '✓ Сохранено';
+      showToast('Скилл сохранен в SQLite!', 'success');
+      if (skillSaveStatusEl) skillSaveStatusEl.textContent = '✓ Сохранено в SQLite';
     } catch (err) {
-      showToast(`Не удалось сохранить скилл: ${err.message}`, 'error');
+      showToast(`Ошибка: ${err.message}`, 'error');
       if (skillSaveStatusEl) skillSaveStatusEl.textContent = 'Ошибка сохранения';
     } finally {
       saveSkillBtn.disabled = false;

@@ -9,6 +9,9 @@ declare(strict_types=1);
  */
 
 header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
 header('X-Content-Type-Options: nosniff');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
@@ -234,38 +237,40 @@ PROMPT
             ]
         ];
 
-        foreach ($defaults as $item) {
-            $stmtCheck = $pdo->prepare('SELECT id FROM skills WHERE code = :code');
-            $stmtCheck->execute([':code' => $item['code']]);
-            $existingId = $stmtCheck->fetchColumn();
+        // Проверяем физическое наличие записей: засеиваем ТОЛЬКО ОДИН РАЗ, когда таблица пуста
+        $count = (int)$pdo->query('SELECT COUNT(*) FROM skills')->fetchColumn();
+        if ($count > 0) {
+            return;
+        }
 
-            if ($existingId) {
-                // Обновляем категорию, заголовок, промпт и тональность
-                $stmtUpd = $pdo->prepare('UPDATE skills SET category = :cat, title = :title, system_prompt = :prompt, tone_of_voice = :tov WHERE id = :id');
-                $stmtUpd->execute([
-                    ':cat'    => $item['category'],
-                    ':title'  => $item['title'],
-                    ':prompt' => $item['system_prompt'],
-                    ':tov'    => $item['tone_of_voice'],
-                    ':id'     => $existingId
-                ]);
-            } else {
-                $stmtIns = $pdo->prepare('INSERT INTO skills (code, title, category, system_prompt, tone_of_voice) VALUES (:code, :title, :category, :prompt, :tov)');
-                $stmtIns->execute([
-                    ':code'     => $item['code'],
-                    ':title'    => $item['title'],
-                    ':category' => $item['category'],
-                    ':prompt'   => $item['system_prompt'],
-                    ':tov'      => $item['tone_of_voice']
-                ]);
-            }
+        $stmtIns = $pdo->prepare('INSERT INTO skills (code, title, category, system_prompt, tone_of_voice) VALUES (:code, :title, :category, :prompt, :tov)');
+        foreach ($defaults as $item) {
+            $stmtIns->execute([
+                ':code'     => $item['code'],
+                ':title'    => $item['title'],
+                ':category' => $item['category'],
+                ':prompt'   => $item['system_prompt'],
+                ':tov'      => $item['tone_of_voice']
+            ]);
         }
     };
 
-    if ($method === 'GET') {
-        // Проверяем актуальность категорий
-        $seedDefaultSkills($pdo);
+    // Убедимся, что колонка category существует в SQLite
+    $cols = $pdo->query('PRAGMA table_info(skills)')->fetchAll(PDO::FETCH_COLUMN, 1);
+    if (!in_array('category', $cols, true)) {
+        $pdo->exec("ALTER TABLE skills ADD COLUMN category TEXT DEFAULT 'articles'");
+    }
 
+    // Проверяем: если таблица физически пуста, выполняем первичный сидинг ТОЛЬКО ОДИН РАЗ
+    $skillsCount = (int)$pdo->query('SELECT COUNT(*) FROM skills')->fetchColumn();
+    if ($skillsCount === 0) {
+        $seedDefaultSkills($pdo);
+    }
+
+    // -------------------------------------------------------------------------
+    // 1. GET: Получение скиллов (КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО ПЕРЕЗАПИСЫВАТЬ БАЗУ!)
+    // -------------------------------------------------------------------------
+    if ($method === 'GET') {
         $category = isset($_GET['category']) ? trim((string)$_GET['category']) : '';
         if ($category !== '' && $category !== 'all') {
             $stmt = $pdo->prepare('SELECT id, code, title, category, system_prompt, tone_of_voice, updated_at FROM skills WHERE category = :cat ORDER BY id ASC');
@@ -285,6 +290,9 @@ PROMPT
         exit;
     }
 
+    // -------------------------------------------------------------------------
+    // 2. POST: Сохранение изменений пользователя в SQLite
+    // -------------------------------------------------------------------------
     if ($method === 'POST') {
         $rawInput = file_get_contents('php://input');
         $input = json_decode($rawInput, true);
@@ -296,8 +304,6 @@ PROMPT
         $code = isset($input['code']) ? trim((string)$input['code']) : null;
         $systemPrompt = isset($input['system_prompt']) ? trim((string)$input['system_prompt']) : null;
         $toneOfVoice = isset($input['tone_of_voice']) ? trim((string)$input['tone_of_voice']) : '';
-        $title = isset($input['title']) ? trim((string)$input['title']) : null;
-        $category = isset($input['category']) ? trim((string)$input['category']) : null;
 
         if ((!$id && !$code) || $systemPrompt === null || $systemPrompt === '') {
             http_response_code(400);
@@ -308,53 +314,43 @@ PROMPT
             exit;
         }
 
-        if ($id) {
-            $sql = 'UPDATE skills SET system_prompt = :prompt, tone_of_voice = :tov' .
-                ($title ? ', title = :title' : '') .
-                ($category ? ', category = :category' : '') .
-                ', updated_at = CURRENT_TIMESTAMP WHERE id = :id';
-            $params = [
-                ':prompt' => $systemPrompt,
-                ':tov'    => $toneOfVoice,
-                ':id'     => $id
-            ];
-            if ($title) $params[':title'] = $title;
-            if ($category) $params[':category'] = $category;
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute($params);
+        // Санитизация: заменяем длинные тире на дефис
+        $systemPrompt = str_replace(['—', '–'], '-', $systemPrompt);
+        $toneOfVoice  = str_replace(['—', '–'], '-', $toneOfVoice);
 
-            $stmtFetch = $pdo->prepare('SELECT * FROM skills WHERE id = :id');
-            $stmtFetch->execute([':id' => $id]);
-            $updatedSkill = $stmtFetch->fetch(PDO::FETCH_ASSOC);
-        } else {
-            $sql = 'UPDATE skills SET system_prompt = :prompt, tone_of_voice = :tov' .
-                ($title ? ', title = :title' : '') .
-                ($category ? ', category = :category' : '') .
-                ', updated_at = CURRENT_TIMESTAMP WHERE code = :code';
-            $params = [
+        if ($code) {
+            $stmt = $pdo->prepare("UPDATE skills SET system_prompt = :prompt, tone_of_voice = :tone, updated_at = CURRENT_TIMESTAMP WHERE code = :code");
+            $stmt->execute([
                 ':prompt' => $systemPrompt,
-                ':tov'    => $toneOfVoice,
+                ':tone'   => $toneOfVoice,
                 ':code'   => $code
-            ];
-            if ($title) $params[':title'] = $title;
-            if ($category) $params[':category'] = $category;
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute($params);
+            ]);
 
-            $stmtFetch = $pdo->prepare('SELECT * FROM skills WHERE code = :code');
-            $stmtFetch->execute([':code' => $code]);
-            $updatedSkill = $stmtFetch->fetch(PDO::FETCH_ASSOC);
+            $fetchStmt = $pdo->prepare("SELECT id, code, title, category, system_prompt, tone_of_voice, updated_at FROM skills WHERE code = :code LIMIT 1");
+            $fetchStmt->execute([':code' => $code]);
+            $updatedSkill = $fetchStmt->fetch(PDO::FETCH_ASSOC);
+        } else {
+            $stmt = $pdo->prepare("UPDATE skills SET system_prompt = :prompt, tone_of_voice = :tone, updated_at = CURRENT_TIMESTAMP WHERE id = :id");
+            $stmt->execute([
+                ':prompt' => $systemPrompt,
+                ':tone'   => $toneOfVoice,
+                ':id'     => $id
+            ]);
+
+            $fetchStmt = $pdo->prepare("SELECT id, code, title, category, system_prompt, tone_of_voice, updated_at FROM skills WHERE id = :id LIMIT 1");
+            $fetchStmt->execute([':id' => $id]);
+            $updatedSkill = $fetchStmt->fetch(PDO::FETCH_ASSOC);
         }
 
         if (!$updatedSkill) {
             http_response_code(404);
-            echo json_encode(['status' => 'error', 'message' => 'Скилл не найден'], JSON_UNESCAPED_UNICODE);
+            echo json_encode(['status' => 'error', 'message' => 'Скилл не найден в базе данных'], JSON_UNESCAPED_UNICODE);
             exit;
         }
 
         echo json_encode([
             'status'  => 'success',
-            'message' => 'Скилл успешно обновлен',
+            'message' => 'Скилл успешно сохранен в базе данных',
             'skill'   => $updatedSkill
         ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
         exit;
@@ -363,6 +359,12 @@ PROMPT
     http_response_code(405);
     echo json_encode(['status' => 'error', 'message' => 'Метод не поддерживается'], JSON_UNESCAPED_UNICODE);
 
+} catch (PDOException $e) {
+    http_response_code(500);
+    echo json_encode([
+        'status'  => 'error',
+        'message' => 'Ошибка базы данных SQLite (PDO): ' . $e->getMessage()
+    ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 } catch (Throwable $e) {
     http_response_code(500);
     echo json_encode([
