@@ -2,17 +2,29 @@
 declare(strict_types=1);
 
 /**
- * AntiDesigner Core — Базовая конфигурация и ключи доступа к внешним сервисам.
- * Локальные боевые ключи автоматически подгружаются из core-data/config.local.php (в .gitignore).
+ * =============================================================================
+ * ANTIDESIGNER CORE — CONFIGURATION STORE
+ * Dual API Keys support (Fast & Heavy tiers) with backward compatibility.
+ * Live keys are isolated in core-data/config.local.php (in .gitignore).
+ * =============================================================================
  */
+
 $config = [
-    'gemini_api_key'     => getenv('GEMINI_API_KEY') ?: 'YOUR_GEMINI_API_KEY_HERE', // Google AI Studio (Gemini 1.5 Flash / Pro)
-    'telegram_bot_token' => getenv('TELEGRAM_BOT_TOKEN') ?: '', // Telegram Bot API Token
-    'admin_telegram_id'  => getenv('ADMIN_TELEGRAM_ID') ?: '', // ID администратора в Telegram для 2FA и уведомлений
-    'tavily_api_key'     => getenv('TAVILY_API_KEY') ?: '', // Tavily API для поискового радара трендов
-    'pagespeed_api_key'  => getenv('PAGESPEED_API_KEY') ?: ''  // Google PageSpeed Insights REST API v5
+    // API Ключи Gemini (раздельные для Free и Flex/Paid тарифов)
+    'gemini_fast_api_key'  => getenv('GEMINI_FAST_API_KEY') ?: '', // Ключ для MODEL_FAST (Free Tier / Flash-Lite)
+    'gemini_heavy_api_key' => getenv('GEMINI_HEAVY_API_KEY') ?: '', // Ключ для MODEL_HEAVY (Flex Tier / Flash / Pro)
+    'gemini_api_key'       => getenv('GEMINI_API_KEY') ?: '', // Универсальный фоллбэк (если используется 1 общий ключ)
+
+    // Telegram
+    'telegram_bot_token'   => getenv('TELEGRAM_BOT_TOKEN') ?: '',
+    'admin_telegram_id'    => getenv('ADMIN_TELEGRAM_ID') ?: '',
+
+    // Внешние парсеры и поисковики
+    'tavily_api_key'       => getenv('TAVILY_API_KEY') ?: '',
+    'pagespeed_api_key'    => getenv('PAGESPEED_API_KEY') ?: ''
 ];
 
+// Автоматическое подключение локальных секретных ключей (не коммитятся в git)
 $localConfigFile = __DIR__ . '/config.local.php';
 if (file_exists($localConfigFile)) {
     $localConfig = require $localConfigFile;

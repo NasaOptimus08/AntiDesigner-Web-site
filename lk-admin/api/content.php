@@ -14,6 +14,7 @@ header('X-Content-Type-Options: nosniff');
 try {
     require_once __DIR__ . '/db.php';
     require_once __DIR__ . '/gemini.php';
+    require_once dirname(__DIR__, 2) . '/core-data/ai_router.php';
     /** @var PDO $pdo */
 
     $rawInput = file_get_contents('php://input');
@@ -97,10 +98,15 @@ try {
             $allSkills[$row['code']] = $row;
         }
 
+        // 3. Инициализируем AI Router с разделением ключей
+        $configFile = dirname(__DIR__, 2) . '/core-data/config.php';
+        $config = file_exists($configFile) ? require $configFile : [];
+        $aiRouter = new AIRouter($config);
+
         $results = [];
         $errors = [];
 
-        // 3. Для каждого выбранного формата вызываем Gemini
+        // 4. Для каждого выбранного формата вызываем Gemini через роутер
         foreach ($formats as $fmtCode) {
             $skill = $allSkills[$fmtCode] ?? null;
             if (!$skill) {
@@ -118,7 +124,8 @@ try {
                 "Отдай только готовый текст без лишних вступительных реплик.";
 
             try {
-                $generatedText = callGemini($systemInstruction, $userPrompt, 'gemini-1.5-flash');
+                // Маршрутизация: vc_ru и lead_magnet идут в MODEL_HEAVY, остальные в MODEL_FAST
+                $generatedText = $aiRouter->execute($fmtCode, $systemInstruction, $userPrompt);
 
                 // Сохраняем в базу данных в статусе draft
                 $stmtInsert = $pdo->prepare('INSERT INTO content_items (topic, format, content_markdown, status) VALUES (:topic, :format, :content, :status)');
