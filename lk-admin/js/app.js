@@ -804,7 +804,8 @@ document.addEventListener('DOMContentLoaded', () => {
       activeGeneratedIndex = 0;
 
       renderGeneratedResults(data.topic || topic);
-      showToast(`Сгенерировано материалов: ${generatedBatch.length}`, 'success');
+      const modelInfo = data.model_used ? ` [${data.model_used}]` : '';
+      showToast(`Сгенерировано материалов: ${generatedBatch.length}${modelInfo}`, 'success');
 
       if (data.errors && data.errors.length > 0) {
         data.errors.forEach(errMsg => showToast(errMsg, 'info'));
@@ -904,9 +905,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (factoryActionStatus) {
+      const modelTag = currentItem.model_used ? ` · ИИ: ${currentItem.model_used}` : '';
       factoryActionStatus.textContent = currentItem.status === 'published'
-        ? 'Материал опубликован в Telegram-канале'
-        : 'Материал сохранен как черновик в SQLite';
+        ? `Материал опубликован в Telegram-канале${modelTag}`
+        : `Черновик в SQLite${modelTag}`;
     }
   }
 

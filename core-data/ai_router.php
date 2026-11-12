@@ -16,20 +16,31 @@ class AIRouter
     public const MODEL_FAST  = 'gemini-3.5-flash-lite';     // Google AI Studio (черновая работа, скаут, чат)
     public const MODEL_HEAVY = 'google/gemini-3.8-flash';    // Polza.ai (главред, аналитик, снайпер продаж)
 
-    // Константы задач
-    public const TASK_LONGREAD    = 'vc_ru';
-    public const TASK_LEAD_MAGNET = 'lead_magnet';
-    public const TASK_TELEGRAM    = 'tg_post';
-    public const TASK_TG_DIGEST   = 'tg_digest';
-    public const TASK_GEO         = 'site_geo';
-    public const TASK_REELS       = 'reels_hook';
-    public const TASK_CAROUSEL    = 'ig_carousel';
-    public const TASK_SETKA       = 'setka_post';
-    public const TASK_COLD_PITCH  = 'cold_pitch';
-    public const TASK_WIN_LOSS    = 'win_loss';
-    public const TASK_AUTO_PLAN   = 'auto_plan';
-    public const TASK_BOT_CHAT    = 'bot_consultant';
-    public const TASK_TG_CHAT     = 'bot_consultant';
+    // Константы FAST задач (MODEL_FAST, ключ gemini_fast_api_key на AQ...)
+    public const TASK_TG_CHAT          = 'tg_chat';
+    public const TASK_RAW_PARSING      = 'raw_parsing';
+    public const TASK_SITE_CODE_AUDIT  = 'site_code_audit';
+    public const TASK_CONTENT_PLANNER  = 'content_planner';
+
+    // Константы HEAVY задач (MODEL_HEAVY, ключ gemini_heavy_api_key на pza...)
+    public const TASK_LONGREAD         = 'vc_ru';
+    public const TASK_TG_POST          = 'tg_post';
+    public const TASK_SETKA_POST       = 'setka_post';
+    public const TASK_REELS            = 'reels_hook';
+    public const TASK_CAROUSEL         = 'ig_carousel';
+    public const TASK_GEO_ARTICLE      = 'site_geo';
+    public const TASK_LEAD_MAGNET      = 'lead_magnet';
+    public const TASK_COLD_PITCH       = 'cold_pitch';
+    public const TASK_CRM_ANALYTICS    = 'crm_analytics';
+
+    // Алиасы для обратной совместимости
+    public const TASK_TELEGRAM         = self::TASK_TG_POST;
+    public const TASK_TG_DIGEST        = 'tg_digest';
+    public const TASK_GEO              = self::TASK_GEO_ARTICLE;
+    public const TASK_SETKA            = self::TASK_SETKA_POST;
+    public const TASK_WIN_LOSS         = self::TASK_CRM_ANALYTICS;
+    public const TASK_AUTO_PLAN        = self::TASK_CONTENT_PLANNER;
+    public const TASK_BOT_CHAT         = self::TASK_TG_CHAT;
 
     // Глобальный защитный протокол "Анти-галлюцинация, личный бренд и 100% честность"
     public const ZERO_HALLUCINATIONS_PROTOCOL = <<<PROMPT
@@ -203,6 +214,9 @@ PROMPT;
             if ($key === '' && str_starts_with($this->fallbackApiKey, 'AQ')) {
                 $key = $this->fallbackApiKey;
             }
+            if (str_starts_with($key, 'pza')) {
+                throw new RuntimeException("Для MODEL_FAST (Flash-Lite) передан ключ Polza.ai (начинается на pza...). Требуется ключ Google AI Studio (префикс AQ...)");
+            }
             if ($key === '') {
                 throw new RuntimeException("API-ключ для MODEL_FAST (Gemini Flash-Lite, префикс AQ...) не указан в core-data/config.php");
             }
@@ -214,6 +228,9 @@ PROMPT;
         if ($key === '' && str_starts_with($this->fallbackApiKey, 'pza')) {
             $key = $this->fallbackApiKey;
         }
+        if (str_starts_with($key, 'AQ')) {
+            throw new RuntimeException("Для MODEL_HEAVY (Flash 3.8) передан ключ Google AI Studio (начинается на AQ...). Требуется ключ Polza.ai (префикс pza...)");
+        }
         if ($key === '') {
             throw new RuntimeException("API-ключ для MODEL_HEAVY (Gemini Flash 3.8, префикс pza...) не указан в core-data/config.php");
         }
@@ -223,15 +240,46 @@ PROMPT;
     /**
      * Определение модели по типу задачи
      * Разделение обязанностей:
-     *  - MODEL_FAST: авто-план, парсинг трендов, первичный аудит 1 экрана, телеграм-диалоги
-     *  - MODEL_HEAVY: чистовой копирайтинг всех форматов контент-фабрики, оценка лидов 1-10, питчинг, Win/Loss разбор
+     *  - MODEL_FAST (ключ gemini_fast_api_key на AQ...):
+     *      * TASK_TG_CHAT (диалоги в Telegram)
+     *      * TASK_RAW_PARSING (первичный парсинг трендов и сайтов)
+     *      * TASK_SITE_CODE_AUDIT (первичный разбор кода/дизайна 1-го экрана)
+     *      * TASK_CONTENT_PLANNER (быстрое проектирование сетки контент-плана на 1-2 дня)
+     *
+     *  - MODEL_HEAVY (ключ gemini_heavy_api_key на pza...):
+     *      * TASK_LONGREAD (статьи VC.ru / Habr)
+     *      * TASK_TG_POST (посты в Telegram, девлоги и новости)
+     *      * TASK_SETKA_POST (посты для Сетки)
+     *      * TASK_REELS (сценарии Reels / Shorts)
+     *      * TASK_CAROUSEL (слайды для каруселей)
+     *      * TASK_GEO_ARTICLE (SEO/GEO-статьи на сайт)
+     *      * TASK_LEAD_MAGNET (структура и тексты PDF лид-магнитов)
+     *      * TASK_COLD_PITCH (персонализированные холодные питчи)
+     *      * TASK_CRM_ANALYTICS (аналитика и Win/Loss разбор сделок)
      */
-    public function resolveModelForTask(string $taskType): string
+    public function resolveModel(string $taskType): string
     {
         return match ($taskType) {
-            'plan', 'auto_plan', 'content_planner', 'trends', 'scout_phase1', 'bot_dialogue', 'bot_consultant', 'tg_chat', self::TASK_BOT_CHAT => self::MODEL_FAST,
+            // Строго FAST задачи
+            self::TASK_TG_CHAT,
+            'bot_dialogue',
+            'bot_consultant',
+            self::TASK_RAW_PARSING,
+            'trends',
+            'scout_phase1',
+            self::TASK_SITE_CODE_AUDIT,
+            self::TASK_CONTENT_PLANNER,
+            'plan',
+            'auto_plan' => self::MODEL_FAST,
+
+            // ВСЕ задачи копирайтинга и глубокого анализа — строго HEAVY
             default => self::MODEL_HEAVY,
         };
+    }
+
+    public function resolveModelForTask(string $taskType): string
+    {
+        return $this->resolveModel($taskType);
     }
 
     /**

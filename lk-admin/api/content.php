@@ -130,8 +130,30 @@ try {
         $results = [];
         $errors = [];
 
+        // Маппинг форматов Контент-фабрики на строгие типы задач AIRouter (ВСЕ идут на MODEL_HEAVY)
+        $taskMap = [
+            'tg_post'     => AIRouter::TASK_TG_POST,
+            'telegram'    => AIRouter::TASK_TG_POST,
+            'vc_ru'       => AIRouter::TASK_LONGREAD,
+            'habr'        => AIRouter::TASK_LONGREAD,
+            'article'     => AIRouter::TASK_LONGREAD,
+            'setka_post'  => AIRouter::TASK_SETKA_POST,
+            'setka'       => AIRouter::TASK_SETKA_POST,
+            'reels_hook'  => AIRouter::TASK_REELS,
+            'reels'       => AIRouter::TASK_REELS,
+            'instagram'   => AIRouter::TASK_REELS,
+            'ig_carousel' => AIRouter::TASK_CAROUSEL,
+            'carousel'    => AIRouter::TASK_CAROUSEL,
+            'lead_magnet' => AIRouter::TASK_LEAD_MAGNET,
+            'site_geo'    => AIRouter::TASK_GEO_ARTICLE,
+            'geo'         => AIRouter::TASK_GEO_ARTICLE,
+        ];
+
         // 4. Для каждого выбранного формата вызываем Gemini Flash 3.8 (MODEL_HEAVY) с подтягиванием профильного скилла
         foreach ($formats as $fmtCode) {
+            $taskType = $taskMap[$fmtCode] ?? AIRouter::TASK_LONGREAD;
+            $resolvedModel = $aiRouter->resolveModel($taskType); // Строго MODEL_HEAVY
+
             // Обязательный точечный запрос скилла из базы данных skills
             $stmtSkill = $pdo->prepare('SELECT code, title, system_prompt, tone_of_voice FROM skills WHERE code = :code LIMIT 1');
             $stmtSkill->execute([':code' => $fmtCode]);
@@ -153,10 +175,11 @@ try {
 
             try {
                 // Все чистовые материалы Контент-фабрики генерирует MODEL_HEAVY (Gemini Flash 3.8, ключ pza...)
-                // Для лонгридов (vc_ru) подключаем thinkingBudget = 2048
-                $thinkingBudget = ($fmtCode === 'vc_ru') ? 2048 : null;
-                $generatedText = $aiRouter->generateWithModel(
-                    AIRouter::MODEL_HEAVY,
+                // Для лонгридов (vc_ru / habr) подключаем thinkingBudget = 2048
+                $thinkingBudget = in_array($taskType, [AIRouter::TASK_LONGREAD, 'vc_ru'], true) ? 2048 : null;
+
+                $generatedText = $aiRouter->execute(
+                    $taskType,
                     $systemInstruction,
                     $userPrompt,
                     $thinkingBudget
@@ -176,11 +199,13 @@ try {
                 $newId = (int)$pdo->lastInsertId();
 
                 $results[] = [
-                    'id'       => $newId,
-                    'format'   => $fmtCode,
-                    'title'    => $skill['title'],
-                    'content'  => $generatedText,
-                    'status'   => 'draft'
+                    'id'         => $newId,
+                    'format'     => $fmtCode,
+                    'task_type'  => $taskType,
+                    'title'      => $skill['title'],
+                    'content'    => $generatedText,
+                    'model_used' => 'gemini-flash-3.8 (HEAVY)',
+                    'status'     => 'draft'
                 ];
             } catch (Throwable $genErr) {
                 $errors[] = "Ошибка при генерации {$skill['title']}: " . $genErr->getMessage();
@@ -197,11 +222,12 @@ try {
         }
 
         echo json_encode([
-            'status'    => 'success',
-            'topic'     => $topic,
-            'count'     => count($results),
-            'generated' => $results,
-            'errors'    => $errors
+            'status'     => 'success',
+            'topic'      => $topic,
+            'count'      => count($results),
+            'model_used' => 'gemini-flash-3.8 (HEAVY)',
+            'generated'  => $results,
+            'errors'     => $errors
         ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
         exit;
     }
@@ -494,7 +520,11 @@ try {
 
         $userPrompt = "Сформируй контент-план на 30 дней с учетом базы знаний независимого разработчика Евгения Антипина:\n\n{$ragContext}\nСгенерируй ровно 30 целевых тем в JSON.";
 
-        $aiResponse = AIRouter::call(AIRouter::MODEL_FAST, $userPrompt, $systemPrompt);
+        $configFile = dirname(__DIR__, 2) . '/core-data/config.php';
+        $config = file_exists($configFile) ? require $configFile : [];
+        $aiRouter = new AIRouter($config);
+        $aiRouter->setPDO($pdo);
+        $aiResponse = $aiRouter->call($userPrompt, $systemPrompt, AIRouter::MODEL_FAST);
         
         // Очищаем json
         $jsonStr = $aiResponse;
