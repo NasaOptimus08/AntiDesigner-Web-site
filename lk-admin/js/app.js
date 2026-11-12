@@ -355,8 +355,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (skillSaveStatusEl) skillSaveStatusEl.textContent = '';
 
-    // Загрузка модульных под-промптов выбранного скилла
+    // Загрузка модульных под-промптов и распакованных ассетов выбранного скилла
     loadSkillSubPrompts(skill.code);
+    loadSkillAssets(skill.code);
   }
 
   // Фильтр категорий скиллов
@@ -753,6 +754,80 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       if (errorCount > 0) {
         showToast(`Ошибок при импорте: ${errorCount}`, 'error');
+      }
+    });
+  }
+
+  // Загрузка списка распакованных ассетов скилла
+  async function loadSkillAssets(skillCode) {
+    const assetsList = document.getElementById('skillAssetsList');
+    const countBadge = document.getElementById('skillAssetsCountBadge');
+    if (!assetsList) return;
+
+    try {
+      const res = await fetch(`api/skills.php?action=list_assets&skill_code=${encodeURIComponent(skillCode)}`);
+      const data = await res.json();
+      if (data && data.status === 'success' && Array.isArray(data.files)) {
+        if (countBadge) countBadge.textContent = data.count || data.files.length;
+        if (data.files.length === 0) {
+          assetsList.innerHTML = '<div class="tech-hint" style="font-size: 11px;">Нет распакованных файлов в core-data/skills_assets/</div>';
+        } else {
+          assetsList.innerHTML = '';
+          data.files.forEach(f => {
+            const chip = document.createElement('div');
+            chip.className = 'asset-file-chip';
+            chip.innerHTML = `<span class="ext-badge">${escapeHtml(f.ext.toUpperCase())}</span> <span>${escapeHtml(f.name)}</span> <span style="font-size:9.5px; opacity:0.6;">(${Math.round(f.size/1024)} KB)</span>`;
+            assetsList.appendChild(chip);
+          });
+        }
+      }
+    } catch (err) {
+      console.warn('Error loading skill assets:', err);
+    }
+  }
+
+  // Загрузка и автораспаковка ZIP-архивов со стилями/промптами
+  const inputUploadZipPrompts = document.getElementById('inputUploadZipPrompts');
+  if (inputUploadZipPrompts) {
+    inputUploadZipPrompts.addEventListener('change', async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+
+      if (!file.name.toLowerCase().endsWith('.zip')) {
+        showToast('Пожалуйста, выберите архив с расширением .zip', 'error');
+        return;
+      }
+
+      const currentSkill = skillsData.find(s => s.id === activeSkillId);
+      const code = currentSkill ? currentSkill.code : 'code_animator';
+
+      showToast(`Распаковка архива ${file.name}...`, 'info', 4000);
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('target', 'skill');
+      formData.append('skill_code', code);
+
+      try {
+        const res = await fetch('api/upload.php', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        if (!res.ok || data.status !== 'success') {
+          throw new Error(data.message || 'Ошибка распаковки архива');
+        }
+
+        const createdCount = data.created_prompts ? data.created_prompts.length : 0;
+        const unpackedCount = data.unpacked_files ? data.unpacked_files.length : 0;
+        showToast(`Архив распакован! Файлов: ${unpackedCount}, создано стилей: ${createdCount}`, 'success');
+
+        loadSkillSubPrompts(code);
+        loadSkillAssets(code);
+      } catch (err) {
+        showToast(`Ошибка распаковки ZIP: ${err.message}`, 'error');
+      } finally {
+        inputUploadZipPrompts.value = '';
       }
     });
   }
@@ -1413,6 +1488,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const topicBadge = document.getElementById('reelsStudioTopicBadge');
     if (topicBadge) topicBadge.textContent = item.topic || 'Без темы';
 
+    const step1TopicInput = document.getElementById('reelsStep1TopicInput');
+    if (step1TopicInput) step1TopicInput.value = item.topic || '';
+
     let storyboard = item.storyboard;
     if (!storyboard && item.storyboard_json) {
       try {
@@ -1457,9 +1535,43 @@ document.addEventListener('DOMContentLoaded', () => {
       voPromptInput.value = (storyboard && storyboard.voice_prompt) || 'Уверенный разговорный тембр Senior-разработчика (Евгений Антипин), акцент на скорости 0.35с';
     }
 
+    const scenes = (storyboard && storyboard.scenes) || [];
+    const hookPromptInput = document.getElementById('reelsHookPromptInput');
+    if (hookPromptInput && scenes[0]) {
+      hookPromptInput.value = scenes[0].image_prompt || scenes[0].video_prompt || '';
+    }
+
+    const hookPhotoImg = document.getElementById('hookPhotoPreviewImg');
+    const hookVideoEl = document.getElementById('hookVideoPreviewEl');
+    const hookStatus = document.getElementById('hookMediaStatus');
+    if (storyboard && storyboard.hook_photo_url) {
+      if (hookPhotoImg) {
+        hookPhotoImg.src = storyboard.hook_photo_url;
+        hookPhotoImg.style.display = 'block';
+      }
+    } else if (hookPhotoImg) {
+      hookPhotoImg.style.display = 'none';
+    }
+
+    if (storyboard && storyboard.hook_video_url) {
+      if (hookVideoEl) {
+        hookVideoEl.src = storyboard.hook_video_url;
+        hookVideoEl.style.display = 'block';
+      }
+      if (hookStatus) {
+        hookStatus.innerHTML = `<span style="color:#00ff88;">✓ Видео-хук готов (${storyboard.hook_duration || 3}с)</span>`;
+      }
+    } else if (hookVideoEl) {
+      hookVideoEl.style.display = 'none';
+      if (hookStatus && !storyboard.hook_photo_url) {
+        hookStatus.textContent = 'Нажмите кнопку выше для генерации фото или оживления в видео-хук (3с).';
+      }
+    }
+
+    setReelsStudioStep(1);
+
     const scenesGrid = document.getElementById('reelsScenesGrid');
     const sceneCountBadge = document.getElementById('reelsSceneCountBadge');
-    const scenes = (storyboard && storyboard.scenes) || [];
 
     if (sceneCountBadge) sceneCountBadge.textContent = `${scenes.length || 6} сцен`;
 
@@ -1935,6 +2047,355 @@ document.addEventListener('DOMContentLoaded', () => {
       } finally {
         btnRegenerateStudioSingle.disabled = false;
         btnRegenerateStudioSingle.innerHTML = '<span>🔄</span> Перегенерировать';
+      }
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // 7.2. 5-ЭТАПНЫЙ ПОШАГОВЫЙ КОНВЕЙЕР (STEPPER PIPELINE)
+  // ---------------------------------------------------------------------------
+  let currentReelsStudioStep = 1;
+
+  function setReelsStudioStep(stepNum) {
+    currentReelsStudioStep = stepNum;
+    for (let i = 1; i <= 5; i++) {
+      const ind = document.getElementById(`stepIndicator${i}`);
+      const panel = document.getElementById(`reelsStepPanel${i}`);
+      if (ind) {
+        ind.classList.remove('active', 'completed');
+        if (i < stepNum) ind.classList.add('completed');
+        if (i === stepNum) ind.classList.add('active');
+      }
+      if (panel) {
+        panel.style.display = (i === stepNum) ? 'flex' : 'none';
+      }
+    }
+  }
+
+  // Переключение по клику на шаги трекера
+  document.querySelectorAll('.reels-stepper-track .stepper-step').forEach(stepEl => {
+    stepEl.addEventListener('click', () => {
+      const step = parseInt(stepEl.getAttribute('data-step') || '1', 10);
+      setReelsStudioStep(step);
+    });
+  });
+
+  // Кнопки возврата на предыдущий шаг
+  document.querySelectorAll('[data-prev-step]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const prev = parseInt(btn.getAttribute('data-prev-step') || '1', 10);
+      setReelsStudioStep(prev);
+    });
+  });
+
+  // ЭТАП 1: Генерация сценария и раскадровки (reels_hook)
+  const btnStep1GenScript = document.getElementById('btnStep1GenScript');
+  if (btnStep1GenScript) {
+    btnStep1GenScript.addEventListener('click', async () => {
+      const currentItem = generatedBatch[activeGeneratedIndex];
+      const topicInput = document.getElementById('reelsStep1TopicInput');
+      const topic = (topicInput && topicInput.value.trim()) || (currentItem && currentItem.topic) || '';
+      if (!topic) {
+        showToast('Введите тему ролика для сценария', 'error');
+        return;
+      }
+
+      btnStep1GenScript.disabled = true;
+      btnStep1GenScript.innerHTML = '<span class="btn-icon">↺</span> Генерация сценария и 6 сцен...';
+
+      try {
+        const res = await fetch('api/content.php?action=step1_script', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content_id: currentItem ? currentItem.id : 0,
+            topic: topic
+          })
+        });
+        const data = await res.json();
+        if (!res.ok || data.status !== 'success') {
+          throw new Error(data.message || 'Ошибка генерации сценария');
+        }
+
+        if (currentItem) {
+          if (data.content_id) currentItem.id = data.content_id;
+          currentItem.topic = data.topic;
+          currentItem.content = data.voice_script;
+          currentItem.storyboard = {
+            topic: data.topic,
+            scenes: data.scenes,
+            voice_script: data.voice_script,
+            duration: 28
+          };
+          currentItem.storyboard_json = JSON.stringify(currentItem.storyboard);
+        }
+
+        renderOneWindowReelsStudio(currentItem);
+        showToast('Сценарий и раскадровка созданы! Переходим к видео-хуку.', 'success');
+        setReelsStudioStep(2);
+      } catch (err) {
+        showToast(`Ошибка: ${err.message}`, 'error');
+      } finally {
+        btnStep1GenScript.disabled = false;
+        btnStep1GenScript.innerHTML = '<span class="btn-icon">⚡</span> 1. Сгенерировать сценарий и раскадровку (reels_hook)';
+      }
+    });
+  }
+
+  const btnStep1Next = document.getElementById('btnStep1Next');
+  if (btnStep1Next) {
+    btnStep1Next.addEventListener('click', () => setReelsStudioStep(2));
+  }
+
+  // ЭТАП 2: Фото хука и Оживление в 3-сек видео
+  const btnStep2GenPhoto = document.getElementById('btnStep2GenPhoto');
+  if (btnStep2GenPhoto) {
+    btnStep2GenPhoto.addEventListener('click', async () => {
+      const currentItem = generatedBatch[activeGeneratedIndex];
+      const promptInput = document.getElementById('reelsHookPromptInput');
+      const prompt = promptInput ? promptInput.value.trim() : '';
+
+      btnStep2GenPhoto.disabled = true;
+      btnStep2GenPhoto.innerHTML = '<span class="btn-icon">↺</span> Генерация фото...';
+      const statusEl = document.getElementById('hookMediaStatus');
+      if (statusEl) statusEl.textContent = 'Генерация фото хука (Nano Banana / Seedream)...';
+
+      try {
+        const res = await fetch('api/content.php?action=step2_hook', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content_id: currentItem ? currentItem.id : 0,
+            sub_action: 'generate_photo',
+            prompt: prompt
+          })
+        });
+        const data = await res.json();
+        if (!res.ok || data.status !== 'success') {
+          throw new Error(data.message || 'Ошибка генерации фото');
+        }
+
+        const photoImg = document.getElementById('hookPhotoPreviewImg');
+        if (photoImg) {
+          photoImg.src = data.photo_url;
+          photoImg.style.display = 'block';
+        }
+        if (statusEl) statusEl.innerHTML = '<span style="color:#00ff88;">✓ Фото хука готово. Теперь нажмите «2. Оживить в 3-сек видео-хук»</span>';
+        if (currentItem && currentItem.storyboard) {
+          currentItem.storyboard.hook_photo_url = data.photo_url;
+        }
+        showToast('Фото хука создано!', 'success');
+      } catch (err) {
+        if (statusEl) statusEl.textContent = 'Ошибка фото';
+        showToast(`Ошибка: ${err.message}`, 'error');
+      } finally {
+        btnStep2GenPhoto.disabled = false;
+        btnStep2GenPhoto.innerHTML = '<span class="btn-icon">📸</span> 1. Сгенерировать фото хука';
+      }
+    });
+  }
+
+  const btnStep2AnimateVideo = document.getElementById('btnStep2AnimateVideo');
+  if (btnStep2AnimateVideo) {
+    btnStep2AnimateVideo.addEventListener('click', async () => {
+      const currentItem = generatedBatch[activeGeneratedIndex];
+      const promptInput = document.getElementById('reelsHookPromptInput');
+      const prompt = promptInput ? promptInput.value.trim() : '';
+      const durSelect = document.getElementById('reelsHookDurationSelect');
+      const duration = durSelect ? parseInt(durSelect.value, 10) : 3;
+
+      btnStep2AnimateVideo.disabled = true;
+      btnStep2AnimateVideo.innerHTML = '<span class="btn-icon">↺</span> Анимация видео...';
+      const statusEl = document.getElementById('hookMediaStatus');
+      if (statusEl) statusEl.textContent = `Генерация ${duration}-сек видео-хука (Seedance-2-mini)...`;
+
+      try {
+        const res = await fetch('api/content.php?action=step2_hook', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content_id: currentItem ? currentItem.id : 0,
+            sub_action: 'animate_video',
+            prompt: prompt,
+            duration: duration
+          })
+        });
+        const data = await res.json();
+        if (!res.ok || data.status !== 'success') {
+          throw new Error(data.message || 'Ошибка анимации видео');
+        }
+
+        const videoEl = document.getElementById('hookVideoPreviewEl');
+        if (videoEl) {
+          videoEl.src = data.hook_video_url;
+          videoEl.style.display = 'block';
+        }
+        if (statusEl) statusEl.innerHTML = `<span style="color:#00ff88;">✓ ${data.duration}-сек видео-хук готов к мастер-монтажу!</span>`;
+        if (currentItem && currentItem.storyboard) {
+          currentItem.storyboard.hook_video_url = data.hook_video_url;
+          currentItem.storyboard.hook_duration = data.duration;
+        }
+        showToast(`${data.duration}-секундный видео-хук создан!`, 'success');
+      } catch (err) {
+        if (statusEl) statusEl.textContent = 'Ошибка видео-хука';
+        showToast(`Ошибка: ${err.message}`, 'error');
+      } finally {
+        btnStep2AnimateVideo.disabled = false;
+        btnStep2AnimateVideo.innerHTML = '<span class="btn-icon">🎬</span> 2. Оживить в 3-сек видео-хук';
+      }
+    });
+  }
+
+  const btnStep2Next = document.getElementById('btnStep2Next');
+  if (btnStep2Next) {
+    btnStep2Next.addEventListener('click', () => setReelsStudioStep(3));
+  }
+
+  // ЭТАП 3: Canvas-анимация сцен 2-6 (code_animator)
+  const btnStep3GenAnimation = document.getElementById('btnStep3GenAnimation');
+  if (btnStep3GenAnimation) {
+    btnStep3GenAnimation.addEventListener('click', async () => {
+      const currentItem = generatedBatch[activeGeneratedIndex];
+      const styleSelect = document.getElementById('reelsAnimStyleSelect');
+      const styleTitle = styleSelect ? styleSelect.value : '';
+
+      btnStep3GenAnimation.disabled = true;
+      btnStep3GenAnimation.innerHTML = '<span class="btn-icon">↺</span> Сборка анимации...';
+      const animStatus = document.getElementById('reelsAnimStatus');
+      if (animStatus) animStatus.textContent = 'Генерация кодовой Canvas-анимации 60 FPS (code_animator)...';
+
+      try {
+        const res = await fetch('api/content.php?action=step3_animate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content_id: currentItem ? currentItem.id : 0,
+            style_title: styleTitle
+          })
+        });
+        const data = await res.json();
+        if (!res.ok || data.status !== 'success') {
+          throw new Error(data.message || 'Ошибка сборки анимации');
+        }
+
+        const iframe = document.getElementById('reelsIframePreview');
+        if (iframe) iframe.srcdoc = data.motion_html;
+        if (currentItem) currentItem.motion_html = data.motion_html;
+
+        if (animStatus) animStatus.innerHTML = `<span style="color:#00ff88;">✓ Canvas-анимация готова в стиле «${escapeHtml(data.style_title)}»</span>`;
+        showToast('Кодовая анимация сцен 2-6 собрана!', 'success');
+      } catch (err) {
+        if (animStatus) animStatus.textContent = 'Ошибка анимации';
+        showToast(`Ошибка: ${err.message}`, 'error');
+      } finally {
+        btnStep3GenAnimation.disabled = false;
+        btnStep3GenAnimation.innerHTML = '<span class="btn-icon">⚡</span> Собрать Canvas-анимацию сцен 2-6 (code_animator)';
+      }
+    });
+  }
+
+  const btnStep3Next = document.getElementById('btnStep3Next');
+  if (btnStep3Next) {
+    btnStep3Next.addEventListener('click', () => setReelsStudioStep(4));
+  }
+
+  // ЭТАП 4: Озвучка ролика (Voiceover)
+  const btnStep4GenAudio = document.getElementById('btnStep4GenAudio');
+  if (btnStep4GenAudio) {
+    btnStep4GenAudio.addEventListener('click', async () => {
+      const currentItem = generatedBatch[activeGeneratedIndex];
+      const voTextarea = document.getElementById('reelsVoiceScriptTextarea');
+      const text = voTextarea ? voTextarea.value.trim() : '';
+      const promptInput = document.getElementById('reelsVoicePromptInput');
+      const prompt = promptInput ? promptInput.value.trim() : '';
+
+      if (!text) {
+        showToast('Текст диктора пуст', 'error');
+        return;
+      }
+
+      btnStep4GenAudio.disabled = true;
+      btnStep4GenAudio.innerHTML = '<span class="btn-icon">↺</span> Синтез речи...';
+      const statusEl = document.getElementById('reelsAudioStatus');
+      if (statusEl) statusEl.textContent = 'Генерация TTS (voiceover_director + Gemini TTS)...';
+
+      try {
+        const res = await fetch('api/content.php?action=step4_voice', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content_id: currentItem ? currentItem.id : 0,
+            voice_script: text,
+            voice_prompt: prompt
+          })
+        });
+        const data = await res.json();
+        if (!res.ok || data.status !== 'success') {
+          throw new Error(data.message || 'Ошибка озвучки');
+        }
+
+        const audioUrl = data.audio_url;
+        const audioEl = document.getElementById('reelsAudioPlayer');
+        if (audioEl) audioEl.src = audioUrl;
+        if (currentItem) currentItem.audio_url = audioUrl;
+        if (statusEl) statusEl.textContent = `✓ Готово: ${audioUrl.split('/').pop()}`;
+
+        showToast('Озвучка успешно создана!', 'success');
+      } catch (err) {
+        if (statusEl) statusEl.textContent = 'Ошибка озвучки';
+        showToast(`Ошибка: ${err.message}`, 'error');
+      } finally {
+        btnStep4GenAudio.disabled = false;
+        btnStep4GenAudio.innerHTML = '<span class="btn-icon">🎙</span> Озвучить ролик (Gemini Flash TTS)';
+      }
+    });
+  }
+
+  const btnStep4Next = document.getElementById('btnStep4Next');
+  if (btnStep4Next) {
+    btnStep4Next.addEventListener('click', () => setReelsStudioStep(5));
+  }
+
+  // ЭТАП 5: Мастер-монтаж (video_editor)
+  const btnStep5AssembleMaster = document.getElementById('btnStep5AssembleMaster');
+  if (btnStep5AssembleMaster) {
+    btnStep5AssembleMaster.addEventListener('click', async () => {
+      const currentItem = generatedBatch[activeGeneratedIndex];
+      btnStep5AssembleMaster.disabled = true;
+      btnStep5AssembleMaster.innerHTML = '<span class="btn-icon">↺</span> Склейка и компиляция мастер-ролика...';
+
+      try {
+        const res = await fetch('api/content.php?action=step5_master_edit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content_id: currentItem ? currentItem.id : 0
+          })
+        });
+        const data = await res.json();
+        if (!res.ok || data.status !== 'success') {
+          throw new Error(data.message || 'Ошибка мастер-монтажа');
+        }
+
+        const iframe = document.getElementById('reelsIframePreview');
+        if (iframe) iframe.srcdoc = data.master_html;
+        if (currentItem) currentItem.motion_html = data.master_html;
+
+        const audioEl = document.getElementById('reelsAudioPlayer');
+        if (audioEl && data.audio_url) audioEl.src = data.audio_url;
+
+        showToast('Мастер-ролик скомпилирован! Запускаем просмотр.', 'success');
+
+        // Автозапуск просмотра
+        setTimeout(() => {
+          const syncBtn = document.getElementById('btnReelsSyncPlay');
+          if (syncBtn) syncBtn.click();
+        }, 500);
+      } catch (err) {
+        showToast(`Ошибка монтажа: ${err.message}`, 'error');
+      } finally {
+        btnStep5AssembleMaster.disabled = false;
+        btnStep5AssembleMaster.innerHTML = '<span class="btn-icon">🎬</span> Скомпилировать мастер-ролик (video_editor)';
       }
     });
   }

@@ -5458,5 +5458,223 @@ html, body {
   flex: 1;
 }
 
+/* =============================================================================
+   10. REELS 5-STAGE STEPPER PIPELINE & UNPACKED ASSETS
+   ============================================================================= */
+.reels-stepper-container {
+  background: rgba(13, 17, 23, 0.9);
+  border: 1px solid rgba(0, 255, 136, 0.2);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 4px;
+}
+
+.reels-stepper-track {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  gap: 8px;
+}
+
+.stepper-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.stepper-step:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(0, 255, 136, 0.3);
+}
+
+.stepper-step.active {
+  background: rgba(0, 255, 136, 0.12);
+  border-color: #00ff88;
+  box-shadow: 0 0 10px rgba(0, 255, 136, 0.15);
+}
+
+.stepper-step.completed {
+  border-color: rgba(0, 255, 136, 0.4);
+}
+
+.stepper-step.completed .step-circle {
+  background: #00ff88;
+  color: #08090c;
+}
+
+.step-circle {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.1);
+  color: #8b949e;
+}
+
+.stepper-step.active .step-circle {
+  background: #00ff88;
+  color: #08090c;
+  font-weight: 800;
+}
+
+.step-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #8b949e;
+  white-space: nowrap;
+}
+
+.stepper-step.active .step-label {
+  color: #00ff88;
+}
+
+.stepper-step.completed .step-label {
+  color: #e6edf3;
+}
+
+.stepper-connector {
+  flex: 1;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  min-width: 8px;
+}
+
+.reels-stage-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: rgba(13, 17, 23, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.stage-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: 10px;
+}
+
+.stage-panel-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #e6edf3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stage-panel-badge {
+  font-family: var(--font-mono, monospace);
+  font-size: 10.5px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: rgba(0, 255, 136, 0.1);
+  color: #00ff88;
+  border: 1px solid rgba(0, 255, 136, 0.25);
+}
+
+.hook-preview-box {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.hook-thumb {
+  width: 90px;
+  height: 160px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: #161b22;
+  border: 1px solid rgba(0, 255, 136, 0.3);
+}
+
+.hook-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stage-next-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, rgba(0, 255, 136, 0.2), rgba(99, 102, 241, 0.2));
+  border: 1px solid #00ff88;
+  color: #00ff88;
+  padding: 10px 18px;
+  font-size: 12.5px;
+  font-weight: 700;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 8px;
+  align-self: flex-end;
+}
+
+.stage-next-btn:hover {
+  background: #00ff88;
+  color: #08090c;
+  box-shadow: 0 0 14px rgba(0, 255, 136, 0.3);
+}
+
+/* Стили распакованных ассетов */
+.skill-assets-section {
+  background: rgba(13, 17, 23, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 10px 14px;
+}
+
+.assets-files-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.asset-file-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: #8b949e;
+}
+
+.asset-file-chip .ext-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 4px;
+  border-radius: 3px;
+  background: rgba(0, 255, 136, 0.15);
+  color: #00ff88;
+}
+
 
 

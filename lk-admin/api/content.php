@@ -17,7 +17,7 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, Accept, X-Requested-With');
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') {
     http_response_code(200);
     exit;
 }
@@ -358,6 +358,287 @@ function render(now) {
 
 window.addEventListener("load", () => {
   window.startReelAnimation();
+});
+</script>
+</body>
+</html>';
+        }
+    }
+
+    if (!function_exists('compileMasterReelHtml')) {
+        function compileMasterReelHtml(string $topic, array $scenes, ?string $hookVideoUrl, ?string $audioUrl, int $durationSeconds = 28): string {
+            $durationMs = max(5000, min(30000, $durationSeconds * 1000));
+            $cleanScenes = array_values($scenes);
+            $scenesJson = json_encode($cleanScenes, JSON_UNESCAPED_UNICODE);
+            $escapedTopic = htmlspecialchars($topic, ENT_QUOTES, 'UTF-8');
+            $safeHookVideoUrl = $hookVideoUrl ? htmlspecialchars($hookVideoUrl, ENT_QUOTES, 'UTF-8') : '';
+            $safeAudioUrl = $audioUrl ? htmlspecialchars($audioUrl, ENT_QUOTES, 'UTF-8') : '';
+
+            return '<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>AntiDesigner Master Reel 9:16</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%;
+    background: #08090c;
+    overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  #reel-canvas {
+    width: 100%; height: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    background: #08090c;
+    display: block;
+  }
+  video, audio { display: none; }
+</style>
+</head>
+<body>
+<canvas id="reel-canvas" width="1080" height="1920"></canvas>
+' . ($safeHookVideoUrl ? '<video id="master-hook-video" src="' . $safeHookVideoUrl . '" preload="auto" playsinline muted></video>' : '') . '
+' . ($safeAudioUrl ? '<audio id="master-audio-track" src="' . $safeAudioUrl . '" preload="auto"></audio>' : '') . '
+<script>
+window.REEL_DURATION_MS = ' . $durationMs . ';
+const canvas = document.getElementById("reel-canvas");
+const ctx = canvas.getContext("2d");
+const scenes = ' . $scenesJson . ';
+const topicText = ' . json_encode($topic, JSON_UNESCAPED_UNICODE) . ';
+const hookVideo = document.getElementById("master-hook-video");
+const audioTrack = document.getElementById("master-audio-track");
+
+let startTime = null;
+let animId = null;
+let isPlaying = false;
+
+window.playMasterReel = function() {
+  if (animId) cancelAnimationFrame(animId);
+  startTime = performance.now();
+  isPlaying = true;
+  if (hookVideo) {
+    hookVideo.currentTime = 0;
+    hookVideo.play().catch(() => {});
+  }
+  if (audioTrack) {
+    audioTrack.currentTime = 0;
+    audioTrack.play().catch(() => {});
+  }
+  render(performance.now());
+};
+
+window.pauseMasterReel = function() {
+  isPlaying = false;
+  if (animId) cancelAnimationFrame(animId);
+  if (hookVideo) hookVideo.pause();
+  if (audioTrack) audioTrack.pause();
+};
+
+window.restartMasterReel = function() {
+  window.playMasterReel();
+};
+
+function wrapText(context, text, x, y, maxWidth, lineHeight) {
+  const words = (text || "").split(" ");
+  let line = "";
+  for (let n = 0; n < words.length; n++) {
+    const testLine = line + words[n] + " ";
+    const metrics = context.measureText(testLine);
+    if (metrics.width > maxWidth && n > 0) {
+      context.fillText(line, x, y);
+      line = words[n] + " ";
+      y += lineHeight;
+    } else {
+      line = testLine;
+    }
+  }
+  context.fillText(line, x, y);
+}
+
+function render(now) {
+  if (!startTime) startTime = now;
+  let elapsed = now - startTime;
+  if (elapsed > window.REEL_DURATION_MS) elapsed = window.REEL_DURATION_MS;
+  const progress = elapsed / window.REEL_DURATION_MS;
+
+  // Очистка холста
+  ctx.fillStyle = "#08090c";
+  ctx.fillRect(0, 0, 1080, 1920);
+
+  // ФАЗА 1: Видео-хук сцены 1 (0-3.2 сек)
+  const isHookPhase = elapsed < 3200 && hookVideo && hookVideo.readyState >= 2;
+
+  if (isHookPhase) {
+    try {
+      ctx.drawImage(hookVideo, 0, 0, 1080, 1920);
+    } catch (e) {}
+
+    const grad = ctx.createLinearGradient(0, 1200, 0, 1920);
+    grad.addColorStop(0, "rgba(8, 9, 12, 0)");
+    grad.addColorStop(0.5, "rgba(8, 9, 12, 0.7)");
+    grad.addColorStop(1, "rgba(8, 9, 12, 0.95)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 1200, 1080, 720);
+
+  } else {
+    // ФАЗА 2: Кодовая графика сцен 2-6 (3.2-30 сек)
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.03)";
+    ctx.lineWidth = 1;
+    for (let x = 0; x < 1080; x += 90) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 1920); ctx.stroke();
+    }
+    for (let y = 0; y < 1920; y += 90) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(1080, y); ctx.stroke();
+    }
+
+    const radial = ctx.createRadialGradient(540, 720, 20, 540, 720, 600);
+    radial.addColorStop(0, "rgba(0, 255, 136, 0.08)");
+    radial.addColorStop(1, "rgba(8, 9, 12, 0)");
+    ctx.fillStyle = radial;
+    ctx.fillRect(0, 0, 1080, 1920);
+
+    // Спидометр PageSpeed 100/100
+    const gaugeX = 540, gaugeY = 680, gaugeR = 220;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(gaugeX, gaugeY, gaugeR, 0.75 * Math.PI, 2.25 * Math.PI);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+    ctx.lineWidth = 36;
+    ctx.lineCap = "round";
+    ctx.stroke();
+
+    const gaugeProgress = Math.min(1, Math.max(0, (elapsed - 3000) / 4000));
+    const scoreVal = Math.min(100, Math.floor(gaugeProgress * 100));
+    ctx.beginPath();
+    ctx.arc(gaugeX, gaugeY, gaugeR, 0.75 * Math.PI, (0.75 + 1.5 * gaugeProgress) * Math.PI);
+    ctx.strokeStyle = "#00ff88";
+    ctx.shadowColor = "#00ff88";
+    ctx.shadowBlur = 18;
+    ctx.lineWidth = 36;
+    ctx.lineCap = "round";
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 130px -apple-system, monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(scoreVal.toString(), gaugeX, gaugeY - 20);
+
+    ctx.fillStyle = "#00ff88";
+    ctx.font = "bold 32px -apple-system, sans-serif";
+    ctx.fillText("GOOGLE PAGESPEED", gaugeX, gaugeY + 70);
+    ctx.restore();
+
+    // Сравнение: 0.35с против 8.4с
+    ctx.save();
+    ctx.fillStyle = "rgba(255, 255, 255, 0.04)";
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(140, 960, 800, 130, 24);
+    else ctx.rect(140, 960, 800, 130);
+    ctx.fill(); ctx.stroke();
+
+    ctx.fillStyle = "#ff4444";
+    ctx.font = "bold 30px monospace";
+    ctx.textAlign = "left";
+    ctx.fillText("✕ ТИЛЬДА / CMS: 8.4 сек", 180, 1015);
+
+    ctx.fillStyle = "#00ff88";
+    ctx.fillText("✓ ЧИСТЫЙ КОД: 0.35 сек", 180, 1055);
+    ctx.restore();
+  }
+
+  // ВЕРХНИЙ БЕЙДЖ
+  ctx.save();
+  ctx.fillStyle = "rgba(0, 255, 136, 0.1)";
+  ctx.strokeStyle = "rgba(0, 255, 136, 0.5)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(140, 140, 800, 96, 48);
+  else ctx.rect(140, 140, 800, 96);
+  ctx.fill(); ctx.stroke();
+
+  ctx.fillStyle = "#00ff88";
+  ctx.font = "bold 36px -apple-system, BlinkMacSystemFont, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("ANTIDESIGNER · ЧИСТЫЙ КОД", 540, 188);
+  ctx.restore();
+
+  // НИЖНЯЯ ПЛАШКА СУБТИТРОВ
+  const sceneDuration = window.REEL_DURATION_MS / Math.max(1, scenes.length);
+  const currentSceneIndex = Math.min(scenes.length - 1, Math.floor(elapsed / sceneDuration));
+  const curScene = scenes[currentSceneIndex] || {};
+
+  ctx.save();
+  ctx.fillStyle = "rgba(13, 17, 23, 0.92)";
+  ctx.strokeStyle = "rgba(0, 255, 136, 0.4)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(80, 1180, 920, 420, 32);
+  else ctx.rect(80, 1180, 920, 420);
+  ctx.fill(); ctx.stroke();
+
+  // Заголовок сцены
+  ctx.fillStyle = "#00ff88";
+  ctx.font = "bold 32px -apple-system, sans-serif";
+  ctx.textAlign = "left";
+  ctx.fillText((curScene.title || ("Сцена " + (currentSceneIndex + 1))) + " · " + (curScene.time_range || ""), 120, 1250);
+
+  // Субтитры крупно
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 50px -apple-system, sans-serif";
+  const subText = curScene.subtitles || curScene.action || topicText;
+  wrapText(ctx, subText, 120, 1320, 840, 66);
+
+  // Retention tag
+  if (curScene.retention) {
+    ctx.fillStyle = "rgba(0, 255, 136, 0.15)";
+    ctx.strokeStyle = "#00ff88";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(120, 1520, 360, 48, 24);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#00ff88";
+    ctx.font = "bold 24px -apple-system, sans-serif";
+    ctx.fillText("⚡ " + curScene.retention, 145, 1552);
+  }
+  ctx.restore();
+
+  // НИЖНИЙ ПРОГРЕСС-БАР ТАЙМЛАЙНА
+  ctx.save();
+  ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
+  ctx.fillRect(80, 1800, 920, 16);
+  ctx.fillStyle = "#00ff88";
+  ctx.shadowColor = "#00ff88";
+  ctx.shadowBlur = 8;
+  ctx.fillRect(80, 1800, 920 * progress, 16);
+  ctx.shadowBlur = 0;
+
+  // Секундомер
+  const curSec = (elapsed / 1000).toFixed(1);
+  const totalSec = (window.REEL_DURATION_MS / 1000).toFixed(0);
+  ctx.fillStyle = "#8b949e";
+  ctx.font = "30px monospace";
+  ctx.textAlign = "right";
+  ctx.fillText(curSec + "s / " + totalSec + "s", 1000, 1780);
+  ctx.restore();
+
+  if (elapsed < window.REEL_DURATION_MS && isPlaying) {
+    animId = requestAnimationFrame(render);
+  } else if (elapsed >= window.REEL_DURATION_MS) {
+    isPlaying = false;
+  }
+}
+
+window.addEventListener("load", () => {
+  window.playMasterReel();
 });
 </script>
 </body>
@@ -1336,13 +1617,21 @@ window.addEventListener("load", () => {
         }
 
         if ($mediaType === 'video') {
+            // ЖЕСТКИЙ ХАРДКАП НА ДЛИТЕЛЬНОСТЬ ВИДЕО-ХУКА: СТРОГО 3 ИЛИ 5 СЕК
+            $requestedDuration = (int)($input['duration'] ?? 3);
+            $safeDuration = ($requestedDuration <= 3) ? 3 : 5;
+
             $model = trim((string)($config['polza_video_model'] ?? 'bytedance/seedance-2-mini')) ?: 'bytedance/seedance-2-mini';
             $payload = [
                 'model'    => $model,
                 'prompt'   => $prompt,
                 'size'     => '1080x1920',
+                'duration' => $safeDuration,
                 'provider' => ['only' => ['mie']]
             ];
+            if (!empty($input['image_url'])) {
+                $payload['image_url'] = $input['image_url'];
+            }
         } else {
             if ($altModel) {
                 $model = trim((string)($config['polza_image_alt_model'] ?? 'bytedance/seedream-4')) ?: 'bytedance/seedream-4';
@@ -1446,6 +1735,512 @@ window.addEventListener("load", () => {
             'message' => 'Не удалось получить медиа от Polza.ai (HTTP ' . $httpCode . ')',
             'details' => $respData
         ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    // -------------------------------------------------------------------------
+    // 4.9. 5-ЭТАПНЫЙ ПОШАГОВЫЙ КОНВЕЙЕР СОЗДАНИЯ REELS/SHORTS
+    // -------------------------------------------------------------------------
+
+    // ЭТАП 1: Сценарий и Раскадровка (action=step1_script)
+    if ($action === 'step1_script') {
+        $contentId = (int)($input['content_id'] ?? 0);
+        $topic = trim((string)($input['topic'] ?? ''));
+
+        if ($topic === '' && $contentId > 0) {
+            $stmtTop = $pdo->prepare("SELECT topic FROM content_items WHERE id = :id");
+            $stmtTop->execute([':id' => $contentId]);
+            $topic = (string)$stmtTop->fetchColumn();
+        }
+
+        if ($topic === '') {
+            http_response_code(400);
+            echo json_encode(['status' => 'error', 'message' => 'Укажите тему для сценария ролика'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $configFile = dirname(__DIR__, 2) . '/core-data/config.php';
+        $config = file_exists($configFile) ? require $configFile : [];
+        $isMock = !empty($config['media_mock_mode']);
+
+        if ($isMock) {
+            $scenes = parseStoryboardScenes('');
+            $voiceScript = "Твой сайт на Тильде ворует клиентов. Пока мобильный посетитель ждет загрузки 8 секунд, рекламный бюджет сгорает. Я пересобираю сайты на чистом коде: отклик 0.3 секунды, зеленые 100 из 100 в PageSpeed. Напрямую с Senior-разработчиком без абонентки и менеджеров. Напиши СКОРОСТЬ в Директ для бесплатного замера.";
+            $scenarioMarkdown = "# СЦЕНАРИЙ REELS: {$topic}\n\n**Хронометраж:** 28 сек (78 слов)\n\n### Сцена 1: Hook (0-3 сек)\n**Субтитры:** Твой сайт на Тильде ворует клиентов\n**Действие:** Человек нервно смотрит в смартфон, белый экран загрузки Tilda.\n**Image Prompt:** Photorealistic cinematic vertical 9:16 shot, frustrated business owner looking at smartphone with white loading screen, dramatic moody Dark Tech lighting, emerald green rim light, 8k.\n**Video Prompt:** Slow push-in to glowing smartphone screen showing spinner, vertical 9:16.\n\n### Сцена 2: Problem (4-10 сек)\n**Субтитры:** Конструктор грузится 8 секунд в 4G сети\n**Действие:** Замер скорости мобильной сети, таймер тикает, посетитель закрывает вкладку.\n**Image Prompt:** Close-up of smartphone screen with slow loading progress bar stuck at 12%, dark background with red warning accents, 9:16.\n**Video Prompt:** Fast glitch transition, red alarm flash, vertical 9:16.\n\n### Сцена 3: Reveal (11-18 сек)\n**Субтитры:** Чистый код открывается мгновенно за 0.35с\n**Действие:** Исходный код Vanilla HTML5/CSS, мгновенная отрисовка первого экрана.\n**Image Prompt:** Clean glowing green code lines on dark titanium background, fast rendering UI, 9:16.\n**Video Prompt:** Smooth slide down of code matrix, emerald glow, 9:16.\n\n### Сцена 4: Escalation (19-24 сек)\n**Субтитры:** Зеленые 100/100 в Google PageSpeed\n**Действие:** Демонстрация круглого зеленого индикатора 100/100 Core Web Vitals.\n**Image Prompt:** High-tech circular HUD speedometer gauge showing 100/100 score with neon green glow, 9:16.\n**Video Prompt:** Dial spinning smoothly to 100, particles bursting, 9:16.\n\n### Сцена 5: Payoff (25-28 сек)\n**Субтитры:** Напрямую с Senior-разработчиком без абонентки\n**Действие:** Работа без посредников, студийных наценок и ежегодных плат за CMS.\n**Image Prompt:** Minimalist modern dark workstation with dual monitors showing fast web pages, 9:16.\n**Video Prompt:** Cinematic rack focus to developer screen, 9:16.\n\n### Сцена 6: CTA (29-30 сек)\n**Субтитры:** Напиши СКОРОСТЬ в Директ для аудита\n**Действие:** Финальная плашка с призывом к действию и переходом в профиль.\n**Image Prompt:** Bold typography card with 'СКОРОСТЬ' keyword and green send icon, 9:16.\n**Video Prompt:** Pulsing neon call-to-action button, vertical 9:16.";
+        } else {
+            // Боевой вызов MODEL_HEAVY (Gemini Flash 3.8 через Polza.ai)
+            $stmtSkill = $pdo->prepare("SELECT system_prompt, tone_of_voice FROM skills WHERE code = 'reels_hook'");
+            $stmtSkill->execute();
+            $skRow = $stmtSkill->fetch(PDO::FETCH_ASSOC);
+            $sysPrompt = $skRow ? ($skRow['system_prompt'] . "\n\nTone of Voice: " . $skRow['tone_of_voice']) : '';
+
+            // Подмешиваем активные под-промпты reels_hook
+            $stmtP = $pdo->query("SELECT title, content_markdown FROM skill_prompts WHERE skill_code = 'reels_hook' AND is_active = 1 ORDER BY step_order ASC");
+            $subPrompts = $stmtP ? $stmtP->fetchAll(PDO::FETCH_ASSOC) : [];
+            foreach ($subPrompts as $sp) {
+                $sysPrompt .= "\n\n---\n### [ИНСТРУКЦИЯ: {$sp['title']}]\n{$sp['content_markdown']}";
+            }
+
+            $userPrompt = "Тема ролика: {$topic}\n\nСгенерируй сценарий Reels/Shorts на 60-90 слов и подробную раскадровку на 5-6 сцен (Hook 0-3s, Problem, Reveal, Escalation, Payoff, CTA). В каждой сцене обязательно укажи:\n- Заголовок и хронометраж\n- Субтитры\n- Действие в кадре\n- Image Prompt (Flux/Midjourney, photorealistic cinematic vertical 9:16 shot)\n- Video Prompt (Seedance/Kling, 60fps vertical 9:16)\nВ конце напиши отдельный блок 'Текст озвучки:' ровно на 60-90 слов.";
+
+            $resp = callGeminiAPI($sysPrompt, $userPrompt, 'heavy');
+            $scenarioMarkdown = trim((string)($resp['text'] ?? ''));
+            $scenes = parseStoryboardScenes($scenarioMarkdown);
+            $voiceScript = extractFallbackVoiceScript($scenarioMarkdown);
+        }
+
+        $storyboard = [
+            'topic'          => $topic,
+            'duration'       => 28,
+            'voice_script'   => $voiceScript,
+            'scenes'         => $scenes,
+            'hook_photo_url' => null,
+            'hook_video_url' => null,
+            'step'           => 1
+        ];
+        $sbJson = json_encode($storyboard, JSON_UNESCAPED_UNICODE);
+
+        if ($contentId > 0) {
+            $stmtUpd = $pdo->prepare("UPDATE content_items SET topic = :t, content_markdown = :md, storyboard_json = :sb WHERE id = :id");
+            $stmtUpd->execute([':t' => $topic, ':md' => $scenarioMarkdown, ':sb' => $sbJson, ':id' => $contentId]);
+        } else {
+            $stmtIns = $pdo->prepare("INSERT INTO content_items (topic, format, status, content_markdown, storyboard_json) VALUES (:t, 'reels', 'planned', :md, :sb)");
+            $stmtIns->execute([':t' => $topic, ':md' => $scenarioMarkdown, ':sb' => $sbJson]);
+            $contentId = (int)$pdo->lastInsertId();
+        }
+
+        echo json_encode([
+            'status'       => 'success',
+            'step'         => 1,
+            'content_id'   => $contentId,
+            'topic'        => $topic,
+            'scenes'       => $scenes,
+            'voice_script' => $voiceScript,
+            'scenario_md'  => $scenarioMarkdown,
+            'mock_mode'    => $isMock,
+            'message'      => 'Шаг 1 завершен: Сценарий и 6 сцен раскадровки готовы. Доступ к Шагу 2 открыт.'
+        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        exit;
+    }
+
+    // ЭТАП 2: 3-секундный видео-хук сцены 1 (action=step2_hook)
+    if ($action === 'step2_hook') {
+        $contentId = (int)($input['content_id'] ?? 0);
+        $subAction = trim((string)($input['sub_action'] ?? 'generate_photo')); // 'generate_photo' | 'animate_video'
+        $customPrompt = trim((string)($input['prompt'] ?? ''));
+
+        if ($contentId <= 0) {
+            http_response_code(400);
+            echo json_encode(['status' => 'error', 'message' => 'Не указан content_id'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        // ЖЕСТКИЙ ХАРДКАП НА ДЛИТЕЛЬНОСТЬ ВИДЕО-ХУКА: СТРОГО 3 ИЛИ 5 СЕК
+        $requestedDuration = (int)($input['duration'] ?? 3);
+        $safeDuration = ($requestedDuration <= 3) ? 3 : 5;
+
+        $stmt = $pdo->prepare("SELECT storyboard_json, topic FROM content_items WHERE id = :id");
+        $stmt->execute([':id' => $contentId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            http_response_code(404);
+            echo json_encode(['status' => 'error', 'message' => 'Черновик не найден'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $sb = json_decode((string)($row['storyboard_json'] ?? '{}'), true);
+        if (!is_array($sb)) $sb = [];
+        $scenes = $sb['scenes'] ?? [];
+        $scene1 = $scenes[0] ?? [];
+
+        $configFile = dirname(__DIR__, 2) . '/core-data/config.php';
+        $config = file_exists($configFile) ? require $configFile : [];
+        $isMock = !empty($config['media_mock_mode']);
+
+        $uploadsDir = dirname(__DIR__, 2) . '/core-data/uploads';
+        if (!is_dir($uploadsDir)) {
+            mkdir($uploadsDir, 0755, true);
+        }
+
+        if ($subAction === 'generate_photo') {
+            $prompt = $customPrompt ?: ($scene1['image_prompt'] ?? 'Photorealistic cinematic vertical 9:16 shot, frustrated business owner looking at smartphone with white loading screen, dramatic moody Dark Tech lighting, emerald green rim light');
+
+            if ($isMock) {
+                $mockSvgName = "mock_hook_photo_{$contentId}.svg";
+                $mockSvgPath = $uploadsDir . '/' . $mockSvgName;
+                generateMockSvgFile($mockSvgPath, 1);
+                $photoUrl = '../core-data/uploads/' . $mockSvgName;
+            } else {
+                $polzaKey = trim((string)($config['polza_api_key'] ?? $config['gemini_heavy_api_key'] ?? ''));
+                $imageModel = trim((string)($config['polza_image_model'] ?? 'google/gemini-nano-banana-2.1')) ?: 'google/gemini-nano-banana-2.1';
+                $payload = [
+                    'model'    => $imageModel,
+                    'prompt'   => $prompt,
+                    'size'     => '1080x1920',
+                    'provider' => [
+                        'order'           => ['mie', 'img-a', 'bananalab'],
+                        'allow_fallbacks' => false
+                    ]
+                ];
+                $ch = curl_init('https://polza.ai/api/v1/images/generations');
+                curl_setopt_array($ch, [
+                    CURLOPT_POST           => true,
+                    CURLOPT_POSTFIELDS     => json_encode($payload, JSON_UNESCAPED_UNICODE),
+                    CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . $polzaKey, 'Content-Type: application/json'],
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_TIMEOUT        => 60,
+                    CURLOPT_SSL_VERIFYPEER => false
+                ]);
+                $respRaw = curl_exec($ch);
+                curl_close($ch);
+                $resp = json_decode((string)$respRaw, true);
+                $first = $resp['data'][0] ?? null;
+                $photoName = "hook_photo_{$contentId}_" . time() . ".webp";
+                $photoPath = $uploadsDir . '/' . $photoName;
+                if (!empty($first['b64_json'])) {
+                    file_put_contents($photoPath, base64_decode($first['b64_json']));
+                    $photoUrl = '../core-data/uploads/' . $photoName;
+                } elseif (!empty($first['url'])) {
+                    $remoteImg = @file_get_contents($first['url']);
+                    if ($remoteImg !== false) {
+                        file_put_contents($photoPath, $remoteImg);
+                        $photoUrl = '../core-data/uploads/' . $photoName;
+                    } else {
+                        $photoUrl = $first['url'];
+                    }
+                } else {
+                    throw new RuntimeException('Не удалось сгенерировать фото хука через Polza.ai');
+                }
+            }
+
+            if (isset($sb['scenes'][0])) {
+                $sb['scenes'][0]['media_url'] = $photoUrl;
+                $sb['scenes'][0]['media_type'] = 'image';
+            }
+            $sb['hook_photo_url'] = $photoUrl;
+            $pdo->prepare("UPDATE content_items SET storyboard_json = :sb WHERE id = :id")
+                ->execute([':sb' => json_encode($sb, JSON_UNESCAPED_UNICODE), ':id' => $contentId]);
+
+            echo json_encode([
+                'status'     => 'success',
+                'step'       => 2,
+                'sub_action' => 'generate_photo',
+                'photo_url'  => $photoUrl,
+                'mock_mode'  => $isMock,
+                'message'    => 'Фотография хука успешно создана. Теперь можно оживить ее в 3-сек видео.'
+            ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+            exit;
+        }
+
+        if ($subAction === 'animate_video') {
+            $prompt = $customPrompt ?: ($scene1['video_prompt'] ?? 'Slow subtle camera push-in to glowing smartphone screen showing spinner, vertical 9:16');
+            $hookPhoto = $sb['hook_photo_url'] ?? ($scene1['media_url'] ?? null);
+
+            if ($isMock) {
+                $mockVideoName = "mock_hook_video_{$contentId}_{$safeDuration}s.svg";
+                $mockVideoPath = $uploadsDir . '/' . $mockVideoName;
+                generateMockSvgFile($mockVideoPath, 1);
+                $hookVideoUrl = '../core-data/uploads/' . $mockVideoName;
+            } else {
+                $polzaKey = trim((string)($config['polza_api_key'] ?? $config['gemini_heavy_api_key'] ?? ''));
+                $videoModel = trim((string)($config['polza_video_model'] ?? 'bytedance/seedance-2-mini')) ?: 'bytedance/seedance-2-mini';
+                $payload = [
+                    'model'    => $videoModel,
+                    'prompt'   => $prompt,
+                    'size'     => '1080x1920',
+                    'duration' => $safeDuration,
+                    'provider' => ['only' => ['mie']]
+                ];
+                if ($hookPhoto) {
+                    $payload['image_url'] = $hookPhoto;
+                }
+
+                $ch = curl_init('https://polza.ai/api/v1/images/generations');
+                curl_setopt_array($ch, [
+                    CURLOPT_POST           => true,
+                    CURLOPT_POSTFIELDS     => json_encode($payload, JSON_UNESCAPED_UNICODE),
+                    CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . $polzaKey, 'Content-Type: application/json'],
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_TIMEOUT        => 90,
+                    CURLOPT_SSL_VERIFYPEER => false
+                ]);
+                $respRaw = curl_exec($ch);
+                curl_close($ch);
+                $resp = json_decode((string)$respRaw, true);
+                $first = $resp['data'][0] ?? null;
+                $videoName = "hook_video_{$contentId}_{$safeDuration}s_" . time() . ".mp4";
+                $videoPath = $uploadsDir . '/' . $videoName;
+                if (!empty($first['b64_json'])) {
+                    file_put_contents($videoPath, base64_decode($first['b64_json']));
+                    $hookVideoUrl = '../core-data/uploads/' . $videoName;
+                } elseif (!empty($first['url'])) {
+                    $remoteVid = @file_get_contents($first['url']);
+                    if ($remoteVid !== false && strlen($remoteVid) > 500) {
+                        file_put_contents($videoPath, $remoteVid);
+                        $hookVideoUrl = '../core-data/uploads/' . $videoName;
+                    } else {
+                        $hookVideoUrl = $first['url'];
+                    }
+                } else {
+                    throw new RuntimeException('Не удалось получить видео-хук от Polza.ai');
+                }
+            }
+
+            if (isset($sb['scenes'][0])) {
+                $sb['scenes'][0]['media_url'] = $hookVideoUrl;
+                $sb['scenes'][0]['media_type'] = 'video';
+            }
+            $sb['hook_video_url'] = $hookVideoUrl;
+            $sb['hook_duration'] = $safeDuration;
+            $pdo->prepare("UPDATE content_items SET storyboard_json = :sb WHERE id = :id")
+                ->execute([':sb' => json_encode($sb, JSON_UNESCAPED_UNICODE), ':id' => $contentId]);
+
+            echo json_encode([
+                'status'         => 'success',
+                'step'           => 2,
+                'sub_action'     => 'animate_video',
+                'hook_video_url' => $hookVideoUrl,
+                'duration'       => $safeDuration,
+                'mock_mode'      => $isMock,
+                'message'        => "Шаг 2 завершен: {$safeDuration}-секундный видео-хук успешно сгенерирован. Доступ к Шагу 3 открыт."
+            ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+            exit;
+        }
+
+        http_response_code(400);
+        echo json_encode(['status' => 'error', 'message' => 'Некорректный sub_action (ожидается generate_photo или animate_video)'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    // ЭТАП 3: Анимация сцен 2-6 через Canvas (action=step3_animate)
+    if ($action === 'step3_animate') {
+        $contentId = (int)($input['content_id'] ?? 0);
+        $styleTitle = trim((string)($input['style_title'] ?? ''));
+        $styleId = (int)($input['style_id'] ?? 0);
+
+        if ($contentId <= 0) {
+            http_response_code(400);
+            echo json_encode(['status' => 'error', 'message' => 'Не указан content_id'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $stmt = $pdo->prepare("SELECT topic, storyboard_json FROM content_items WHERE id = :id");
+        $stmt->execute([':id' => $contentId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            http_response_code(404);
+            echo json_encode(['status' => 'error', 'message' => 'Черновик не найден'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $sb = json_decode((string)($row['storyboard_json'] ?? '{}'), true);
+        $scenes = is_array($sb) ? ($sb['scenes'] ?? []) : [];
+        $topic = (string)($row['topic'] ?? 'AntiDesigner');
+
+        // Выбираем стиль из skill_prompts (code_animator)
+        $stylePrompt = '';
+        if ($styleId > 0) {
+            $stmtSt = $pdo->prepare("SELECT title, content_markdown FROM skill_prompts WHERE id = :id AND skill_code = 'code_animator'");
+            $stmtSt->execute([':id' => $styleId]);
+            $stRow = $stmtSt->fetch(PDO::FETCH_ASSOC);
+            if ($stRow) {
+                $styleTitle = $stRow['title'];
+                $stylePrompt = $stRow['content_markdown'];
+            }
+        } elseif ($styleTitle !== '') {
+            $stmtSt = $pdo->prepare("SELECT content_markdown FROM skill_prompts WHERE title = :t AND skill_code = 'code_animator' LIMIT 1");
+            $stmtSt->execute([':t' => $styleTitle]);
+            $stylePrompt = (string)$stmtSt->fetchColumn();
+        }
+
+        if ($styleTitle === '') {
+            $styleTitle = 'Dark Tech Minimalist (Canvas 9:16)';
+        }
+
+        $configFile = dirname(__DIR__, 2) . '/core-data/config.php';
+        $config = file_exists($configFile) ? require $configFile : [];
+        $isMock = !empty($config['media_mock_mode']);
+
+        if ($isMock) {
+            $motionHtml = generateDefaultReelsCanvasHtml($topic, $scenes, 28);
+        } else {
+            $stmtSkill = $pdo->prepare("SELECT system_prompt, tone_of_voice FROM skills WHERE code = 'code_animator'");
+            $stmtSkill->execute();
+            $skRow = $stmtSkill->fetch(PDO::FETCH_ASSOC);
+            $sysPrompt = $skRow ? ($skRow['system_prompt'] . "\n\n" . $stylePrompt) : $stylePrompt;
+
+            $scenesContext = json_encode(array_slice($scenes, 1), JSON_UNESCAPED_UNICODE);
+            $userPrompt = "Тема ролика: {$topic}\n\nСцены для кодовой анимации (Scenes 2-6):\n{$scenesContext}\n\nСгенерируй чистый, самодостаточный HTML5/Canvas/CSS3 код анимации для сцен 2-6 (хронометраж 3.0с - 28.0с) со скоростью 60 FPS (requestAnimationFrame) в вертикальном формате 1080x1920 9:16.\nСТРОГО БЕЗ AI-СЛОПА: никакого Three.js, GSAP или Lottie. Верни полный рабочий HTML документ внутри ```html блока.";
+
+            $resp = callGeminiAPI($sysPrompt, $userPrompt, 'heavy');
+            $rawHtml = (string)($resp['text'] ?? '');
+            if (preg_match('/```html(.*?)```/s', $rawHtml, $m)) {
+                $motionHtml = trim($m[1]);
+            } elseif (str_contains($rawHtml, '<canvas')) {
+                $motionHtml = trim($rawHtml);
+            } else {
+                $motionHtml = generateDefaultReelsCanvasHtml($topic, $scenes, 28);
+            }
+        }
+
+        $pdo->prepare("UPDATE content_items SET motion_html = :mh WHERE id = :id")
+            ->execute([':mh' => $motionHtml, ':id' => $contentId]);
+
+        echo json_encode([
+            'status'      => 'success',
+            'step'        => 3,
+            'motion_html' => $motionHtml,
+            'style_title' => $styleTitle,
+            'mock_mode'   => $isMock,
+            'message'     => 'Шаг 3 завершен: Кодовая Canvas-анимация сцен 2-6 собрана без AI-слопа. Доступ к Шагу 4 открыт.'
+        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        exit;
+    }
+
+    // ЭТАП 4: Озвучка ролика (Voiceover) (action=step4_voice)
+    if ($action === 'step4_voice') {
+        $contentId = (int)($input['content_id'] ?? 0);
+        $voiceScript = trim((string)($input['voice_script'] ?? ''));
+        $voicePrompt = trim((string)($input['voice_prompt'] ?? ''));
+
+        if ($contentId <= 0) {
+            http_response_code(400);
+            echo json_encode(['status' => 'error', 'message' => 'Не указан content_id'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $stmt = $pdo->prepare("SELECT topic, storyboard_json, content_markdown FROM content_items WHERE id = :id");
+        $stmt->execute([':id' => $contentId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            http_response_code(404);
+            echo json_encode(['status' => 'error', 'message' => 'Черновик не найден'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $sb = json_decode((string)($row['storyboard_json'] ?? '{}'), true);
+        if (!is_array($sb)) $sb = [];
+
+        $configFile = dirname(__DIR__, 2) . '/core-data/config.php';
+        $config = file_exists($configFile) ? require $configFile : [];
+        $isMock = !empty($config['media_mock_mode']);
+
+        $uploadsDir = dirname(__DIR__, 2) . '/core-data/uploads';
+        if (!is_dir($uploadsDir)) {
+            mkdir($uploadsDir, 0755, true);
+        }
+
+        // Если текст озвучки не задан пользователем вручную, адаптируем через voiceover_director
+        if ($voiceScript === '') {
+            $voiceScript = $sb['voice_script'] ?? extractFallbackVoiceScript((string)($row['content_markdown'] ?? ''));
+            if ($voiceScript === '') {
+                $voiceScript = "Твой сайт на Тильде ворует клиентов. Пока мобильный посетитель ждет загрузки 8 секунд, рекламный бюджет сгорает. Я собираю сайты на чистом коде: скорость 0.3 секунды, зеленые 100 из 100 в PageSpeed. Напрямую с разработчиком без наценок. Напиши СКОРОСТЬ в Директ.";
+            }
+        }
+        if ($voicePrompt === '') {
+            $voicePrompt = "Уверенный, спокойный, разговорный тембр разработчика (Евгений Антипин), смысловые акценты на цифрах 0.35 секунды и 100 из 100.";
+        }
+
+        // Генерация аудио
+        if ($isMock) {
+            $audioFileName = "audio_mock_{$contentId}_" . time() . ".wav";
+            $audioPath = $uploadsDir . '/' . $audioFileName;
+            generateMockWavFile($audioPath, 28);
+            $audioUrl = '../core-data/uploads/' . $audioFileName;
+            $audioDuration = 28;
+        } else {
+            $polzaKey = trim((string)($config['polza_api_key'] ?? $config['gemini_heavy_api_key'] ?? ''));
+            $ttsModel = trim((string)($config['polza_tts_model'] ?? 'google/gemini-3.8-flash-lite-tts')) ?: 'google/gemini-3.8-flash-lite-tts';
+            $payload = [
+                'model'  => $ttsModel,
+                'input'  => $voiceScript,
+                'voice'  => 'onyx',
+                'prompt' => $voicePrompt
+            ];
+            $ch = curl_init('https://polza.ai/api/v1/audio/speech');
+            curl_setopt_array($ch, [
+                CURLOPT_POST           => true,
+                CURLOPT_POSTFIELDS     => json_encode($payload, JSON_UNESCAPED_UNICODE),
+                CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . $polzaKey, 'Content-Type: application/json'],
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT        => 60,
+                CURLOPT_SSL_VERIFYPEER => false
+            ]);
+            $audioData = curl_exec($ch);
+            $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode === 200 && is_string($audioData) && strlen($audioData) > 500) {
+                $audioFileName = "audio_{$contentId}_" . time() . ".mp3";
+                $audioPath = $uploadsDir . '/' . $audioFileName;
+                file_put_contents($audioPath, $audioData);
+                $audioUrl = '../core-data/uploads/' . $audioFileName;
+                $audioDuration = 28;
+            } else {
+                throw new RuntimeException('Не удалось сгенерировать аудио озвучки через Polza.ai');
+            }
+        }
+
+        $sb['voice_script'] = $voiceScript;
+        $sb['voice_prompt'] = $voicePrompt;
+        $sb['audio_url'] = $audioUrl;
+        $sb['audio_duration'] = $audioDuration;
+
+        $pdo->prepare("UPDATE content_items SET audio_url = :au, storyboard_json = :sb WHERE id = :id")
+            ->execute([':au' => $audioUrl, ':sb' => json_encode($sb, JSON_UNESCAPED_UNICODE), ':id' => $contentId]);
+
+        echo json_encode([
+            'status'           => 'success',
+            'step'             => 4,
+            'audio_url'        => $audioUrl,
+            'voice_script'     => $voiceScript,
+            'voice_prompt'     => $voicePrompt,
+            'duration_seconds' => $audioDuration,
+            'mock_mode'        => $isMock,
+            'message'          => 'Шаг 4 завершен: Озвучка ролика успешно сгенерирована. Доступ к Шагу 5 открыт.'
+        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        exit;
+    }
+
+    // ЭТАП 5: Мастер-монтаж и Экспорт (action=step5_master_edit)
+    if ($action === 'step5_master_edit') {
+        $contentId = (int)($input['content_id'] ?? 0);
+        if ($contentId <= 0) {
+            http_response_code(400);
+            echo json_encode(['status' => 'error', 'message' => 'Не указан content_id'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $stmt = $pdo->prepare("SELECT topic, storyboard_json, audio_url, motion_html FROM content_items WHERE id = :id");
+        $stmt->execute([':id' => $contentId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            http_response_code(404);
+            echo json_encode(['status' => 'error', 'message' => 'Черновик не найден'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $sb = json_decode((string)($row['storyboard_json'] ?? '{}'), true);
+        if (!is_array($sb)) $sb = [];
+        $scenes = $sb['scenes'] ?? [];
+        $topic = (string)($row['topic'] ?? 'AntiDesigner');
+        $hookVideoUrl = $sb['hook_video_url'] ?? null;
+        $audioUrl = $row['audio_url'] ?: ($sb['audio_url'] ?? null);
+
+        // Компилируем мастер-ролик (video_editor)
+        $masterHtml = compileMasterReelHtml($topic, $scenes, $hookVideoUrl, $audioUrl, 28);
+
+        $pdo->prepare("UPDATE content_items SET motion_html = :mh WHERE id = :id")
+            ->execute([':mh' => $masterHtml, ':id' => $contentId]);
+
+        echo json_encode([
+            'status'         => 'success',
+            'step'           => 5,
+            'master_html'    => $masterHtml,
+            'hook_video_url' => $hookVideoUrl,
+            'audio_url'      => $audioUrl,
+            'message'        => 'Шаг 5 завершен: Мастер-ролик успешно скомпилирован! Готов к просмотру и экспорту.'
+        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
         exit;
     }
 

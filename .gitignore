@@ -20,6 +20,8 @@ core-data/*.sqlite*
 core-data/*.lock
 core-data/uploads/*
 !core-data/uploads/.htaccess
+core-data/skills_assets/*
+!core-data/skills_assets/.gitkeep
 
 # Agent local configuration & skills
 .agents/

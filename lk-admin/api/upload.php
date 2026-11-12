@@ -14,7 +14,7 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, Accept, X-Requested-With');
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') {
     http_response_code(200);
     exit;
 }
@@ -23,7 +23,8 @@ try {
     require_once __DIR__ . '/db.php';
     /** @var PDO $pdo */
 
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    $requestMethod = $_SERVER['REQUEST_METHOD'] ?? 'POST';
+    if ($requestMethod !== 'POST') {
         http_response_code(405);
         echo json_encode(['status' => 'error', 'message' => 'Метод не поддерживается'], JSON_UNESCAPED_UNICODE);
         exit;
@@ -53,7 +54,7 @@ try {
     $origName = (string)($file['name'] ?? 'document.txt');
     $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
 
-    $allowedExts = ['pdf', 'docx', 'md', 'txt', 'json', 'py', 'js', 'html', 'css', 'sql', 'mp3', 'wav', 'm4a', 'ogg', 'aac'];
+    $allowedExts = ['pdf', 'docx', 'md', 'txt', 'json', 'py', 'js', 'html', 'css', 'sql', 'mp3', 'wav', 'm4a', 'ogg', 'aac', 'zip'];
     if (!in_array($ext, $allowedExts, true)) {
         http_response_code(400);
         echo json_encode(['status' => 'error', 'message' => "Неподдерживаемый формат: .{$ext}. Разрешены: " . implode(', ', $allowedExts)], JSON_UNESCAPED_UNICODE);
@@ -77,7 +78,9 @@ try {
     $targetPath = $uploadsDir . '/' . $storedFileName;
 
     if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
-        throw new RuntimeException('Не удалось сохранить файл в директорию загрузок');
+        if (!copy($file['tmp_name'], $targetPath)) {
+            throw new RuntimeException('Не удалось сохранить файл в директорию загрузок');
+        }
     }
 
     $target = trim((string)($_POST['target'] ?? 'knowledge'));
@@ -185,6 +188,128 @@ try {
             'category'       => $category,
             'extracted_text' => $extractedText,
             'new_content'    => $newContent
+        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        exit;
+    }
+
+    // -------------------------------------------------------------------------
+    // 1.5. ЦЕЛЕВОЙ МОДУЛЬ: РАСПАКОВКА ZIP-АРХИВОВ СТИЛЕЙ/ПРОМПТОВ
+    // -------------------------------------------------------------------------
+    if (($target === 'skill' || $target === 'skill_prompt' || $target === 'skill_prompts' || $target === 'skill_zip') && $ext === 'zip') {
+        $skillCode = trim((string)($_POST['skill_code'] ?? ''));
+        $skillId = isset($_POST['skill_id']) ? (int)$_POST['skill_id'] : 0;
+        if ($skillCode === '' && $skillId > 0) {
+            $stmtCode = $pdo->prepare('SELECT code FROM skills WHERE id = :id');
+            $stmtCode->execute([':id' => $skillId]);
+            $skillCode = (string)$stmtCode->fetchColumn();
+        }
+        if ($skillCode === '') {
+            $skillCode = 'code_animator'; // Безопасный дефолт для стилей анимаций
+        }
+
+        $cleanSkillCode = preg_replace('/[^a-zA-Z0-9_-]/', '', $skillCode);
+        $assetsDir = dirname(__DIR__, 2) . '/core-data/skills_assets/' . $cleanSkillCode;
+        if (!is_dir($assetsDir)) {
+            mkdir($assetsDir, 0755, true);
+        }
+
+        if (!class_exists('ZipArchive')) {
+            http_response_code(500);
+            echo json_encode(['status' => 'error', 'message' => 'PHP ZipArchive модуль не установлен на сервере'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $zip = new ZipArchive();
+        if ($zip->open($targetPath) !== true) {
+            http_response_code(400);
+            echo json_encode(['status' => 'error', 'message' => 'Не удалось открыть ZIP-архив'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $allowedFileExts = ['md', 'txt', 'json', 'css', 'html', 'mp3', 'wav', 'png', 'jpg', 'jpeg', 'webp'];
+        $unpackedFiles = [];
+        $createdPrompts = [];
+
+        // Получаем максимальный step_order для добавления
+        $maxOrder = (int)$pdo->query("SELECT MAX(step_order) FROM skill_prompts WHERE skill_code = " . $pdo->quote($cleanSkillCode))->fetchColumn();
+
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $entry = $zip->getNameIndex($i);
+            if ($entry === false) continue;
+
+            // Защита от Directory Traversal (..) и скрытых системных файлов
+            if (str_contains($entry, '..') || str_starts_with($entry, '/') || str_starts_with($entry, '\\')) {
+                continue;
+            }
+
+            // Игнорируем папки и служебные файлы macOS/Windows
+            if (str_ends_with($entry, '/') || str_ends_with($entry, '\\')) continue;
+            if (str_contains($entry, '__MACOSX') || str_starts_with(basename($entry), '._')) continue;
+
+            $fileExt = strtolower(pathinfo($entry, PATHINFO_EXTENSION));
+            if (!in_array($fileExt, $allowedFileExts, true)) {
+                // Исполняемые файлы (.php, .sh, .exe, etc) строго блокируются!
+                continue;
+            }
+
+            $entryBaseName = basename($entry);
+            $cleanFileName = preg_replace('/[^a-zA-Z0-9_\.-]/u', '_', $entryBaseName);
+            $destFilePath = $assetsDir . '/' . $cleanFileName;
+
+            $fileStream = $zip->getStream($entry);
+            if ($fileStream) {
+                file_put_contents($destFilePath, stream_get_contents($fileStream));
+                fclose($fileStream);
+                $unpackedFiles[] = $cleanFileName;
+
+                // Если это .md или .txt, автоматически создаем/обновляем стиль в skill_prompts
+                if (in_array($fileExt, ['md', 'txt'], true)) {
+                    $rawText = (string)file_get_contents($destFilePath);
+                    $rawText = str_replace(['—', '–'], '-', $rawText);
+                    $rawTitle = pathinfo($entryBaseName, PATHINFO_FILENAME);
+                    $cleanTitle = ucwords(str_replace(['_', '-'], ' ', $rawTitle));
+                    if (!str_starts_with(mb_strtolower($cleanTitle), 'стиль:')) {
+                        $cleanTitle = 'Стиль: ' . $cleanTitle;
+                    }
+
+                    // Проверяем, существует ли уже промпт с таким названием
+                    $stmtCheck = $pdo->prepare("SELECT id FROM skill_prompts WHERE skill_code = :code AND title = :title LIMIT 1");
+                    $stmtCheck->execute([':code' => $cleanSkillCode, ':title' => $cleanTitle]);
+                    $existingId = (int)$stmtCheck->fetchColumn();
+
+                    if ($existingId > 0) {
+                        $stmtUpdPrompt = $pdo->prepare("UPDATE skill_prompts SET content_markdown = :content, is_active = 1 WHERE id = :id");
+                        $stmtUpdPrompt->execute([':content' => $rawText, ':id' => $existingId]);
+                        $createdPrompts[] = ['id' => $existingId, 'title' => $cleanTitle, 'action' => 'updated'];
+                    } else {
+                        $maxOrder++;
+                        $stmtInsPrompt = $pdo->prepare("
+                            INSERT INTO skill_prompts (skill_code, title, prompt_type, step_order, content_markdown, is_active, created_at)
+                            VALUES (:code, :title, 'style', :order, :content, 1, CURRENT_TIMESTAMP)
+                        ");
+                        $stmtInsPrompt->execute([
+                            ':code'    => $cleanSkillCode,
+                            ':title'   => $cleanTitle,
+                            ':order'   => $maxOrder,
+                            ':content' => $rawText
+                        ]);
+                        $newId = (int)$pdo->lastInsertId();
+                        $createdPrompts[] = ['id' => $newId, 'title' => $cleanTitle, 'action' => 'created'];
+                    }
+                }
+            }
+        }
+        $zip->close();
+
+        // Удаляем временный zip из uploads для экономии места
+        @unlink($targetPath);
+
+        echo json_encode([
+            'status'          => 'success',
+            'message'         => "Архив успешно распакован. Обработано файлов: " . count($unpackedFiles) . ", создано стилей: " . count($createdPrompts),
+            'skill_code'      => $cleanSkillCode,
+            'unpacked_files'  => $unpackedFiles,
+            'created_prompts' => $createdPrompts
         ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
         exit;
     }
