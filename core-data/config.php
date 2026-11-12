@@ -39,10 +39,12 @@ $config = [
     'gemini_api_key'       => getenv('GEMINI_API_KEY') ?: '',
 
     // Провайдер Polza.ai (для Heavy модели и генерации медиа)
-    'polza_api_url'        => getenv('POLZA_API_URL') ?: 'https://polza.ai/api/v1',
-    'polza_api_key'        => getenv('POLZA_API_KEY') ?: '',
-    'polza_tts_model'      => getenv('POLZA_TTS_MODEL') ?: 'openai/tts-1',
-    'polza_image_model'    => getenv('POLZA_IMAGE_MODEL') ?: 'black-forest-labs/flux-schnell',
+    'polza_api_url'         => getenv('POLZA_API_URL') ?: 'https://polza.ai/api/v1',
+    'polza_api_key'         => getenv('POLZA_API_KEY') ?: '',
+    'polza_tts_model'       => getenv('POLZA_TTS_MODEL') ?: 'google/gemini-3.8-flash-lite-tts',
+    'polza_image_model'     => getenv('POLZA_IMAGE_MODEL') ?: 'google/gemini-nano-banana-2.1',
+    'polza_image_alt_model' => getenv('POLZA_IMAGE_ALT_MODEL') ?: 'bytedance/seedream-4',
+    'polza_video_model'     => getenv('POLZA_VIDEO_MODEL') ?: 'bytedance/seedance-2-mini',
 
     // Telegram
     'telegram_bot_token'   => getenv('TELEGRAM_BOT_TOKEN') ?: '',

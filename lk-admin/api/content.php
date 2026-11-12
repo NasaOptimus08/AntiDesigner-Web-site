@@ -38,6 +38,333 @@ try {
     $action = $_GET['action'] ?? $input['action'] ?? 'list';
 
     // -------------------------------------------------------------------------
+    // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ СТУДИИ REELS (РАСКАДРОВКА И ВОЙСОВЕР)
+    // -------------------------------------------------------------------------
+    if (!function_exists('parseStoryboardScenes')) {
+        function parseStoryboardScenes(string $text): array {
+            $scenes = [];
+            preg_match_all('/(?:^|\n)###?\s*(?:Сцена|Scene|\d+\.)\s*(\d*)[:\s\.\-–—]*([^\n]*)(.*?)(?=(?:\n###?\s*(?:Сцена|Scene|\d+\.)|\n##|\z))/us', $text, $matches, PREG_SET_ORDER);
+
+            if (!empty($matches)) {
+                $idx = 1;
+                foreach ($matches as $m) {
+                    $title = trim($m[2]) ?: ('Сцена ' . $idx);
+                    $body = trim($m[3]);
+
+                    $timeRange = '0-5 сек';
+                    if (preg_match('/(?:\[|\()?\s*(\d+[\s–—\-]+\d+\s*с(?:ек)?)\s*(?:\]|\))?/ui', $title . ' ' . $body, $tm)) {
+                        $timeRange = trim($tm[1]);
+                    }
+
+                    $subtitles = '';
+                    if (preg_match('/(?:Субтитры|Текст на экране|Титры)[:\s–—\-]*([^\n]+)/ui', $body, $subM)) {
+                        $subtitles = trim($subM[1], " \t\n\r\0\x0B\"'«»");
+                    }
+
+                    $action = '';
+                    if (preg_match('/(?:Действие|Визуал|Кадр)[:\s–—\-]*([^\n]+)/ui', $body, $actM)) {
+                        $action = trim($actM[1]);
+                    }
+
+                    $retention = 'Pattern Interrupt';
+                    if (preg_match('/(?:Роль|Удержание|Retention)[:\s–—\-]*([^\n]+)/ui', $body, $retM)) {
+                        $retention = trim($retM[1]);
+                    }
+
+                    $imagePrompt = '';
+                    if (preg_match('/Image\s*Prompt[^:]*:\s*([^\n]+(?:\n[^\n#]+)*)/ui', $body, $ipM)) {
+                        $imagePrompt = trim($ipM[1]);
+                    }
+
+                    $videoPrompt = '';
+                    if (preg_match('/Video\s*Prompt[^:]*:\s*([^\n]+(?:\n[^\n#]+)*)/ui', $body, $vpM)) {
+                        $videoPrompt = trim($vpM[1]);
+                    }
+
+                    $scenes[] = [
+                        'scene_num'    => $idx,
+                        'title'        => $title,
+                        'time_range'   => $timeRange,
+                        'subtitles'    => $subtitles ?: $title,
+                        'action'       => $action ?: 'Демонстрация интерфейса и замера скорости',
+                        'retention'    => $retention,
+                        'image_prompt' => $imagePrompt ?: 'Photorealistic cinematic vertical 9:16 shot, anamorphic lens, shallow depth of field, 8k resolution, raw style, Dark Tech aesthetic, emerald green and dark titanium accents',
+                        'video_prompt' => $videoPrompt ?: 'Slow subtle camera push-in, micro motion, volumetric lighting, 60fps cinematic movement, vertical 9:16'
+                    ];
+                    $idx++;
+                    if ($idx > 6) break;
+                }
+            }
+
+            if (count($scenes) < 4) {
+                $defaultRoles = [
+                    1 => ['Hook (0-3 сек)', '0-3 сек', 'Твой сайт на Тильде ворует клиентов', 'Pattern Interrupt'],
+                    2 => ['Problem (4-10 сек)', '4-10 сек', 'Конструктор грузится 5 секунд в сети 4G', 'Pain Agitation'],
+                    3 => ['Reveal (11-18 сек)', '11-18 сек', 'Чистый код открывается мгновенно за 0.35с', 'Pattern Shift'],
+                    4 => ['Escalation (19-24 сек)', '19-24 сек', 'Зеленые 100/100 в PageSpeed без абонентки', 'Proof Benchmark'],
+                    5 => ['Payoff (25-28 сек)', '25-28 сек', 'Напрямую с Senior-разработчиком без студий', 'Direct Value'],
+                    6 => ['CTA (29-30 сек)', '29-30 сек', 'Напиши СКОРОСТЬ в Директ для аудита', 'Call to Action']
+                ];
+                $scenes = [];
+                foreach ($defaultRoles as $num => $def) {
+                    $scenes[] = [
+                        'scene_num'    => $num,
+                        'title'        => $def[0],
+                        'time_range'   => $def[1],
+                        'subtitles'    => $def[2],
+                        'action'       => "Динамичный кадр: {$def[0]}, кинетическая типографика",
+                        'retention'    => $def[3],
+                        'image_prompt' => "Photorealistic cinematic vertical 9:16 shot, anamorphic lens, 8k, Dark Tech aesthetic, emerald green neon, scene {$num}",
+                        'video_prompt' => "Slow subtle camera push-in, micro motion, 60fps cinematic vertical 9:16"
+                    ];
+                }
+            }
+
+            return $scenes;
+        }
+    }
+
+    if (!function_exists('extractFallbackVoiceScript')) {
+        function extractFallbackVoiceScript(string $text): string {
+            if (preg_match('/(?:Дикторский текст|Текст озвучки|Voiceover|voice_script)[:\s–—\-]*\n*(.*?)(?=\n###|\n##|\z)/uis', $text, $m)) {
+                return trim(str_replace(['—', '–'], '-', $m[1]));
+            }
+            $words = preg_split('/\s+/u', trim(strip_tags($text)));
+            $slice = array_slice($words, 0, 75);
+            return implode(' ', $slice);
+        }
+    }
+
+    if (!function_exists('generateDefaultReelsCanvasHtml')) {
+        function generateDefaultReelsCanvasHtml(string $topic, array $scenes, int $durationSeconds = 28): string {
+            $durationMs = max(5000, min(30000, $durationSeconds * 1000));
+            $cleanScenes = array_values($scenes);
+            $scenesJson = json_encode($cleanScenes, JSON_UNESCAPED_UNICODE);
+            $escapedTopic = htmlspecialchars($topic, ENT_QUOTES, 'UTF-8');
+
+            return '<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>AntiDesigner Reels Studio</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%;
+    background: #08090c;
+    overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  #reel-canvas {
+    width: 100%; height: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    background: #08090c;
+    display: block;
+  }
+</style>
+</head>
+<body>
+<canvas id="reel-canvas" width="1080" height="1920"></canvas>
+<script>
+window.REEL_DURATION_MS = ' . $durationMs . ';
+const canvas = document.getElementById("reel-canvas");
+const ctx = canvas.getContext("2d");
+const scenes = ' . $scenesJson . ';
+const topicText = ' . json_encode($topic, JSON_UNESCAPED_UNICODE) . ';
+
+let startTime = null;
+let animId = null;
+
+window.startReelAnimation = function() {
+  if (animId) cancelAnimationFrame(animId);
+  startTime = performance.now();
+  render(performance.now());
+};
+
+function wrapText(context, text, x, y, maxWidth, lineHeight) {
+  const words = (text || "").split(" ");
+  let line = "";
+  for (let n = 0; n < words.length; n++) {
+    const testLine = line + words[n] + " ";
+    const metrics = context.measureText(testLine);
+    if (metrics.width > maxWidth && n > 0) {
+      context.fillText(line, x, y);
+      line = words[n] + " ";
+      y += lineHeight;
+    } else {
+      line = testLine;
+    }
+  }
+  context.fillText(line, x, y);
+}
+
+function render(now) {
+  if (!startTime) startTime = now;
+  let elapsed = now - startTime;
+  if (elapsed > window.REEL_DURATION_MS) elapsed = window.REEL_DURATION_MS;
+  const progress = elapsed / window.REEL_DURATION_MS;
+
+  // 1. Очистка и глубокий темный фон
+  ctx.fillStyle = "#08090c";
+  ctx.fillRect(0, 0, 1080, 1920);
+
+  // 2. Сетка Dark Tech
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.03)";
+  ctx.lineWidth = 1;
+  for (let x = 0; x < 1080; x += 90) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 1920); ctx.stroke();
+  }
+  for (let y = 0; y < 1920; y += 90) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(1080, y); ctx.stroke();
+  }
+
+  // Неоновое свечение в центре
+  const radial = ctx.createRadialGradient(540, 720, 20, 540, 720, 600);
+  radial.addColorStop(0, "rgba(0, 255, 136, 0.07)");
+  radial.addColorStop(1, "rgba(8, 9, 12, 0)");
+  ctx.fillStyle = radial;
+  ctx.fillRect(0, 0, 1080, 1920);
+
+  // 3. Верхний бейдж
+  ctx.save();
+  ctx.fillStyle = "rgba(0, 255, 136, 0.08)";
+  ctx.strokeStyle = "rgba(0, 255, 136, 0.4)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  if (ctx.roundRect) {
+    ctx.roundRect(140, 140, 800, 96, 48);
+  } else {
+    ctx.rect(140, 140, 800, 96);
+  }
+  ctx.fill(); ctx.stroke();
+
+  ctx.fillStyle = "#00ff88";
+  ctx.font = "bold 36px -apple-system, BlinkMacSystemFont, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("ANTIDESIGNER · ЧИСТЫЙ КОД", 540, 188);
+  ctx.restore();
+
+  // 4. Спидометр скорости PageSpeed 100/100
+  ctx.save();
+  const gaugeAngle = Math.min(progress * 1.6, 1) * Math.PI * 2;
+  ctx.lineWidth = 20;
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+  ctx.beginPath();
+  ctx.arc(540, 540, 190, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.strokeStyle = "#00ff88";
+  ctx.shadowColor = "#00ff88";
+  ctx.shadowBlur = 15;
+  ctx.beginPath();
+  ctx.arc(540, 540, 190, -Math.PI / 2, -Math.PI / 2 + gaugeAngle);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "900 96px -apple-system, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  const currentSpeedScore = Math.min(100, Math.floor(progress * 140));
+  ctx.fillText(currentSpeedScore >= 100 ? "100" : currentSpeedScore + "", 540, 520);
+
+  ctx.fillStyle = "#00ff88";
+  ctx.font = "bold 30px -apple-system, sans-serif";
+  ctx.fillText("GOOGLE PAGESPEED", 540, 590);
+  ctx.restore();
+
+  // 5. Тема ролика
+  ctx.save();
+  ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+  ctx.font = "500 36px -apple-system, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  wrapText(ctx, topicText, 540, 800, 920, 48);
+  ctx.restore();
+
+  // 6. Активная сцена и субтитры
+  const sceneCount = scenes.length || 1;
+  const sceneDurationMs = window.REEL_DURATION_MS / sceneCount;
+  const currentSceneIndex = Math.min(sceneCount - 1, Math.floor(elapsed / sceneDurationMs));
+  const curScene = scenes[currentSceneIndex] || {};
+
+  ctx.save();
+  // Карточка сцены
+  ctx.fillStyle = "rgba(18, 22, 31, 0.85)";
+  ctx.strokeStyle = "rgba(0, 255, 136, 0.3)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  if (ctx.roundRect) {
+    ctx.roundRect(80, 1140, 920, 440, 32);
+  } else {
+    ctx.rect(80, 1140, 920, 440);
+  }
+  ctx.fill(); ctx.stroke();
+
+  // Заголовок сцены
+  ctx.fillStyle = "#00ff88";
+  ctx.font = "bold 32px -apple-system, sans-serif";
+  ctx.textAlign = "left";
+  ctx.fillText((curScene.title || ("Сцена " + (currentSceneIndex + 1))) + " · " + (curScene.time_range || ""), 120, 1210);
+
+  // Субтитры крупно
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 52px -apple-system, sans-serif";
+  const subText = curScene.subtitles || curScene.action || topicText;
+  wrapText(ctx, subText, 120, 1270, 840, 68);
+
+  // Retention tag
+  if (curScene.retention) {
+    ctx.fillStyle = "rgba(0, 255, 136, 0.15)";
+    ctx.strokeStyle = "#00ff88";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(120, 1490, 360, 50, 25);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#00ff88";
+    ctx.font = "bold 24px -apple-system, sans-serif";
+    ctx.fillText("⚡ " + curScene.retention, 145, 1524);
+  }
+  ctx.restore();
+
+  // 7. Нижний прогресс-бар таймлайна (0-30 сек)
+  ctx.save();
+  ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
+  ctx.fillRect(80, 1800, 920, 16);
+  ctx.fillStyle = "#00ff88";
+  ctx.shadowColor = "#00ff88";
+  ctx.shadowBlur = 8;
+  ctx.fillRect(80, 1800, 920 * progress, 16);
+  ctx.shadowBlur = 0;
+
+  // Секундомер
+  const curSec = (elapsed / 1000).toFixed(1);
+  const totalSec = (window.REEL_DURATION_MS / 1000).toFixed(0);
+  ctx.fillStyle = "#8b949e";
+  ctx.font = "30px monospace";
+  ctx.textAlign = "right";
+  ctx.fillText(curSec + "s / " + totalSec + "s", 1000, 1780);
+  ctx.restore();
+
+  if (elapsed < window.REEL_DURATION_MS) {
+    animId = requestAnimationFrame(render);
+  }
+}
+
+window.addEventListener("load", () => {
+  window.startReelAnimation();
+});
+</script>
+</body>
+</html>';
+        }
+    }
+
+    // -------------------------------------------------------------------------
     // 1. СПИСОК МАТЕРИАЛОВ (action=list)
     // -------------------------------------------------------------------------
     if ($action === 'list') {
@@ -57,16 +384,41 @@ try {
     // -------------------------------------------------------------------------
     if ($action === 'update') {
         $id = (int)($input['id'] ?? 0);
-        $contentMarkdown = trim((string)($input['content_markdown'] ?? ''));
+        $contentMarkdown = isset($input['content_markdown']) ? trim((string)$input['content_markdown']) : null;
+        $motionHtml = isset($input['motion_html']) ? (string)$input['motion_html'] : null;
+        $storyboardJson = isset($input['storyboard_json']) ? (string)$input['storyboard_json'] : null;
+        $audioUrl = isset($input['audio_url']) ? (string)$input['audio_url'] : null;
 
-        if ($id <= 0 || $contentMarkdown === '') {
+        if ($id <= 0) {
             http_response_code(400);
-            echo json_encode(['status' => 'error', 'message' => 'Некорректный id или пустой контент'], JSON_UNESCAPED_UNICODE);
+            echo json_encode(['status' => 'error', 'message' => 'Некорректный id'], JSON_UNESCAPED_UNICODE);
             exit;
         }
 
-        $stmt = $pdo->prepare('UPDATE content_items SET content_markdown = :content WHERE id = :id');
-        $stmt->execute([':content' => $contentMarkdown, ':id' => $id]);
+        if ($contentMarkdown !== null && $contentMarkdown !== '') {
+            $stmt = $pdo->prepare('UPDATE content_items SET content_markdown = :content WHERE id = :id');
+            $stmt->execute([':content' => $contentMarkdown, ':id' => $id]);
+        }
+        if ($motionHtml !== null && $motionHtml !== '') {
+            $pdo->prepare('UPDATE content_items SET motion_html = :mh WHERE id = :id')->execute([':mh' => $motionHtml, ':id' => $id]);
+        }
+        if ($storyboardJson !== null && $storyboardJson !== '') {
+            $pdo->prepare('UPDATE content_items SET storyboard_json = :sb WHERE id = :id')->execute([':sb' => $storyboardJson, ':id' => $id]);
+        }
+        $voiceScript = isset($input['voice_script']) ? trim((string)$input['voice_script']) : null;
+        if ($voiceScript !== null && $voiceScript !== '') {
+            $stmtSb = $pdo->prepare("SELECT storyboard_json FROM content_items WHERE id = :id");
+            $stmtSb->execute([':id' => $id]);
+            $sbRaw = $stmtSb->fetchColumn();
+            $sb = $sbRaw ? json_decode((string)$sbRaw, true) : [];
+            if (!is_array($sb)) $sb = [];
+            $sb['voice_script'] = $voiceScript;
+            $pdo->prepare("UPDATE content_items SET storyboard_json = :sb WHERE id = :id")
+                ->execute([':sb' => json_encode($sb, JSON_UNESCAPED_UNICODE), ':id' => $id]);
+        }
+        if ($audioUrl !== null && $audioUrl !== '') {
+            $pdo->prepare('UPDATE content_items SET audio_url = :au, media_files = :au WHERE id = :id')->execute([':au' => $audioUrl, ':id' => $id]);
+        }
 
         echo json_encode([
             'status'  => 'success',
@@ -184,24 +536,24 @@ try {
                 $subPromptsInstruction;
 
             if (in_array($fmtCode, ['reels_hook', 'reels', 'instagram'], true)) {
-                $userPrompt = "ТЕМА ВИДЕО: {$topic}\n\n" .
-                    "ЗАДАЧА: Сгенерируй профессиональный пакет для короткого видео (Reels / Shorts) строго по 6-фазной дуге удержания (5-6 сцен): Hook (0-3c) -> Problem (4-12c) -> Reveal (13-25c) -> Escalation (26-38c) -> Payoff (39-48c) -> CTA (49-60c).\n\n" .
-                    "ДЛЯ КАЖДОЙ СЦЕНЫ СФОРМИРУЙ:\n" .
-                    "1. Действие и визуал в кадре\n" .
-                    "2. Текст субтитров (коротко, 4-8 слов)\n" .
-                    "3. Роль в удержании аудитории (Retention Hook)\n" .
-                    "4. Единый стиль, свет, ракурс камеры (Cinematic 35mm, Dark Tech)\n" .
-                    "5. Image Prompt (Flux / Midjourney, 9:16)\n" .
-                    "6. Video Prompt (Runway / Kling / Luma, 9:16)\n\n" .
-                    "В КОНЦЕ ДОБАВЬ БЛОК ЗАКАДРОВОГО ГОЛОСА:\n" .
-                    "• Дикторский скрипт озвучки (60-90 слов) с разметкой пауз [пауза 0.5с] и ударений (**слово**)\n" .
-                    "• Voice Direction Prompt (тембр, темп, интонация для Gemini 3.8 Flash Audio / TTS).\n\n" .
-                    "Отдай готовый материал в четко структурированном Markdown. Без длинных тире (—).";
+                $userPrompt = "ТЕМА РОЛИКА: {$topic}\n\n" .
+                    "ЗАДАЧА: Сгенерируй профессиональный пакет для вертикального видео (Reels / Shorts, 9:16) строго по 6-фазной дуге удержания (хронометраж до 30 секунд):\n" .
+                    "1. СЦЕНАРИЙ (ровно 60-90 слов, без канцелярщины, от лица Senior-разработчика Евгения Антипина).\n" .
+                    "2. РАСКАДРОВКА ИЗ 5-6 СЦЕН:\n" .
+                    "   - Сцена 1: Hook (0-3 сек)\n" .
+                    "   - Сцена 2: Problem (4-10 сек)\n" .
+                    "   - Сцена 3: Reveal (11-18 сек)\n" .
+                    "   - Сцена 4: Escalation (19-24 сек)\n" .
+                    "   - Сцена 5: Payoff (25-28 сек)\n" .
+                    "   - Сцена 6: CTA (29-30 сек)\n" .
+                    "   Для каждой сцены укажи: [Время], [Действие], [Субтитры (4-8 слов)], [Роль удержания], [Image Prompt (9:16)], [Video Prompt (9:16)].\n\n" .
+                    "3. САМОДОСТАТОЧНЫЙ HTML5/CSS3/CANVAS MOTION-КОД РОЛИКА (9:16, 1080x1920 viewBox, 60fps, темная тема Dark Tech, анимированный круговой счетчик PageSpeed 100/100, поочередная смена титров, нижний таймлайн 0-30 сек). Оберни код в блок ```html <!DOCTYPE html>...</html> ```.\n\n" .
+                    "Отдай готовый материал в четко структурированном виде. Без длинных тире (-).";
             } else {
                 $userPrompt = "ТЕМА МАТЕРИАЛА: {$topic}\n\n" .
                     "ЗАДАЧА: Сгенерируй полноценный, готовый к публикации материал для формата «{$skill['title']}» (код: {$fmtCode}). " .
                     "Опирайся на контекст компании AntiDesigner, приводи реальные цифры и преимущества чистого кода перед конструкторами. " .
-                    "Отдай только готовый текст без лишних вступительных реплик. Без длинных тире (символ —).";
+                    "Отдай только готовый текст без лишних вступительных реплик. Без длинных тире (символ -).";
             }
 
             try {
@@ -219,25 +571,110 @@ try {
                 // Дополнительная валидация типографики: исключение длинных тире
                 $generatedText = str_replace(['—', '–'], '-', trim($generatedText));
 
-                // Сохраняем в базу данных в статусе draft
-                $stmtInsert = $pdo->prepare('INSERT INTO content_items (topic, format, content_markdown, status) VALUES (:topic, :format, :content, :status)');
-                $stmtInsert->execute([
-                    ':topic'   => $topic,
-                    ':format'  => $fmtCode,
-                    ':content' => $generatedText,
-                    ':status'  => 'draft'
-                ]);
-                $newId = (int)$pdo->lastInsertId();
+                // Специальная обработка для формата Reels: 2-шаговый пайплайн (Motion + Voiceover)
+                $motionHtml = '';
+                $storyboardData = null;
 
-                $results[] = [
-                    'id'         => $newId,
-                    'format'     => $fmtCode,
-                    'task_type'  => $taskType,
-                    'title'      => $skill['title'],
-                    'content'    => $generatedText,
-                    'model_used' => 'gemini-flash-3.8 (HEAVY)',
-                    'status'     => 'draft'
-                ];
+                if (in_array($fmtCode, ['reels_hook', 'reels', 'instagram'], true)) {
+                    // Извлекаем HTML5 Motion-код
+                    if (preg_match('/```html\s*(.*?)\s*```/is', $generatedText, $mHtml)) {
+                        $motionHtml = trim($mHtml[1]);
+                    } elseif (preg_match('/<!DOCTYPE html>.*?<\/html>/is', $generatedText, $mDoc)) {
+                        $motionHtml = trim($mDoc[0]);
+                    }
+                    if ($motionHtml === '') {
+                        $motionHtml = "<!DOCTYPE html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><style>body{margin:0;background:#08090c;color:#e6edf3;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;overflow:hidden;}.phone{aspect-ratio:9/16;height:95vh;background:#0d1117;border:1px solid #1e222d;border-radius:16px;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:20px;text-align:center;box-sizing:border-box;}h2{color:#00ff88;font-size:24px;margin-bottom:12px;}</style></head><body><div class='phone'><h2>AntiDesigner</h2><p>" . htmlspecialchars($topic, ENT_QUOTES, 'UTF-8') . "</p><div style='margin-top:20px;padding:8px 16px;border:1px solid #00ff88;border-radius:20px;color:#00ff88;'>PageSpeed 100/100 · 0.35s</div></div></body></html>";
+                    }
+
+                    // ШАГ 2: Режиссер закадрового голоса (voiceover_director)
+                    $stmtVo = $pdo->prepare("SELECT system_prompt, tone_of_voice FROM skills WHERE code = 'voiceover_director' LIMIT 1");
+                    $stmtVo->execute();
+                    $voSkill = $stmtVo->fetch();
+                    $voSysPrompt = ($voSkill && !empty($voSkill['system_prompt']))
+                        ? $voSkill['system_prompt']
+                        : 'Ты - звукорежиссер коротких видео. Адаптируй текст под хронометраж до 30 секунд. Верни строго JSON: {"voice_script": "...", "voice_prompt": "...", "estimated_seconds": 28}.';
+
+                    $voUserPrompt = "ТЕМА РОЛИКА: {$topic}\nСЦЕНАРИЙ И ТАЙМИНГИ:\n" . substr($generatedText, 0, 3000) . "\n\n"
+                        . "Адаптируй дикторский текст под точный тайминг до 30 секунд и верни СТРОГО JSON: {\"voice_script\": \"...\", \"voice_prompt\": \"...\", \"estimated_seconds\": 28}. Запрещены длинные тире (-).";
+
+                    $step2Output = $aiRouter->execute(AIRouter::TASK_REELS, $voSysPrompt, $voUserPrompt);
+                    $cleanJson = preg_replace('/^```(?:json)?\s*/i', '', trim((string)$step2Output));
+                    $cleanJson = preg_replace('/\s*```$/i', '', $cleanJson);
+                    $voData = json_decode(trim($cleanJson), true);
+
+                    $voiceScript = is_array($voData) && !empty($voData['voice_script'])
+                        ? trim((string)$voData['voice_script'])
+                        : extractFallbackVoiceScript($generatedText);
+
+                    $voicePrompt = is_array($voData) && !empty($voData['voice_prompt'])
+                        ? trim((string)$voData['voice_prompt'])
+                        : 'Уверенный тембр Senior-разработчика (Евгений Антипин). Без дикторского пафоса, четкие паузы под монтаж, акцент на цифрах скорости (0.35с, 100/100).';
+
+                    $estimatedSeconds = is_array($voData) && !empty($voData['estimated_seconds'])
+                        ? (int)$voData['estimated_seconds']
+                        : 28;
+
+                    $scenes = parseStoryboardScenes($generatedText);
+
+                    $storyboardData = [
+                        'topic'             => $topic,
+                        'format'            => $fmtCode,
+                        'scenario'          => $generatedText,
+                        'scenes'            => $scenes,
+                        'voice_script'      => $voiceScript,
+                        'voice_prompt'      => $voicePrompt,
+                        'estimated_seconds' => $estimatedSeconds,
+                        'motion_html'       => $motionHtml,
+                        'audio_url'         => null
+                    ];
+
+                    $stmtInsert = $pdo->prepare('INSERT INTO content_items (topic, format, content_markdown, motion_html, storyboard_json, status) VALUES (:topic, :format, :content, :motion, :sb, :status)');
+                    $stmtInsert->execute([
+                        ':topic'   => $topic,
+                        ':format'  => $fmtCode,
+                        ':content' => $generatedText,
+                        ':motion'  => $motionHtml,
+                        ':sb'      => json_encode($storyboardData, JSON_UNESCAPED_UNICODE),
+                        ':status'  => 'draft'
+                    ]);
+                    $newId = (int)$pdo->lastInsertId();
+
+                    $results[] = [
+                        'id'                => $newId,
+                        'format'            => $fmtCode,
+                        'task_type'         => $taskType,
+                        'title'             => $skill['title'],
+                        'content'           => $generatedText,
+                        'motion_html'       => $motionHtml,
+                        'voice_script'      => $voiceScript,
+                        'voice_prompt'      => $voicePrompt,
+                        'estimated_seconds' => $estimatedSeconds,
+                        'scenes'            => $scenes,
+                        'storyboard'        => $storyboardData,
+                        'model_used'        => 'gemini-flash-3.8 (HEAVY)',
+                        'status'            => 'draft'
+                    ];
+                } else {
+                    // Сохраняем в базу данных в статусе draft для обычных текстовых форматов
+                    $stmtInsert = $pdo->prepare('INSERT INTO content_items (topic, format, content_markdown, status) VALUES (:topic, :format, :content, :status)');
+                    $stmtInsert->execute([
+                        ':topic'   => $topic,
+                        ':format'  => $fmtCode,
+                        ':content' => $generatedText,
+                        ':status'  => 'draft'
+                    ]);
+                    $newId = (int)$pdo->lastInsertId();
+
+                    $results[] = [
+                        'id'         => $newId,
+                        'format'     => $fmtCode,
+                        'task_type'  => $taskType,
+                        'title'      => $skill['title'],
+                        'content'    => $generatedText,
+                        'model_used' => 'gemini-flash-3.8 (HEAVY)',
+                        'status'     => 'draft'
+                    ];
+                }
             } catch (Throwable $genErr) {
                 $errors[] = "Ошибка при генерации {$skill['title']}: " . $genErr->getMessage();
             }
@@ -379,6 +816,9 @@ try {
             exit;
         }
 
+        $draft['storyboard'] = !empty($draft['storyboard_json']) ? json_decode((string)$draft['storyboard_json'], true) : null;
+        $draft['chat_history_list'] = !empty($draft['chat_history']) ? json_decode((string)$draft['chat_history'], true) : [];
+
         echo json_encode([
             'status' => 'success',
             'draft'  => $draft
@@ -454,11 +894,28 @@ try {
     }
 
     // -------------------------------------------------------------------------
-    // 4.4. СИНТЕЗ ОЗВУЧКИ ЧЕРЕЗ POLZA.AI / GEMINI TTS (action=generate_tts)
+    // 4.4. СИНТЕЗ ОЗВУЧКИ ЧЕРЕЗ POLZA.AI / GEMINI TTS (action=generate_audio / action=generate_tts)
     // -------------------------------------------------------------------------
-    if ($action === 'generate_tts') {
+    if ($action === 'generate_audio' || $action === 'generate_tts') {
         $contentId = (int)($input['content_id'] ?? 0);
         $text = trim((string)($input['text'] ?? ''));
+
+        if ($text === '' && $contentId > 0) {
+            $stmtC = $pdo->prepare("SELECT storyboard_json, content_markdown FROM content_items WHERE id = :id LIMIT 1");
+            $stmtC->execute([':id' => $contentId]);
+            $cRow = $stmtC->fetch(PDO::FETCH_ASSOC);
+            if ($cRow) {
+                if (!empty($cRow['storyboard_json'])) {
+                    $sb = json_decode((string)$cRow['storyboard_json'], true);
+                    if (!empty($sb['voice_script'])) {
+                        $text = trim((string)$sb['voice_script']);
+                    }
+                }
+                if ($text === '') {
+                    $text = extractFallbackVoiceScript((string)$cRow['content_markdown']);
+                }
+            }
+        }
 
         if ($text === '') {
             http_response_code(400);
@@ -470,7 +927,7 @@ try {
         $config = file_exists($configFile) ? require $configFile : [];
 
         $polzaKey = trim((string)($config['polza_api_key'] ?? $config['gemini_heavy_api_key'] ?? ''));
-        $ttsModel = trim((string)($config['polza_tts_model'] ?? 'openai/tts-1')) ?: 'openai/tts-1';
+        $ttsModel = trim((string)($config['polza_tts_model'] ?? 'google/gemini-3.8-flash-lite-tts')) ?: 'google/gemini-3.8-flash-lite-tts';
 
         if ($polzaKey === '') {
             echo json_encode([
@@ -512,20 +969,33 @@ try {
             if (!is_dir($uploadsDir)) {
                 mkdir($uploadsDir, 0755, true);
             }
-            $audioFileName = 'tts_' . ($contentId ?: rand(100, 999)) . '_' . time() . '.mp3';
+            $audioFileName = 'voice_' . ($contentId ?: rand(100, 999)) . '_' . time() . '.mp3';
             $audioFilePath = $uploadsDir . '/' . $audioFileName;
             file_put_contents($audioFilePath, $audioRaw);
 
             $relativeAudioUrl = '../core-data/uploads/' . $audioFileName;
 
             if ($contentId > 0) {
-                $stmtUpd = $pdo->prepare("UPDATE content_items SET audio_url = :url WHERE id = :id");
+                $stmtUpd = $pdo->prepare("UPDATE content_items SET audio_url = :url, media_files = :url WHERE id = :id");
                 $stmtUpd->execute([':url' => $relativeAudioUrl, ':id' => $contentId]);
+
+                $stmtGetSb = $pdo->prepare("SELECT storyboard_json FROM content_items WHERE id = :id");
+                $stmtGetSb->execute([':id' => $contentId]);
+                $sbRaw = $stmtGetSb->fetchColumn();
+                if ($sbRaw) {
+                    $sb = json_decode((string)$sbRaw, true);
+                    if (is_array($sb)) {
+                        $sb['audio_url'] = $relativeAudioUrl;
+                        $pdo->prepare("UPDATE content_items SET storyboard_json = :sb WHERE id = :id")
+                            ->execute([':sb' => json_encode($sb, JSON_UNESCAPED_UNICODE), ':id' => $contentId]);
+                    }
+                }
             }
 
             echo json_encode([
                 'status'    => 'success',
                 'audio_url' => $relativeAudioUrl,
+                'model'     => $ttsModel,
                 'message'   => 'Озвучка успешно сгенерирована через Polza.ai'
             ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
             exit;
@@ -565,6 +1035,499 @@ try {
             'message'   => 'Аудиодорожка успешно прикреплена к драфту',
             'audio_url' => $audioUrl
         ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    // -------------------------------------------------------------------------
+    // 4.6. ГЕНЕРАЦИЯ ОДИНОЧНОГО ДРАФТА / REELS СТУДИИ (action=generate_single)
+    // -------------------------------------------------------------------------
+    if ($action === 'generate_single') {
+        $contentId = (int)($input['content_id'] ?? 0);
+        $topic = trim((string)($input['topic'] ?? ''));
+        $fmtCode = trim((string)($input['format'] ?? 'reels_hook'));
+
+        if ($topic === '' && $contentId > 0) {
+            $stmtEx = $pdo->prepare("SELECT topic, format FROM content_items WHERE id = :id");
+            $stmtEx->execute([':id' => $contentId]);
+            $rowEx = $stmtEx->fetch(PDO::FETCH_ASSOC);
+            if ($rowEx) {
+                $topic = (string)$rowEx['topic'];
+                if (empty($input['format'])) {
+                    $fmtCode = (string)$rowEx['format'];
+                }
+            }
+        }
+
+        if ($topic === '') {
+            http_response_code(400);
+            echo json_encode(['status' => 'error', 'message' => 'Укажите тему для генерации'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $configFile = dirname(__DIR__, 2) . '/core-data/config.php';
+        $config = file_exists($configFile) ? require $configFile : [];
+        $aiRouter = new AIRouter($config);
+        $aiRouter->setPDO($pdo);
+
+        // Контекст базы знаний
+        $stmtKb = $pdo->query('SELECT category, title, content_markdown FROM knowledge_base ORDER BY id ASC');
+        $kbRows = $stmtKb->fetchAll();
+        $knowledgeContext = "АКТУАЛЬНЫЙ КОНТЕКСТ КОМПАНИИ ANTIDESIGNER:\n";
+        foreach ($kbRows as $kb) {
+            $knowledgeContext .= "--- {$kb['title']} ({$kb['category']}) ---\n{$kb['content_markdown']}\n\n";
+        }
+
+        // Подтягиваем скилл
+        $stmtSkill = $pdo->prepare('SELECT code, title, system_prompt, tone_of_voice FROM skills WHERE code = :code LIMIT 1');
+        $stmtSkill->execute([':code' => $fmtCode]);
+        $skill = $stmtSkill->fetch();
+        if (!$skill || empty($skill['system_prompt'])) {
+            $skill = $aiRouter->loadSkill($fmtCode);
+        }
+
+        // Под-промпты
+        $subPromptsInstruction = '';
+        $stmtSub = $pdo->prepare("SELECT title, prompt_type, step_order, content_markdown FROM skill_prompts WHERE skill_code = :code AND is_active = 1 ORDER BY step_order ASC, id ASC");
+        $stmtSub->execute([':code' => $fmtCode]);
+        $activeSub = $stmtSub->fetchAll(PDO::FETCH_ASSOC);
+        if (!empty($activeSub)) {
+            $subPromptsInstruction = "\n\n### ЦЕПОЧКА МОДУЛЬНЫХ ПРОМПТОВ И СТИЛЕЙ (.MD):\n";
+            foreach ($activeSub as $sp) {
+                $subPromptsInstruction .= "\n---\n#### {$sp['title']}:\n{$sp['content_markdown']}\n";
+            }
+        }
+
+        $systemInstruction = $skill['system_prompt'] . "\n\nTONE OF VOICE:\n" . ($skill['tone_of_voice'] ?: 'Dark Tech, лаконичный') . "\n\n" . $knowledgeContext . $subPromptsInstruction;
+
+        if (in_array($fmtCode, ['reels_hook', 'reels', 'instagram'], true)) {
+            // ШАГ 1: Сценарий, 5-6 сцен раскадровки и HTML5 Canvas код
+            $userPrompt = "ТЕМА РОЛИКА: {$topic}\n\n" .
+                "ЗАДАЧА: Сгенерируй профессиональный пакет для вертикального видео (Reels / Shorts, 9:16) строго по 6-фазной дуге удержания (до 30 сек):\n" .
+                "1. СЦЕНАРИЙ (ровно 60-90 слов, от лица Senior-разработчика Евгения Антипина).\n" .
+                "2. РАСКАДРОВКА ИЗ 5-6 СЦЕН (Сцена 1: Hook, Сцена 2: Problem, Сцена 3: Reveal, Сцена 4: Escalation, Сцена 5: Payoff, Сцена 6: CTA) с [Субтитры], [Действие], [Retention], [Image Prompt (9:16)], [Video Prompt (9:16)].\n" .
+                "3. САМОДОСТАТОЧНЫЙ HTML5 CANVAS MOTION-КОД РОЛИКА: Оберни в блок ```html <!DOCTYPE html>...</html> ```. ОБЯЗАТЕЛЬНО холст <canvas id=\"reel-canvas\" width=\"1080\" height=\"1920\"></canvas> и скрипт с window.startReelAnimation() и window.REEL_DURATION_MS (до 30000). Без внешних CDN. Без длинных тире (-).";
+
+            $generatedText = $aiRouter->execute(AIRouter::TASK_REELS, $systemInstruction, $userPrompt);
+            $generatedText = str_replace(['—', '–'], '-', trim($generatedText));
+
+            $motionHtml = '';
+            if (preg_match('/```html\s*(.*?)\s*```/is', $generatedText, $mHtml)) {
+                $motionHtml = trim($mHtml[1]);
+            } elseif (preg_match('/<!DOCTYPE html>.*?<\/html>/is', $generatedText, $mDoc)) {
+                $motionHtml = trim($mDoc[0]);
+            }
+
+            // ШАГ 2: Режиссер закадрового голоса (voiceover_director)
+            $stmtVo = $pdo->prepare("SELECT system_prompt, tone_of_voice FROM skills WHERE code = 'voiceover_director' LIMIT 1");
+            $stmtVo->execute();
+            $voSkill = $stmtVo->fetch();
+            $voSysPrompt = ($voSkill && !empty($voSkill['system_prompt']))
+                ? $voSkill['system_prompt']
+                : 'Ты - звукорежиссер коротких видео. Адаптируй текст под хронометраж до 30 секунд. Верни строго JSON: {"voice_script": "...", "voice_prompt": "...", "estimated_seconds": 28}.';
+
+            $voUserPrompt = "ТЕМА РОЛИКА: {$topic}\nСЦЕНАРИЙ И ТАЙМИНГИ:\n" . substr($generatedText, 0, 3000) . "\n\n"
+                . "Адаптируй дикторский текст под точный тайминг до 30 секунд и верни СТРОГО JSON: {\"voice_script\": \"...\", \"voice_prompt\": \"...\", \"estimated_seconds\": 28}. Запрещены длинные тире (-).";
+
+            $step2Output = $aiRouter->execute(AIRouter::TASK_REELS, $voSysPrompt, $voUserPrompt);
+            $cleanJson = preg_replace('/^```(?:json)?\s*/i', '', trim((string)$step2Output));
+            $cleanJson = preg_replace('/\s*```$/i', '', $cleanJson);
+            $voData = json_decode(trim($cleanJson), true);
+
+            $voiceScript = is_array($voData) && !empty($voData['voice_script'])
+                ? trim((string)$voData['voice_script'])
+                : extractFallbackVoiceScript($generatedText);
+
+            $voicePrompt = is_array($voData) && !empty($voData['voice_prompt'])
+                ? trim((string)$voData['voice_prompt'])
+                : 'Уверенный тембр Senior-разработчика (Евгений Антипин). Без дикторского пафоса, четкие паузы под монтаж, акцент на цифрах скорости (0.35с, 100/100).';
+
+            $estimatedSeconds = is_array($voData) && !empty($voData['estimated_seconds'])
+                ? (int)$voData['estimated_seconds']
+                : 28;
+
+            $scenes = parseStoryboardScenes($generatedText);
+
+            if ($motionHtml === '' || stripos($motionHtml, 'reel-canvas') === false || stripos($motionHtml, 'startReelAnimation') === false) {
+                $motionHtml = generateDefaultReelsCanvasHtml($topic, $scenes, $estimatedSeconds);
+            }
+
+            $storyboardData = [
+                'topic'             => $topic,
+                'format'            => $fmtCode,
+                'scenario'          => $generatedText,
+                'scenes'            => $scenes,
+                'voice_script'      => $voiceScript,
+                'voice_prompt'      => $voicePrompt,
+                'estimated_seconds' => $estimatedSeconds,
+                'motion_html'       => $motionHtml,
+                'audio_url'         => null
+            ];
+
+            if ($contentId > 0) {
+                $stmtSave = $pdo->prepare("UPDATE content_items SET topic = :topic, format = :format, content_markdown = :c, motion_html = :m, storyboard_json = :sb WHERE id = :id");
+                $stmtSave->execute([
+                    ':topic'  => $topic,
+                    ':format' => $fmtCode,
+                    ':c'      => $generatedText,
+                    ':m'      => $motionHtml,
+                    ':sb'     => json_encode($storyboardData, JSON_UNESCAPED_UNICODE),
+                    ':id'     => $contentId
+                ]);
+            } else {
+                $stmtSave = $pdo->prepare("INSERT INTO content_items (topic, format, content_markdown, motion_html, storyboard_json, status) VALUES (:topic, :format, :c, :m, :sb, 'draft')");
+                $stmtSave->execute([
+                    ':topic'  => $topic,
+                    ':format' => $fmtCode,
+                    ':c'      => $generatedText,
+                    ':m'      => $motionHtml,
+                    ':sb'     => json_encode($storyboardData, JSON_UNESCAPED_UNICODE)
+                ]);
+                $contentId = (int)$pdo->lastInsertId();
+            }
+
+            $stmtGet = $pdo->prepare("SELECT * FROM content_items WHERE id = :id");
+            $stmtGet->execute([':id' => $contentId]);
+            $savedDraft = $stmtGet->fetch(PDO::FETCH_ASSOC);
+            $savedDraft['storyboard'] = $storyboardData;
+
+            echo json_encode([
+                'status'     => 'success',
+                'id'         => $contentId,
+                'draft'      => $savedDraft,
+                'storyboard' => $storyboardData,
+                'message'    => 'Ролик успешно сгенерирован (Шаг 1: Canvas Motion + Шаг 2: Voiceover)'
+            ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+            exit;
+        } else {
+            // Обычный текстовый формат
+            $userPrompt = "ТЕМА МАТЕРИАЛА: {$topic}\n\nСгенерируй полноценный материал для «{$skill['title']}» (код: {$fmtCode}). Без длинных тире (-).";
+            $generatedText = $aiRouter->execute(AIRouter::TASK_LONGREAD, $systemInstruction, $userPrompt);
+            $generatedText = str_replace(['—', '–'], '-', trim($generatedText));
+
+            if ($contentId > 0) {
+                $stmtSave = $pdo->prepare("UPDATE content_items SET topic = :topic, format = :format, content_markdown = :c WHERE id = :id");
+                $stmtSave->execute([':topic' => $topic, ':format' => $fmtCode, ':c' => $generatedText, ':id' => $contentId]);
+            } else {
+                $stmtSave = $pdo->prepare("INSERT INTO content_items (topic, format, content_markdown, status) VALUES (:topic, :format, :c, 'draft')");
+                $stmtSave->execute([':topic' => $topic, ':format' => $fmtCode, ':c' => $generatedText]);
+                $contentId = (int)$pdo->lastInsertId();
+            }
+
+            $stmtGet = $pdo->prepare("SELECT * FROM content_items WHERE id = :id");
+            $stmtGet->execute([':id' => $contentId]);
+            $savedDraft = $stmtGet->fetch(PDO::FETCH_ASSOC);
+
+            echo json_encode([
+                'status'  => 'success',
+                'id'      => $contentId,
+                'draft'   => $savedDraft,
+                'message' => 'Материал успешно сгенерирован'
+            ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+            exit;
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // 4.7. ГЕНЕРАЦИЯ B-ROLL МЕДИА ДЛЯ СЦЕНЫ (action=generate_scene_media)
+    // -------------------------------------------------------------------------
+    if ($action === 'generate_scene_media') {
+        $contentId = (int)($input['content_id'] ?? 0);
+        $sceneNum = (int)($input['scene_num'] ?? 1);
+        $prompt = trim((string)($input['prompt'] ?? ''));
+        $mediaType = trim((string)($input['media_type'] ?? 'image'));
+        $altModel = !empty($input['alt_model']);
+
+        if ($prompt === '') {
+            http_response_code(400);
+            echo json_encode(['status' => 'error', 'message' => 'Промпт для генерации медиа пуст'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $configFile = dirname(__DIR__, 2) . '/core-data/config.php';
+        $config = file_exists($configFile) ? require $configFile : [];
+        $polzaKey = trim((string)($config['polza_api_key'] ?? $config['gemini_heavy_api_key'] ?? ''));
+
+        if ($polzaKey === '') {
+            echo json_encode(['status' => 'error', 'message' => 'polza_api_key не настроен в config.local.php'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        if ($mediaType === 'video') {
+            $model = trim((string)($config['polza_video_model'] ?? 'bytedance/seedance-2-mini')) ?: 'bytedance/seedance-2-mini';
+            $payload = [
+                'model'    => $model,
+                'prompt'   => $prompt,
+                'size'     => '1080x1920',
+                'provider' => ['only' => ['mie']]
+            ];
+        } else {
+            if ($altModel) {
+                $model = trim((string)($config['polza_image_alt_model'] ?? 'bytedance/seedream-4')) ?: 'bytedance/seedream-4';
+                $payload = [
+                    'model'    => $model,
+                    'prompt'   => $prompt,
+                    'size'     => '1080x1920',
+                    'provider' => ['only' => ['mie']]
+                ];
+            } else {
+                $model = trim((string)($config['polza_image_model'] ?? 'google/gemini-nano-banana-2.1')) ?: 'google/gemini-nano-banana-2.1';
+                $payload = [
+                    'model'    => $model,
+                    'prompt'   => $prompt,
+                    'size'     => '1080x1920',
+                    'provider' => [
+                        'order'           => ['mie', 'img-a', 'bananalab'],
+                        'allow_fallbacks' => false
+                    ]
+                ];
+            }
+        }
+
+        $ch = curl_init('https://polza.ai/api/v1/images/generations');
+        curl_setopt_array($ch, [
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => json_encode($payload, JSON_UNESCAPED_UNICODE),
+            CURLOPT_HTTPHEADER     => [
+                'Authorization: Bearer ' . $polzaKey,
+                'Content-Type: application/json'
+            ],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 60,
+            CURLOPT_SSL_VERIFYPEER => false
+        ]);
+        $responseRaw = curl_exec($ch);
+        $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        $respData = json_decode((string)$responseRaw, true);
+        $mediaUrl = null;
+        if ($httpCode === 200 && is_array($respData) && !empty($respData['data'][0])) {
+            $first = $respData['data'][0];
+            $ext = ($mediaType === 'video') ? 'mp4' : 'webp';
+            $uploadsDir = dirname(__DIR__, 2) . '/core-data/uploads';
+            if (!is_dir($uploadsDir)) {
+                mkdir($uploadsDir, 0755, true);
+            }
+            $fileName = "scene_{$contentId}_{$sceneNum}_" . time() . ".{$ext}";
+            $filePath = $uploadsDir . '/' . $fileName;
+
+            if (!empty($first['b64_json'])) {
+                file_put_contents($filePath, base64_decode($first['b64_json']));
+                $mediaUrl = '../core-data/uploads/' . $fileName;
+            } elseif (!empty($first['url'])) {
+                $remoteMedia = @file_get_contents($first['url']);
+                if ($remoteMedia !== false && strlen($remoteMedia) > 500) {
+                    file_put_contents($filePath, $remoteMedia);
+                    $mediaUrl = '../core-data/uploads/' . $fileName;
+                } else {
+                    $mediaUrl = $first['url'];
+                }
+            }
+        }
+
+        if ($mediaUrl !== null && $contentId > 0) {
+            $stmtSb = $pdo->prepare("SELECT storyboard_json FROM content_items WHERE id = :id");
+            $stmtSb->execute([':id' => $contentId]);
+            $sbRaw = $stmtSb->fetchColumn();
+            if ($sbRaw) {
+                $sb = json_decode((string)$sbRaw, true);
+                if (isset($sb['scenes']) && is_array($sb['scenes'])) {
+                    foreach ($sb['scenes'] as &$sc) {
+                        if ((int)($sc['scene_num'] ?? 0) === $sceneNum) {
+                            $sc['media_url'] = $mediaUrl;
+                            $sc['media_type'] = $mediaType;
+                            break;
+                        }
+                    }
+                    unset($sc);
+                    $pdo->prepare("UPDATE content_items SET storyboard_json = :sb WHERE id = :id")
+                        ->execute([':sb' => json_encode($sb, JSON_UNESCAPED_UNICODE), ':id' => $contentId]);
+                }
+            }
+        }
+
+        if ($mediaUrl !== null) {
+            echo json_encode([
+                'status'    => 'success',
+                'scene_num' => $sceneNum,
+                'media_url' => $mediaUrl,
+                'model'     => $model,
+                'message'   => 'B-roll медиа успешно сгенерировано'
+            ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+            exit;
+        }
+
+        http_response_code(502);
+        echo json_encode([
+            'status'  => 'error',
+            'message' => 'Не удалось получить медиа от Polza.ai (HTTP ' . $httpCode . ')',
+            'details' => $respData
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    // -------------------------------------------------------------------------
+    // 4.8. AI-ЧАТ ДОРАБОТКИ РОЛИКА (action=chat_refine)
+    // -------------------------------------------------------------------------
+    if ($action === 'chat_refine') {
+        $contentId = (int)($input['content_id'] ?? 0);
+        $message = trim((string)($input['message'] ?? ''));
+
+        if ($contentId <= 0 || $message === '') {
+            http_response_code(400);
+            echo json_encode(['status' => 'error', 'message' => 'Не указан content_id или пустое сообщение'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $stmtD = $pdo->prepare("SELECT * FROM content_items WHERE id = :id");
+        $stmtD->execute([':id' => $contentId]);
+        $draft = $stmtD->fetch(PDO::FETCH_ASSOC);
+        if (!$draft) {
+            http_response_code(404);
+            echo json_encode(['status' => 'error', 'message' => 'Черновик не найден'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $storyboard = !empty($draft['storyboard_json']) ? json_decode((string)$draft['storyboard_json'], true) : [];
+        $chatHistory = !empty($draft['chat_history']) ? json_decode((string)$draft['chat_history'], true) : [];
+
+        $configFile = dirname(__DIR__, 2) . '/core-data/config.php';
+        $config = file_exists($configFile) ? require $configFile : [];
+        $aiRouter = new AIRouter($config);
+        $aiRouter->setPDO($pdo);
+
+        $sysPrompt = "Ты - Senior моушн-дизайнер и редактор AntiDesigner. Пользователь дает правку к вертикальному видео (Reels / Shorts). "
+            . "Твоя задача: применить правку и вернуть СТРОГО JSON: {\"reply\": \"что изменено\", \"voice_script\": \"...\", \"motion_html\": \"... (если менялся)\"}. Без длинных тире (-).";
+
+        $userPrompt = "ТЕКУЩИЙ СЦЕНАРИЙ И ОЗВУЧКА:\n" . ($storyboard['voice_script'] ?? $draft['content_markdown']) . "\n\n"
+            . "ПРАВКА ПОЛЬЗОВАТЕЛЯ:\n{$message}\n\n"
+            . "Примени изменения и верни СТРОГО JSON.";
+
+        $aiRes = $aiRouter->execute(AIRouter::TASK_REELS, $sysPrompt, $userPrompt);
+        $cleanJson = preg_replace('/^```(?:json)?\s*/i', '', trim((string)$aiRes));
+        $cleanJson = preg_replace('/\s*```$/i', '', $cleanJson);
+        $resData = json_decode($cleanJson, true);
+
+        $reply = is_array($resData) && !empty($resData['reply']) ? (string)$resData['reply'] : 'Правки успешно учтены и сохранены в драфт.';
+        $newVoiceScript = is_array($resData) && !empty($resData['voice_script']) ? trim((string)$resData['voice_script']) : null;
+        $newMotionHtml = is_array($resData) && !empty($resData['motion_html']) ? trim((string)$resData['motion_html']) : null;
+
+        if ($newVoiceScript !== null) {
+            $storyboard['voice_script'] = $newVoiceScript;
+        }
+        if ($newMotionHtml !== null && stripos($newMotionHtml, 'reel-canvas') !== false) {
+            $draft['motion_html'] = $newMotionHtml;
+            $storyboard['motion_html'] = $newMotionHtml;
+        }
+
+        $chatHistory[] = ['role' => 'user', 'text' => $message, 'time' => date('H:i')];
+        $chatHistory[] = ['role' => 'assistant', 'text' => $reply, 'time' => date('H:i')];
+
+        $stmtUpd = $pdo->prepare("UPDATE content_items SET storyboard_json = :sb, motion_html = :mh, chat_history = :ch WHERE id = :id");
+        $stmtUpd->execute([
+            ':sb' => json_encode($storyboard, JSON_UNESCAPED_UNICODE),
+            ':mh' => $draft['motion_html'],
+            ':ch' => json_encode($chatHistory, JSON_UNESCAPED_UNICODE),
+            ':id' => $contentId
+        ]);
+
+        $draft['storyboard'] = $storyboard;
+        $draft['chat_history_list'] = $chatHistory;
+
+        echo json_encode([
+            'status'     => 'success',
+            'reply'      => $reply,
+            'draft'      => $draft,
+            'storyboard' => $storyboard
+        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        exit;
+    }
+
+    // -------------------------------------------------------------------------
+    // 4.9. ОТПРАВКА ЧЕРНОВИКА РОЛИКА В TELEGRAM-БОТ (action=send_to_telegram_bot)
+    // -------------------------------------------------------------------------
+    if ($action === 'send_to_telegram_bot') {
+        $contentId = (int)($input['content_id'] ?? 0);
+        if ($contentId <= 0) {
+            http_response_code(400);
+            echo json_encode(['status' => 'error', 'message' => 'Не указан content_id'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $stmtD = $pdo->prepare("SELECT * FROM content_items WHERE id = :id");
+        $stmtD->execute([':id' => $contentId]);
+        $draft = $stmtD->fetch(PDO::FETCH_ASSOC);
+        if (!$draft) {
+            http_response_code(404);
+            echo json_encode(['status' => 'error', 'message' => 'Черновик не найден'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $configFile = dirname(__DIR__, 2) . '/core-data/config.php';
+        $config = file_exists($configFile) ? require $configFile : [];
+        $botToken = trim((string)($config['telegram_bot_token'] ?? ''));
+        $adminId = trim((string)($config['admin_telegram_id'] ?? ''));
+
+        if ($botToken === '' || $adminId === '') {
+            http_response_code(400);
+            echo json_encode(['status' => 'error', 'message' => 'telegram_bot_token или admin_telegram_id не настроены в config.local.php'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $sb = !empty($draft['storyboard_json']) ? json_decode((string)$draft['storyboard_json'], true) : [];
+        $voiceScript = $sb['voice_script'] ?? extractFallbackVoiceScript((string)$draft['content_markdown']);
+        $estSec = $sb['estimated_seconds'] ?? 28;
+
+        $tgText = "🎬 *AntiDesigner Reels Studio // Черновик ролика*\n\n"
+            . "📌 *Тема:* " . ($draft['topic'] ?? 'Без темы') . "\n"
+            . "⏱ *Хронометраж:* до {$estSec} сек\n\n"
+            . "🎙 *Дикторский текст:*\n" . $voiceScript . "\n\n"
+            . "⚡ Открыть и экспортировать ролик можно в админ-панели AntiDesigner Core.";
+
+        // Отправка текстового сообщения
+        $sendUrl = "https://api.telegram.org/bot{$botToken}/sendMessage";
+        $ch = curl_init($sendUrl);
+        curl_setopt_array($ch, [
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => json_encode([
+                'chat_id'    => $adminId,
+                'text'       => $tgText,
+                'parse_mode' => 'Markdown'
+            ]),
+            CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 15,
+            CURLOPT_SSL_VERIFYPEER => false
+        ]);
+        curl_exec($ch);
+        curl_close($ch);
+
+        // Если есть локальный аудиофайл, отправляем его через sendAudio
+        if (!empty($draft['audio_url'])) {
+            $localAudioPath = dirname(__DIR__, 2) . '/' . ltrim(str_replace('../', '', $draft['audio_url']), '/');
+            if (file_exists($localAudioPath)) {
+                $chAudio = curl_init("https://api.telegram.org/bot{$botToken}/sendAudio");
+                $cfile = new CURLFile($localAudioPath, 'audio/mpeg', basename($localAudioPath));
+                curl_setopt_array($chAudio, [
+                    CURLOPT_POST           => true,
+                    CURLOPT_POSTFIELDS     => [
+                        'chat_id' => $adminId,
+                        'audio'   => $cfile,
+                        'caption' => '🎙 Озвучка ролика: ' . ($draft['topic'] ?? '')
+                    ],
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_TIMEOUT        => 30,
+                    CURLOPT_SSL_VERIFYPEER => false
+                ]);
+                curl_exec($chAudio);
+                curl_close($chAudio);
+            }
+        }
+
+        echo json_encode([
+            'status'  => 'success',
+            'message' => 'Черновик ролика успешно отправлен в Telegram администратору'
+        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
         exit;
     }
 

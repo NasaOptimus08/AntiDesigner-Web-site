@@ -79,6 +79,19 @@ function getDatabaseConnection(): PDO
                 $pdo->exec("ALTER TABLE content_items ADD COLUMN {$colName} {$colDef}");
             }
         }
+
+        // Автомиграция скилла voiceover_director в SQLite
+        $checkVo = (int)$pdo->query("SELECT COUNT(*) FROM skills WHERE code = 'voiceover_director'")->fetchColumn();
+        if ($checkVo === 0) {
+            $stmtVo = $pdo->prepare("INSERT INTO skills (code, title, category, system_prompt, tone_of_voice) VALUES (:code, :title, :category, :prompt, :tov)");
+            $stmtVo->execute([
+                ':code'     => 'voiceover_director',
+                ':title'    => 'Режиссер закадрового голоса (Voiceover)',
+                ':category' => 'instagram',
+                ':prompt'   => 'Ты - звукорежиссер коротких видео. На вход ты получаешь готовый сценарий ролика (60-90 слов) и тайминги 5-6 сцен анимации. Твоя задача: 1) Адаптировать текст озвучки под точный тайминг до 30 секунд с расстановкой естественных пауз под смену сцен; 2) Написать точный Voice Direction Prompt (тембр, скорость речи, эмоциональные акценты на ключевых цифрах и словах); 3) Вернуть строго JSON: {"voice_script": "чистый текст для TTS", "voice_prompt": "инструкция подачи и тембра", "estimated_seconds": 28}. Запрещены длинные тире ("-") и фразы от лица агентства ("мы").',
+                ':tov'      => 'Уверенный, живой, разговорный тембр Senior-разработчика (Евгений Антипин). Без дикторского пафоса, с четкими паузами под монтаж.'
+            ]);
+        }
     } catch (Throwable $e) {
         // Фоллбэк логирования миграций без блокировки приложения
     }

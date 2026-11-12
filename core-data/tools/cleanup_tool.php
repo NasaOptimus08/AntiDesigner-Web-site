@@ -61,16 +61,18 @@ if (!function_exists('cleanupPublishedDraftGarbage')) {
                 $mediaJson = trim((string)($item['media_files'] ?? ''));
                 if ($mediaJson !== '') {
                     $mediaList = json_decode($mediaJson, true);
-                    if (is_array($mediaList)) {
-                        foreach ($mediaList as $mf) {
-                            $fPath = is_string($mf) ? $mf : (string)($mf['path'] ?? $mf['url'] ?? '');
-                            $fName = basename($fPath);
-                            $diskFile = $uploadsDir . '/' . $fName;
-                            if (file_exists($diskFile) && is_file($diskFile)) {
-                                $cleanedBytes += filesize($diskFile);
-                                @unlink($diskFile);
-                                $cleanedFilesCount++;
-                            }
+                    if (!is_array($mediaList)) {
+                        $mediaList = [$mediaJson];
+                    }
+                    foreach ($mediaList as $mf) {
+                        $fPath = is_string($mf) ? $mf : (string)($mf['path'] ?? $mf['url'] ?? '');
+                        if ($fPath === '') continue;
+                        $fName = basename($fPath);
+                        $diskFile = $uploadsDir . '/' . $fName;
+                        if (file_exists($diskFile) && is_file($diskFile)) {
+                            $cleanedBytes += filesize($diskFile);
+                            @unlink($diskFile);
+                            $cleanedFilesCount++;
                         }
                     }
                 }
@@ -80,6 +82,7 @@ if (!function_exists('cleanupPublishedDraftGarbage')) {
                     UPDATE content_items 
                     SET storyboard_json = NULL, 
                         media_files = NULL, 
+                        audio_url = NULL,
                         chat_history = NULL, 
                         motion_html = NULL 
                     WHERE id = :id
@@ -104,3 +107,4 @@ if (!function_exists('cleanupPublishedDraftGarbage')) {
         ];
     }
 }
+

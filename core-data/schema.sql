@@ -45,16 +45,36 @@ CREATE TABLE IF NOT EXISTS trends (
 -- 5. Контент-фабрика и Контент-план (Омничеканальные материалы)
 CREATE TABLE IF NOT EXISTS content_items (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    plan_id INTEGER DEFAULT NULL,
     topic TEXT NOT NULL,
     status TEXT DEFAULT 'planned',
     scheduled_for DATE,
     format TEXT NOT NULL,
     content_markdown TEXT,
+    storyboard_json TEXT DEFAULT NULL,
+    media_files TEXT DEFAULT NULL,
+    chat_history TEXT DEFAULT NULL,
+    audio_url TEXT DEFAULT NULL,
+    motion_html TEXT DEFAULT NULL,
     views_count INTEGER DEFAULT 0,
     likes_count INTEGER DEFAULT 0,
     published_url TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+-- 5.1. Модульные под-промпты для скиллов (шаги цепочки, стили анимации, правила)
+CREATE TABLE IF NOT EXISTS skill_prompts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    skill_code TEXT NOT NULL,
+    title TEXT NOT NULL,
+    prompt_type TEXT DEFAULT 'step',
+    step_order INTEGER DEFAULT 1,
+    content_markdown TEXT NOT NULL,
+    is_active INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_skill_prompts_code ON skill_prompts(skill_code);
+CREATE INDEX IF NOT EXISTS idx_skill_prompts_active ON skill_prompts(is_active);
 
 -- 6. CRM и Воронка Лидов (Атрибуция, статусы, тарифы, контакты)
 CREATE TABLE IF NOT EXISTS leads (

@@ -1241,35 +1241,13 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    const isVideoFormat = ['reels_hook', 'reels', 'ig_carousel'].includes(currentItem.format);
+    const isVideoFormat = ['reels_hook', 'reels', 'ig_carousel', 'instagram'].includes(currentItem.format);
 
     if (isVideoFormat) {
       if (factoryTextEditorWrapper) factoryTextEditorWrapper.style.display = 'none';
       if (factoryDraftStudioBox) factoryDraftStudioBox.style.display = 'block';
 
-      if (factoryVideoScriptTextarea) {
-        factoryVideoScriptTextarea.value = currentItem.content || '';
-      }
-      if (voiceoverScriptTextarea && (!voiceoverScriptTextarea.value || voiceoverScriptTextarea.value === '')) {
-        voiceoverScriptTextarea.value = currentItem.content || '';
-      }
-      if (motionSourceCodeTextarea) {
-        motionSourceCodeTextarea.value = currentItem.motion_html || '';
-      }
-      if (motionPreviewIframe) {
-        motionPreviewIframe.srcdoc = currentItem.motion_html || '';
-      }
-
-      if (currentItem.audio_url) {
-        if (draftAudioPlayer) draftAudioPlayer.src = currentItem.audio_url;
-        if (draftAudioPlayerCard) draftAudioPlayerCard.style.display = 'flex';
-        if (audioFileNameBadge) audioFileNameBadge.textContent = currentItem.audio_url.split('/').pop();
-      } else {
-        if (draftAudioPlayerCard) draftAudioPlayerCard.style.display = 'none';
-        if (draftAudioPlayer) draftAudioPlayer.removeAttribute('src');
-      }
-
-      updateVideoCharCounter();
+      renderOneWindowReelsStudio(currentItem);
     } else {
       if (factoryDraftStudioBox) factoryDraftStudioBox.style.display = 'none';
       if (factoryTextEditorWrapper) factoryTextEditorWrapper.style.display = 'block';
@@ -1427,175 +1405,536 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ---------------------------------------------------------------------------
-  // 7.1. КОДОВАЯ MOTION-АНИМАЦИЯ (HTML5/CANVAS 9:16)
+  // 7.1. ONE-WINDOW REELS STUDIO (ЛОГИКА 1-ОКОННОЙ СТУДИИ 9:16)
   // ---------------------------------------------------------------------------
-  if (btnGenerateMotionHtml) {
-    btnGenerateMotionHtml.addEventListener('click', async () => {
+  function renderOneWindowReelsStudio(item) {
+    if (!item) return;
+
+    const topicBadge = document.getElementById('reelsStudioTopicBadge');
+    if (topicBadge) topicBadge.textContent = item.topic || 'Без темы';
+
+    let storyboard = item.storyboard;
+    if (!storyboard && item.storyboard_json) {
+      try {
+        storyboard = JSON.parse(item.storyboard_json);
+        item.storyboard = storyboard;
+      } catch (e) {}
+    }
+
+    const estSec = (storyboard && storyboard.estimated_seconds) || 28;
+    const timeBadge = document.getElementById('reelsStudioTimeBadge');
+    if (timeBadge) timeBadge.textContent = `⏱ ${estSec} сек`;
+
+    const iframe = document.getElementById('reelsIframePreview');
+    if (iframe) {
+      iframe.srcdoc = item.motion_html || (storyboard && storyboard.motion_html) || '';
+    }
+
+    const audioEl = document.getElementById('reelsAudioPlayer');
+    const audioStatus = document.getElementById('reelsAudioStatus');
+    const audioUrl = item.audio_url || (storyboard && storyboard.audio_url);
+    if (audioEl) {
+      if (audioUrl) {
+        audioEl.src = audioUrl;
+        if (audioStatus) audioStatus.textContent = `✓ Озвучка: ${audioUrl.split('/').pop()}`;
+      } else {
+        audioEl.removeAttribute('src');
+        if (audioStatus) audioStatus.textContent = 'Озвучка еще не сгенерирована (нажмите ⚡ Сгенерировать)';
+      }
+    }
+
+    const voTextarea = document.getElementById('reelsVoiceScriptTextarea');
+    const voPromptInput = document.getElementById('reelsVoicePromptInput');
+    const voWordCount = document.getElementById('reelsVoWordCount');
+
+    const voiceScript = (storyboard && storyboard.voice_script) || item.content || '';
+    if (voTextarea) voTextarea.value = voiceScript;
+
+    const words = voiceScript.trim() ? voiceScript.trim().split(/\s+/).length : 0;
+    if (voWordCount) voWordCount.textContent = `~${words} слов (${estSec}с)`;
+
+    if (voPromptInput) {
+      voPromptInput.value = (storyboard && storyboard.voice_prompt) || 'Уверенный разговорный тембр Senior-разработчика (Евгений Антипин), акцент на скорости 0.35с';
+    }
+
+    const scenesGrid = document.getElementById('reelsScenesGrid');
+    const sceneCountBadge = document.getElementById('reelsSceneCountBadge');
+    const scenes = (storyboard && storyboard.scenes) || [];
+
+    if (sceneCountBadge) sceneCountBadge.textContent = `${scenes.length || 6} сцен`;
+
+    if (scenesGrid) {
+      scenesGrid.innerHTML = '';
+      if (scenes.length === 0) {
+        scenesGrid.innerHTML = '<div style="color: #8b949e; font-size: 12px; padding: 10px;">Раскадровка загружается...</div>';
+      } else {
+        scenes.forEach((sc, idx) => {
+          const card = document.createElement('div');
+          card.className = 'reels-scene-card';
+          const sceneNum = sc.scene_num || (idx + 1);
+          const timeRange = sc.time_range || `${idx * 5}-${(idx + 1) * 5} сек`;
+          const title = sc.title || `Сцена ${sceneNum}`;
+          const subtitles = sc.subtitles || sc.action || '';
+          const retention = sc.retention || 'Pattern Interrupt';
+          const mediaUrl = sc.media_url || '';
+
+          card.innerHTML = `
+            <div class="reels-scene-header">
+              <span class="scene-num-badge">#${sceneNum} ${escapeHtml(title)}</span>
+              <span class="scene-time-pill">${escapeHtml(timeRange)}</span>
+              <span class="scene-retention-pill">⚡ ${escapeHtml(retention)}</span>
+            </div>
+            <div class="scene-subtitles">"${escapeHtml(subtitles)}"</div>
+            <div class="scene-action">${escapeHtml(sc.action || '')}</div>
+            ${mediaUrl ? `<div style="font-size: 10.5px; color: #00ff88; margin-top: 4px;">✓ B-roll: <a href="${escapeHtml(mediaUrl)}" target="_blank" style="color:#00ff88;">просмотр</a></div>` : ''}
+            <div class="scene-actions-row">
+              <button type="button" class="btn-scene-pill btn-copy-image-prompt" data-prompt="${escapeHtml(sc.image_prompt || '')}" title="Скопировать Image Prompt (9:16)">
+                📷 Image Prompt
+              </button>
+              <button type="button" class="btn-scene-pill btn-copy-video-prompt" data-prompt="${escapeHtml(sc.video_prompt || '')}" title="Скопировать Video Prompt (9:16)">
+                🎥 Video Prompt
+              </button>
+              <button type="button" class="btn-scene-pill btn-generate-broll" data-scene="${sceneNum}" data-prompt="${escapeHtml(sc.image_prompt || sc.action || '')}" title="Сгенерировать B-roll через Polza.ai">
+                🎨 B-roll (Polza)
+              </button>
+            </div>
+          `;
+          scenesGrid.appendChild(card);
+        });
+      }
+    }
+
+    const chatContainer = document.getElementById('reelsChatHistory');
+    if (chatContainer) {
+      chatContainer.innerHTML = '';
+      const history = (item.chat_history_list) || (item.chat_history ? JSON.parse(item.chat_history) : []);
+      if (!history || history.length === 0) {
+        chatContainer.innerHTML = `
+          <div class="chat-msg chat-assistant">
+            <span class="msg-author">AI Director:</span>
+            <span class="msg-body">Ролик готов по 6 фазам удержания. Нажмите любую быструю правку или напишите, что изменить.</span>
+          </div>
+        `;
+      } else {
+        history.forEach(msg => {
+          const div = document.createElement('div');
+          div.className = `chat-msg ${msg.role === 'user' ? 'chat-user' : 'chat-assistant'}`;
+          div.innerHTML = `
+            <span class="msg-author">${msg.role === 'user' ? 'Вы:' : 'AI Director:'}</span>
+            <span class="msg-body">${escapeHtml(msg.text || '')}</span>
+          `;
+          chatContainer.appendChild(div);
+        });
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }
+    }
+  }
+
+  // Переключение карточек-аккордеонов
+  document.querySelectorAll('.reels-accordion-card .accordion-header').forEach(header => {
+    header.addEventListener('click', () => {
+      const card = header.closest('.reels-accordion-card');
+      if (card) card.classList.toggle('open');
+    });
+  });
+
+  // Синхронный плеер
+  const btnReelsSyncPlay = document.getElementById('btnReelsSyncPlay');
+  if (btnReelsSyncPlay) {
+    btnReelsSyncPlay.addEventListener('click', () => {
+      const iframe = document.getElementById('reelsIframePreview');
+      if (iframe && iframe.contentWindow && iframe.contentWindow.startReelAnimation) {
+        iframe.contentWindow.startReelAnimation();
+      }
+      const audioEl = document.getElementById('reelsAudioPlayer');
+      if (audioEl && audioEl.src && !audioEl.src.endsWith('#')) {
+        audioEl.currentTime = 0;
+        audioEl.play().catch(e => console.warn('Audio play:', e));
+      }
+      showToast('Синхронный запуск анимации и озвучки', 'info', 1500);
+    });
+  }
+
+  // Генерация озвучки через Polza / Gemini TTS
+  const btnReelsGenerateAudio = document.getElementById('btnReelsGenerateAudio');
+  if (btnReelsGenerateAudio) {
+    btnReelsGenerateAudio.addEventListener('click', async () => {
       const currentItem = generatedBatch[activeGeneratedIndex];
-      const scriptText = factoryVideoScriptTextarea ? factoryVideoScriptTextarea.value.trim() : '';
-      if (!scriptText) {
-        showToast('Сначала составьте или сгенерируйте сценарий видео', 'error');
+      const voTextarea = document.getElementById('reelsVoiceScriptTextarea');
+      const text = voTextarea ? voTextarea.value.trim() : '';
+
+      if (!text) {
+        showToast('Текст диктора пуст', 'error');
         return;
       }
 
-      btnGenerateMotionHtml.disabled = true;
-      btnGenerateMotionHtml.innerHTML = '<span class="btn-icon">↺</span> Генерация Motion (MODEL_HEAVY)...';
+      btnReelsGenerateAudio.disabled = true;
+      btnReelsGenerateAudio.textContent = '⏳ Синтез...';
+      const statusEl = document.getElementById('reelsAudioStatus');
+      if (statusEl) statusEl.textContent = 'Генерация TTS через Polza.ai...';
 
       try {
-        const styleCode = motionStyleSelect ? motionStyleSelect.value : 'dark_tech';
-        const res = await fetch('api/content.php?action=generate_motion', {
+        const res = await fetch('api/content.php?action=generate_audio', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             content_id: currentItem ? currentItem.id : 0,
-            script_text: scriptText,
-            style_code: styleCode,
-            topic: (currentItem && currentItem.topic) || (factoryTopicInputEl ? factoryTopicInputEl.value : '')
+            text: text
           })
         });
-
         const data = await res.json();
         if (!res.ok || data.status !== 'success') {
-          throw new Error(data.message || 'Ошибка генерации анимации');
+          throw new Error(data.message || 'Ошибка генерации озвучки');
         }
 
-        const html = data.motion_html || '';
-        if (motionSourceCodeTextarea) motionSourceCodeTextarea.value = html;
-        if (motionPreviewIframe) motionPreviewIframe.srcdoc = html;
-        if (currentItem) currentItem.motion_html = html;
+        const audioUrl = data.audio_url;
+        const audioEl = document.getElementById('reelsAudioPlayer');
+        if (audioEl) audioEl.src = audioUrl;
+        if (currentItem) currentItem.audio_url = audioUrl;
+        if (statusEl) statusEl.textContent = `✓ Готово: ${audioUrl.split('/').pop()}`;
 
-        showToast('Motion-анимация сгенерирована!', 'success');
+        showToast('Озвучка успешно сгенерирована!', 'success');
       } catch (err) {
-        showToast(`Ошибка генерации: ${err.message}`, 'error');
+        if (statusEl) statusEl.textContent = 'Ошибка TTS';
+        showToast(`Ошибка озвучки: ${err.message}`, 'error');
       } finally {
-        btnGenerateMotionHtml.disabled = false;
-        btnGenerateMotionHtml.innerHTML = '<span>⚡</span> Сгенерировать Motion-анимацию (MODEL_HEAVY)';
+        btnReelsGenerateAudio.disabled = false;
+        btnReelsGenerateAudio.textContent = '⚡ Сгенерировать';
       }
     });
   }
 
-  if (btnReloadMotion) {
-    btnReloadMotion.addEventListener('click', () => {
-      if (!motionPreviewIframe || !motionSourceCodeTextarea) return;
-      motionPreviewIframe.srcdoc = motionSourceCodeTextarea.value;
-      showToast('Плеер перезапущен', 'info', 1500);
-    });
-  }
+  // Запись и экспорт видео в браузере (0% CPU хостинга)
+  async function recordReelsVideo(includeAudio = true) {
+    const currentItem = generatedBatch[activeGeneratedIndex];
+    const iframe = document.getElementById('reelsIframePreview');
+    if (!iframe || !iframe.contentDocument) {
+      showToast('Превью ролика еще не готово', 'error');
+      return;
+    }
+    const canvas = iframe.contentDocument.getElementById('reel-canvas');
+    if (!canvas) {
+      showToast('Canvas #reel-canvas не найден внутри превью', 'error');
+      return;
+    }
 
-  if (motionSourceCodeTextarea) {
-    motionSourceCodeTextarea.addEventListener('input', () => {
-      if (motionPreviewIframe) {
-        motionPreviewIframe.srcdoc = motionSourceCodeTextarea.value;
+    const durationMs = (iframe.contentWindow && iframe.contentWindow.REEL_DURATION_MS) || 28000;
+    const canvasStream = canvas.captureStream(30);
+    const streamTracks = [...canvasStream.getVideoTracks()];
+    const audioEl = document.getElementById('reelsAudioPlayer');
+
+    if (includeAudio && audioEl && audioEl.src && !audioEl.src.endsWith('#')) {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const source = audioCtx.createMediaElementSource(audioEl);
+        const dest = audioCtx.createMediaStreamDestination();
+        source.connect(dest);
+        source.connect(audioCtx.destination);
+        const aTracks = dest.stream.getAudioTracks();
+        if (aTracks && aTracks.length > 0) {
+          streamTracks.push(aTracks[0]);
+        }
+      } catch (e) {
+        console.warn('AudioContext mixing:', e);
       }
-    });
+    }
+
+    const combinedStream = new MediaStream(streamTracks);
+    let mimeType = 'video/webm;codecs=vp9';
+    if (!window.MediaRecorder || !MediaRecorder.isTypeSupported(mimeType)) {
+      mimeType = (window.MediaRecorder && MediaRecorder.isTypeSupported('video/webm')) ? 'video/webm' : 'video/mp4';
+    }
+
+    const recordBtn = includeAudio ? document.getElementById('btnRecordVideoAudio') : document.getElementById('btnRecordVideoOnly');
+    const origHtml = recordBtn ? recordBtn.innerHTML : '';
+    if (recordBtn) {
+      recordBtn.disabled = true;
+      recordBtn.innerHTML = '<span>🔴</span> Запись (' + Math.round(durationMs / 1000) + 'с)...';
+    }
+
+    try {
+      const recorder = new MediaRecorder(combinedStream, { mimeType: mimeType });
+      const chunks = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) chunks.push(e.data);
+      };
+
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+        a.download = `reel_${(currentItem && currentItem.id) || 'draft'}.${ext}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        if (recordBtn) {
+          recordBtn.disabled = false;
+          recordBtn.innerHTML = origHtml;
+        }
+        showToast('Видео успешно экспортировано!', 'success');
+      };
+
+      recorder.start();
+      if (iframe.contentWindow && iframe.contentWindow.startReelAnimation) {
+        iframe.contentWindow.startReelAnimation();
+      }
+      if (includeAudio && audioEl && audioEl.src && !audioEl.src.endsWith('#')) {
+        audioEl.currentTime = 0;
+        audioEl.play().catch(e => console.warn(e));
+      }
+
+      setTimeout(() => {
+        if (recorder.state === 'recording') {
+          recorder.stop();
+        }
+      }, durationMs + 400);
+    } catch (recErr) {
+      if (recordBtn) {
+        recordBtn.disabled = false;
+        recordBtn.innerHTML = origHtml;
+      }
+      showToast(`Ошибка экспорта: ${recErr.message}`, 'error');
+    }
   }
 
-  if (btnDownloadMotionHtml) {
-    btnDownloadMotionHtml.addEventListener('click', () => {
-      if (!motionSourceCodeTextarea || !motionSourceCodeTextarea.value.trim()) {
-        showToast('Нет кода анимации для скачивания', 'info');
+  const btnRecordVideoAudio = document.getElementById('btnRecordVideoAudio');
+  if (btnRecordVideoAudio) {
+    btnRecordVideoAudio.addEventListener('click', () => recordReelsVideo(true));
+  }
+
+  const btnRecordVideoOnly = document.getElementById('btnRecordVideoOnly');
+  if (btnRecordVideoOnly) {
+    btnRecordVideoOnly.addEventListener('click', () => recordReelsVideo(false));
+  }
+
+  const btnDownloadAudioOnly = document.getElementById('btnDownloadAudioOnly');
+  if (btnDownloadAudioOnly) {
+    btnDownloadAudioOnly.addEventListener('click', () => {
+      const audioEl = document.getElementById('reelsAudioPlayer');
+      const currentItem = generatedBatch[activeGeneratedIndex];
+      if (!audioEl || !audioEl.src || audioEl.src.endsWith('#')) {
+        showToast('Сначала сгенерируйте озвучку', 'info');
         return;
       }
-      const currentItem = generatedBatch[activeGeneratedIndex];
-      const blob = new Blob([motionSourceCodeTextarea.value], { type: 'text/html;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
-      a.download = `motion_reel_${(currentItem && currentItem.id) || 'draft'}.html`;
+      a.href = audioEl.src;
+      a.download = `voiceover_${(currentItem && currentItem.id) || 'draft'}.mp3`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      showToast('HTML5 файл скачан!', 'success');
+      showToast('MP3 скачивается', 'success');
     });
   }
 
-  // ---------------------------------------------------------------------------
-  // 7.2. ЗАКАДРОВЫЙ ГОЛОС (POLZA.AI / GEMINI TTS) И ПРИКРЕПЛЕНИЕ АУДИО
-  // ---------------------------------------------------------------------------
-  if (btnGeneratePolzaTts) {
-    btnGeneratePolzaTts.addEventListener('click', async () => {
-      const currentItem = generatedBatch[activeGeneratedIndex];
-      const textToVoice = (voiceoverScriptTextarea && voiceoverScriptTextarea.value.trim()) ||
-                          (factoryVideoScriptTextarea && factoryVideoScriptTextarea.value.trim()) || '';
-
-      if (!textToVoice) {
-        showToast('Укажите текст для озвучки', 'error');
+  // Клик по кнопкам раскадровки (Копирование промптов и генерация B-roll)
+  const scenesGridEl = document.getElementById('reelsScenesGrid');
+  if (scenesGridEl) {
+    scenesGridEl.addEventListener('click', async (e) => {
+      const copyImgBtn = e.target.closest('.btn-copy-image-prompt');
+      if (copyImgBtn) {
+        const prompt = copyImgBtn.getAttribute('data-prompt') || '';
+        await navigator.clipboard.writeText(prompt);
+        showToast('Image Prompt скопирован!', 'info', 1500);
         return;
       }
 
-      btnGeneratePolzaTts.disabled = true;
-      btnGeneratePolzaTts.innerHTML = '<span class="btn-icon">↺</span> Синтез речи (Polza.ai)...';
-      if (voiceoverStatusHint) voiceoverStatusHint.textContent = 'Синтез аудио через Polza.ai API...';
+      const copyVidBtn = e.target.closest('.btn-copy-video-prompt');
+      if (copyVidBtn) {
+        const prompt = copyVidBtn.getAttribute('data-prompt') || '';
+        await navigator.clipboard.writeText(prompt);
+        showToast('Video Prompt скопирован!', 'info', 1500);
+        return;
+      }
 
-      try {
-        const res = await fetch('api/content.php?action=generate_tts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            content_id: currentItem ? currentItem.id : 0,
-            text: textToVoice
-          })
-        });
+      const brollBtn = e.target.closest('.btn-generate-broll');
+      if (brollBtn) {
+        const currentItem = generatedBatch[activeGeneratedIndex];
+        const sceneNum = parseInt(brollBtn.getAttribute('data-scene') || '1', 10);
+        const prompt = brollBtn.getAttribute('data-prompt') || '';
 
-        const data = await res.json();
-        if (!res.ok || data.status !== 'success') {
-          throw new Error(data.message || 'Ошибка синтеза речи');
+        brollBtn.disabled = true;
+        brollBtn.textContent = '⏳ Генерация...';
+
+        try {
+          const res = await fetch('api/content.php?action=generate_scene_media', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              content_id: currentItem ? currentItem.id : 0,
+              scene_num: sceneNum,
+              prompt: prompt,
+              media_type: 'image'
+            })
+          });
+          const data = await res.json();
+          if (!res.ok || data.status !== 'success') {
+            throw new Error(data.message || 'Ошибка генерации B-roll');
+          }
+          showToast(`B-roll для сцены #${sceneNum} готов!`, 'success');
+          if (currentItem && currentItem.id) {
+            // Перезагружаем драфт для обновления ссылок
+            const dRes = await fetch(`api/content.php?action=get_draft&id=${currentItem.id}`);
+            const dData = await dRes.json();
+            if (dData.draft) {
+              Object.assign(currentItem, dData.draft);
+              renderOneWindowReelsStudio(currentItem);
+            }
+          }
+        } catch (bErr) {
+          showToast(`B-roll ошибка: ${bErr.message}`, 'error');
+        } finally {
+          brollBtn.disabled = false;
+          brollBtn.textContent = '🎨 B-roll (Polza)';
         }
-
-        const audioUrl = data.audio_url;
-        if (draftAudioPlayer) draftAudioPlayer.src = audioUrl;
-        if (draftAudioPlayerCard) draftAudioPlayerCard.style.display = 'flex';
-        if (audioFileNameBadge) audioFileNameBadge.textContent = audioUrl.split('/').pop();
-        if (currentItem) currentItem.audio_url = audioUrl;
-        if (voiceoverStatusHint) voiceoverStatusHint.textContent = '✓ Озвучка готова';
-
-        showToast('Озвучка успешно создана!', 'success');
-      } catch (err) {
-        if (voiceoverStatusHint) voiceoverStatusHint.textContent = 'Ошибка озвучки';
-        showToast(`Ошибка TTS: ${err.message}`, 'error');
-      } finally {
-        btnGeneratePolzaTts.disabled = false;
-        btnGeneratePolzaTts.innerHTML = '<span>🔊</span> Озвучить через API (Polza / Gemini TTS)';
       }
     });
   }
 
-  if (inputCustomAudio) {
-    inputCustomAudio.addEventListener('change', async (e) => {
-      const file = e.target.files && e.target.files[0];
-      if (!file) return;
+  // AI-чат доработки ролика
+  const btnReelsSendChat = document.getElementById('btnReelsSendChat');
+  const reelsChatInput = document.getElementById('reelsChatInput');
 
-      const currentItem = generatedBatch[activeGeneratedIndex];
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('target', 'audio');
-      if (currentItem && currentItem.id) {
-        formData.append('content_id', String(currentItem.id));
+  async function sendReelsChatMessage(msg) {
+    const text = (msg || (reelsChatInput && reelsChatInput.value) || '').trim();
+    if (!text) return;
+    const currentItem = generatedBatch[activeGeneratedIndex];
+    if (!currentItem) return;
+
+    if (reelsChatInput) reelsChatInput.value = '';
+
+    const chatContainer = document.getElementById('reelsChatHistory');
+    if (chatContainer) {
+      const userDiv = document.createElement('div');
+      userDiv.className = 'chat-msg chat-user';
+      userDiv.innerHTML = `<span class="msg-author">Вы:</span><span class="msg-body">${escapeHtml(text)}</span>`;
+      chatContainer.appendChild(userDiv);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    if (btnReelsSendChat) {
+      btnReelsSendChat.disabled = true;
+      btnReelsSendChat.textContent = '⏳';
+    }
+
+    try {
+      const res = await fetch('api/content.php?action=chat_refine', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content_id: currentItem.id,
+          message: text
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || data.status !== 'success') {
+        throw new Error(data.message || 'Ошибка доработки');
       }
 
-      showToast(`Загрузка аудио: ${file.name}...`, 'info');
+      if (data.draft) {
+        Object.assign(currentItem, data.draft);
+      }
+      renderOneWindowReelsStudio(currentItem);
+      showToast('Правки ролика успешно применены!', 'success');
+    } catch (cErr) {
+      showToast(`Ошибка чата: ${cErr.message}`, 'error');
+    } finally {
+      if (btnReelsSendChat) {
+        btnReelsSendChat.disabled = false;
+        btnReelsSendChat.textContent = '➤';
+      }
+    }
+  }
+
+  if (btnReelsSendChat) {
+    btnReelsSendChat.addEventListener('click', () => sendReelsChatMessage());
+  }
+  if (reelsChatInput) {
+    reelsChatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        sendReelsChatMessage();
+      }
+    });
+  }
+
+  // Чипсы быстрых правок
+  document.querySelectorAll('.reels-quick-chips .quick-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const prompt = chip.getAttribute('data-prompt') || chip.textContent;
+      sendReelsChatMessage(prompt);
+    });
+  });
+
+  // Отправка в Telegram-бот админу
+  const btnReelsSendTelegram = document.getElementById('btnReelsSendTelegram');
+  if (btnReelsSendTelegram) {
+    btnReelsSendTelegram.addEventListener('click', async () => {
+      const currentItem = generatedBatch[activeGeneratedIndex];
+      if (!currentItem || !currentItem.id) {
+        showToast('Черновик ролика еще не сохранен', 'error');
+        return;
+      }
+
+      btnReelsSendTelegram.disabled = true;
+      btnReelsSendTelegram.textContent = '⏳ Отправка в Telegram...';
+
       try {
-        const res = await fetch('api/upload.php', {
+        const res = await fetch('api/content.php?action=send_to_telegram_bot', {
           method: 'POST',
-          body: formData
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content_id: currentItem.id })
         });
         const data = await res.json();
         if (!res.ok || data.status !== 'success') {
-          throw new Error(data.message || 'Ошибка загрузки аудио');
+          throw new Error(data.message || 'Ошибка отправки');
         }
-
-        const audioUrl = data.audio_url;
-        if (draftAudioPlayer) draftAudioPlayer.src = audioUrl;
-        if (draftAudioPlayerCard) draftAudioPlayerCard.style.display = 'flex';
-        if (audioFileNameBadge) audioFileNameBadge.textContent = file.name;
-        if (currentItem) currentItem.audio_url = audioUrl;
-
-        showToast('Аудиодорожка прикреплена!', 'success');
-      } catch (err) {
-        showToast(`Ошибка загрузки аудио: ${err.message}`, 'error');
+        showToast('Черновик ролика отправлен в Telegram!', 'success');
+      } catch (tgErr) {
+        showToast(`Ошибка Telegram: ${tgErr.message}`, 'error');
       } finally {
-        inputCustomAudio.value = '';
+        btnReelsSendTelegram.disabled = false;
+        btnReelsSendTelegram.innerHTML = '<span>✈️</span> Отправить ролик в Telegram-бот';
+      }
+    });
+  }
+
+  // Перегенерация ролика заново
+  const btnRegenerateStudioSingle = document.getElementById('btnRegenerateStudioSingle');
+  if (btnRegenerateStudioSingle) {
+    btnRegenerateStudioSingle.addEventListener('click', async () => {
+      const currentItem = generatedBatch[activeGeneratedIndex];
+      if (!currentItem) return;
+
+      btnRegenerateStudioSingle.disabled = true;
+      btnRegenerateStudioSingle.textContent = '⏳ Генерация...';
+
+      try {
+        const res = await fetch('api/content.php?action=generate_single', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content_id: currentItem.id,
+            topic: currentItem.topic,
+            format: currentItem.format || 'reels_hook'
+          })
+        });
+        const data = await res.json();
+        if (!res.ok || data.status !== 'success') {
+          throw new Error(data.message || 'Ошибка генерации');
+        }
+        if (data.draft) {
+          Object.assign(currentItem, data.draft);
+        }
+        renderOneWindowReelsStudio(currentItem);
+        showToast('Ролик перегенерирован заново!', 'success');
+      } catch (gErr) {
+        showToast(`Ошибка: ${gErr.message}`, 'error');
+      } finally {
+        btnRegenerateStudioSingle.disabled = false;
+        btnRegenerateStudioSingle.innerHTML = '<span>🔄</span> Перегенерировать';
       }
     });
   }

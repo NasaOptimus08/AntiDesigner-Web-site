@@ -316,98 +316,152 @@
                     <textarea id="factoryContentTextarea" class="tech-textarea code-font" rows="16" placeholder="Текст сгенерированного материала..."></textarea>
                   </div>
 
-                  <!-- Расширенная Студия Драфта Видео (Reels / Shorts / Carousels) -->
-                  <div id="factoryDraftStudioBox" class="draft-studio-box" style="display: none;">
-                    <div class="draft-studio-nav">
-                      <button type="button" class="draft-studio-tab-btn active" data-draft-tab="storyboard">
-                        <span>🎬</span> Сценарий и Раскадровка (5-6 сцен)
-                      </button>
-                      <button type="button" class="draft-studio-tab-btn" data-draft-tab="motion">
-                        <span>⚡</span> Кодовая Motion-Анимация (HTML5 9:16)
-                      </button>
-                      <button type="button" class="draft-studio-tab-btn" data-draft-tab="voiceover">
-                        <span>🎙</span> Закадровый голос (Voiceover)
-                      </button>
-                    </div>
-
-                    <!-- Вкладка А: Сценарий и Посценовая Раскадровка -->
-                    <div class="draft-tab-pane active" id="draftTabStoryboard">
-                      <textarea id="factoryVideoScriptTextarea" class="tech-textarea code-font" rows="18" placeholder="Посценовая раскадровка и сценарий видео..."></textarea>
-                    </div>
-
-                    <!-- Вкладка Б: Кодовая Motion-Анимация (HTML5/Canvas 9:16) -->
-                    <div class="draft-tab-pane" id="draftTabMotion">
-                      <div class="motion-studio-layout">
-                        <!-- Вертикальный плеер 9:16 -->
-                        <div class="phone-mockup-wrapper">
-                          <div class="phone-screen-frame">
-                            <iframe id="motionPreviewIframe" class="phone-screen-iframe" sandbox="allow-scripts"></iframe>
-                          </div>
-                          <div style="display: flex; gap: 8px; width: 270px;">
-                            <button type="button" id="btnReloadMotion" class="btn-tech-outline" style="flex: 1; font-size: 11px; padding: 4px 8px;">
-                              <span>🔄</span> Рестарт
-                            </button>
-                            <button type="button" id="btnDownloadMotionHtml" class="btn-tech-primary" style="flex: 1.5; font-size: 11px; padding: 4px 8px;">
-                              <span>📥</span> Скачать .html
-                            </button>
-                          </div>
-                        </div>
-
-                        <!-- Настройки и генератор стиля анимации -->
-                        <div class="motion-controls-panel">
-                          <div class="form-group">
-                            <label class="tech-label" for="motionStyleSelect">Визуальный стиль Motion-анимации (.md)</label>
-                            <select id="motionStyleSelect" class="tech-input">
-                              <option value="dark_tech">Dark Tech Minimalist (HTML5/Canvas 9:16)</option>
-                              <option value="swiss_grid">Kinetic Typography & Swiss Grid (HTML5 9:16)</option>
-                              <option value="cyberpunk_hud">Cyberpunk Neon HUD & Scanlines (Canvas 9:16)</option>
-                            </select>
-                            <span class="tech-hint" style="font-size: 11px; margin-top: 4px; display: block;">Стили синхронизируются с разделом ⚙️ Скиллы. Модель сгенерирует самодостаточный ролик на базе сценария.</span>
-                          </div>
-
-                          <button type="button" id="btnGenerateMotionHtml" class="btn-tech-primary" style="padding: 10px 16px;">
-                            <span>⚡</span> Сгенерировать Motion-анимацию (MODEL_HEAVY)
-                          </button>
-
-                          <div class="form-group" style="margin-top: 8px;">
-                            <label class="tech-label">Исходный код анимации HTML5 / Canvas</label>
-                            <textarea id="motionSourceCodeTextarea" class="tech-textarea code-font" rows="8" placeholder="Код <!DOCTYPE html> появится здесь..." style="font-size: 11px;"></textarea>
-                          </div>
-                        </div>
+                  <!-- Расширенная 1-Оконная Студия Драфта Видео (One-Window Reels Studio 9:16) -->
+                  <div id="factoryDraftStudioBox" class="reels-studio-wrapper" style="display: none;">
+                    <div class="reels-studio-header">
+                      <div class="reels-header-left">
+                        <span class="reels-studio-badge">⚡ ONE-WINDOW REELS STUDIO</span>
+                        <span id="reelsStudioTopicBadge" class="reels-topic-pill">Тема ролика</span>
+                      </div>
+                      <div class="reels-header-right">
+                        <span id="reelsStudioTimeBadge" class="reels-duration-badge">⏱ 28 сек</span>
+                        <button type="button" id="btnRegenerateStudioSingle" class="btn-tech-outline" style="padding: 4px 10px; font-size: 11.5px;" title="Перегенерировать ролик заново">
+                          <span>🔄</span> Перегенерировать
+                        </button>
                       </div>
                     </div>
 
-                    <!-- Вкладка В: Закадровый голос и аудио-озвучка -->
-                    <div class="draft-tab-pane" id="draftTabVoiceover">
-                      <div class="voiceover-studio-panel">
-                        <div class="form-group">
-                          <label class="tech-label" for="voiceoverScriptTextarea">Текст для диктора с разметкой пауз и ударений</label>
-                          <textarea id="voiceoverScriptTextarea" class="tech-textarea code-font" rows="6" placeholder="Дикторский текст: [пауза 0.5с] Твой сайт на Тильде ворует клиентов..."></textarea>
+                    <div class="reels-studio-grid">
+                      <!-- ЛЕВАЯ КОЛОНКА: СМАРТФОН 9:16 + ПЛЕЕР + ЭКСПОРТ (0% CPU) -->
+                      <div class="reels-left-column">
+                        <div class="reels-phone-frame-wrapper">
+                          <div class="reels-phone-notch"></div>
+                          <div class="reels-phone-screen">
+                            <iframe id="reelsIframePreview" class="reels-iframe" sandbox="allow-scripts allow-same-origin"></iframe>
+                          </div>
+                          <div class="reels-phone-homebar"></div>
                         </div>
 
-                        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
-                          <button type="button" id="btnGeneratePolzaTts" class="btn-tech-primary">
-                            <span>🔊</span> Озвучить через API (Polza / Gemini TTS)
+                        <!-- Кнопка синхронного воспроизведения -->
+                        <button type="button" id="btnReelsSyncPlay" class="btn-sync-play" title="Запустить синхронно анимацию и озвучку">
+                          <span class="play-icon">▶</span>
+                          <span class="play-label">Смотреть со звуком</span>
+                        </button>
+
+                        <!-- Плеер озвучки -->
+                        <div class="reels-audio-compact-card">
+                          <div class="audio-compact-header">
+                            <div class="audio-title-row">
+                              <span class="audio-icon">🎙</span>
+                              <span class="audio-label">Озвучка (Polza / Gemini TTS)</span>
+                            </div>
+                            <button type="button" id="btnReelsGenerateAudio" class="btn-tech-primary" style="padding: 4px 10px; font-size: 11px;">
+                              <span>⚡</span> Сгенерировать
+                            </button>
+                          </div>
+                          <audio id="reelsAudioPlayer" controls preload="auto" class="reels-audio-element"></audio>
+                          <div id="reelsAudioStatus" class="reels-audio-status">Готово к синхронному воспроизведению</div>
+                        </div>
+
+                        <!-- Блок из 3 кнопок экспорта без нагрузки на сервер -->
+                        <div class="reels-export-group">
+                          <div class="export-group-title">ЭКСПОРТ В БРАУЗЕРЕ (0% CPU ХОСТИНГА):</div>
+                          <button type="button" id="btnRecordVideoAudio" class="btn-export-action btn-export-all" title="Запись canvas + аудио через Web MediaRecorder">
+                            <span class="export-icon">🎬</span>
+                            <span class="export-text">Скачать всё (Ролик + Озвучка)</span>
                           </button>
-                          
-                          <label class="btn-tech-outline upload-btn-label" style="cursor: pointer;">
-                            <span>📎</span> Прикрепить свою аудиодорожку
-                            <input type="file" id="inputCustomAudio" accept="audio/*" style="display: none;">
-                          </label>
-                          
-                          <span id="voiceoverStatusHint" class="action-status-hint"></span>
+                          <div class="export-sub-row">
+                            <button type="button" id="btnRecordVideoOnly" class="btn-export-sub" title="Запись только canvas анимации">
+                              <span>🔇</span> Без озвучки (.webm)
+                            </button>
+                            <button type="button" id="btnDownloadAudioOnly" class="btn-export-sub" title="Скачать MP3 файл озвучки">
+                              <span>🎙</span> Только звук (.mp3)
+                            </button>
+                          </div>
                         </div>
 
-                        <!-- Аудиоплеер драфта -->
-                        <div class="audio-player-card" id="draftAudioPlayerCard" style="display: none;">
-                          <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="font-size: 18px;">🎵</span>
-                            <div>
-                              <div style="font-size: 12px; font-weight: 700; color: #e6edf3;">Аудиодорожка ролика</div>
-                              <div id="audioFileNameBadge" style="font-size: 10.5px; color: #7c8896;">tts_preview.mp3</div>
+                        <!-- Отправка в Telegram -->
+                        <button type="button" id="btnReelsSendTelegram" class="btn-tech-outline" style="width: 100%; margin-top: 6px; font-size: 12px; padding: 8px;">
+                          <span>✈️</span> Отправить ролик в Telegram-бот
+                        </button>
+                      </div>
+
+                      <!-- ПРАВАЯ КОЛОНКА: 3 КАРТОЧКИ-АККОРДЕОНА -->
+                      <div class="reels-right-column">
+                        <!-- КАРТОЧКА 1: ДИКТОРСКИЙ ТЕКСТ И VOICE DIRECTION -->
+                        <div class="reels-accordion-card open" id="accordionCardVoiceover">
+                          <div class="accordion-header" data-toggle="voiceover">
+                            <div class="accordion-title-wrap">
+                              <span class="accordion-icon">🎙</span>
+                              <span class="accordion-title">Дикторский текст и подача</span>
+                              <span class="accordion-badge" id="reelsVoWordCount">~75 слов</span>
+                            </div>
+                            <span class="accordion-chevron">▾</span>
+                          </div>
+                          <div class="accordion-content">
+                            <div class="form-group">
+                              <label class="tech-label" for="reelsVoiceScriptTextarea">Текст озвучки (синхронизирован с хронометражем до 30с):</label>
+                              <textarea id="reelsVoiceScriptTextarea" class="tech-textarea code-font" rows="4" placeholder="Текст диктора..."></textarea>
+                            </div>
+                            <div class="form-group" style="margin-top: 6px;">
+                              <label class="tech-label" for="reelsVoicePromptInput">Voice Direction Prompt (тембр, акценты, подача Senior-разработчика):</label>
+                              <input type="text" id="reelsVoicePromptInput" class="tech-input code-font" placeholder="Уверенный разговорный тембр, акцент на скорости 0.35с...">
                             </div>
                           </div>
-                          <audio id="draftAudioPlayer" controls></audio>
+                        </div>
+
+                        <!-- КАРТОЧКА 2: ИНТЕРАКТИВНАЯ РАСКАДРОВКА (5-6 СЦЕН) -->
+                        <div class="reels-accordion-card open" id="accordionCardStoryboard">
+                          <div class="accordion-header" data-toggle="storyboard">
+                            <div class="accordion-title-wrap">
+                              <span class="accordion-icon">🎬</span>
+                              <span class="accordion-title">Раскадровка (6 фаз удержания)</span>
+                              <span class="accordion-badge" id="reelsSceneCountBadge">6 сцен</span>
+                            </div>
+                            <span class="accordion-chevron">▾</span>
+                          </div>
+                          <div class="accordion-content">
+                            <div id="reelsScenesGrid" class="reels-scenes-grid">
+                              <!-- Динамически заполняется карточками сцен -->
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- КАРТОЧКА 3: ВСТРОЕННЫЙ AI-ЧАТ ДОРАБОТКИ РОЛИКА -->
+                        <div class="reels-accordion-card open" id="accordionCardChat">
+                          <div class="accordion-header" data-toggle="chat">
+                            <div class="accordion-title-wrap">
+                              <span class="accordion-icon">💬</span>
+                              <span class="accordion-title">AI-доработка ролика (Refine Chat)</span>
+                              <span class="accordion-badge" style="background: rgba(0, 255, 136, 0.15); color: #00ff88;">HEAVY</span>
+                            </div>
+                            <span class="accordion-chevron">▾</span>
+                          </div>
+                          <div class="accordion-content">
+                            <!-- Чипсы быстрых правок -->
+                            <div class="reels-quick-chips">
+                              <button type="button" class="quick-chip" data-prompt="Сделай хук более дерзким и жестким к конструкторам">⚡ Дерзкий хук</button>
+                              <button type="button" class="quick-chip" data-prompt="Сократи сценарий строго до 20 секунд">⏱ До 20 секунд</button>
+                              <button type="button" class="quick-chip" data-prompt="Сделай акцент на мобильной скорости в 4G сети">📱 Скорость 4G</button>
+                              <button type="button" class="quick-chip" data-prompt="Смени цветовую гамму на титановый белый и изумруд">🎨 Титановый стиль</button>
+                            </div>
+
+                            <!-- История сообщений -->
+                            <div id="reelsChatHistory" class="reels-chat-history">
+                              <div class="chat-msg chat-assistant">
+                                <span class="msg-author">AI Director:</span>
+                                <span class="msg-body">Ролик готов по 6 фазам удержания. Нажмите любую быструю правку или напишите, что изменить в анимации или озвучке.</span>
+                              </div>
+                            </div>
+
+                            <!-- Форма отправки сообщения -->
+                            <div class="reels-chat-input-row">
+                              <input type="text" id="reelsChatInput" class="tech-input" placeholder="Напишите правку (например: сделай субтитры 2 сцены короче)...">
+                              <button type="button" id="btnReelsSendChat" class="btn-tech-primary">
+                                <span>➤</span>
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
