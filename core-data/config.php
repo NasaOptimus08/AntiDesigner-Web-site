@@ -44,6 +44,7 @@ $config = [
     // Telegram
     'telegram_bot_token'   => getenv('TELEGRAM_BOT_TOKEN') ?: '',
     'admin_telegram_id'    => getenv('ADMIN_TELEGRAM_ID') ?: '',
+    'telegram_channel_id'  => getenv('TELEGRAM_CHANNEL_ID') ?: '@AntidesignerAI',
 
     // Внешние парсеры и поисковики
     'tavily_api_key'       => getenv('TAVILY_API_KEY') ?: '',

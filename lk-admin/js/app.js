@@ -3639,6 +3639,47 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
+    // Кнопка 5: Тест Telegram-бота
+    const btnTestTelegram = document.getElementById('btnTestTelegram');
+    const badgeTelegramStatus = document.getElementById('badgeTelegramStatus');
+    if (btnTestTelegram) {
+      btnTestTelegram.addEventListener('click', async () => {
+        btnTestTelegram.disabled = true;
+        const originalText = btnTestTelegram.innerHTML;
+        btnTestTelegram.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Отправка в TG...';
+        appendTerminalLog(`\n[${new Date().toLocaleTimeString()}] Запуск теста связи с Telegram Bot API...`);
+
+        try {
+          const resp = await fetch('api/test_runner.php?action=test_telegram');
+          const data = await resp.json();
+
+          if (data.log) {
+            appendTerminalLog(data.log);
+          }
+
+          if (data.status === 'success') {
+            if (badgeTelegramStatus) {
+              badgeTelegramStatus.style.color = 'var(--accent-green, #10b981)';
+              badgeTelegramStatus.textContent = 'ДОСТАВЛЕНО';
+            }
+            showToast('Тестовое сообщение доставлено в Telegram!', 'success');
+          } else {
+            if (badgeTelegramStatus) {
+              badgeTelegramStatus.style.color = 'var(--accent-orange, #f59e0b)';
+              badgeTelegramStatus.textContent = 'ТРЕБУЕТСЯ /start';
+            }
+            showToast(data.message || 'Ошибка отправки в Telegram', 'warning');
+          }
+        } catch (e) {
+          appendTerminalLog(`[ERROR] Сетевая ошибка: ${e.message}`);
+          showToast(e.message, 'error');
+        } finally {
+          btnTestTelegram.disabled = false;
+          btnTestTelegram.innerHTML = originalText;
+        }
+      });
+    }
+
     // Кнопка очистки терминала
     if (btnClearTerminal) {
       btnClearTerminal.addEventListener('click', () => {

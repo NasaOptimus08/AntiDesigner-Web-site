@@ -39,6 +39,7 @@ try {
     require_once $coreDataDir . '/ai_router.php';
     require_once $coreDataDir . '/scout_engine.php';
     require_once $coreDataDir . '/tools/lead_scout_tool.php';
+    require_once $coreDataDir . '/tools/tg_notify.php';
     /** @var PDO $pdo */
 
     $configFile = $coreDataDir . '/config.php';
@@ -151,6 +152,7 @@ try {
     }
 
     $newLeadsCount = 0;
+    $qualifiedBatch = [];
 
     foreach ($targetsToProcess as $target) {
         // Остановка, как только за сегодня добавлено 3 квалифицированных лида
@@ -178,6 +180,14 @@ try {
         if ($status === 'success') {
             $newLeadsCount++;
             $todayCount++;
+            $qualifiedBatch[] = [
+                'company' => $company,
+                'url'     => $url,
+                'score'   => $score,
+                'lpr'     => (string)($result['lead']['lpr_name'] ?? 'Руководитель'),
+                'contact' => (string)($result['lead']['lpr_contact'] ?? 'Не найден')
+            ];
+
             echo "[" . date('Y-m-d H:i:s') . "] Gemini Flash 3.8: оценка {$score}/10. Лид квалифицирован! [{$company}]\n";
             echo "[" . date('Y-m-d H:i:s') . "] Персонализированный питч и стратегия записаны в cold_outreach. (Квота на сегодня: {$todayCount}/{$dailyQuota})\n";
 
@@ -193,6 +203,26 @@ try {
         } else {
             $msg = $result['message'] ?? 'Неизвестная ошибка';
             echo "[" . date('Y-m-d H:i:s') . "] Ошибка аудита: {$msg}\n";
+        }
+    }
+
+    // Отправка личной сводки админу в Telegram при нахождении новых квалифицированных лидов
+    if (!empty($qualifiedBatch)) {
+        $tgSummary = "🎯 <b>AntiDesigner Scout: новые лиды ({$todayCount}/{$dailyQuota})</b>\n\n";
+        foreach ($qualifiedBatch as $idx => $qb) {
+            $num = $idx + 1;
+            $tgSummary .= "<b>{$num}. {$qb['company']}</b> (Оценка: <b>{$qb['score']}/10</b>)\n";
+            $tgSummary .= "• Сайт: {$qb['url']}\n";
+            $tgSummary .= "• ЛПР: {$qb['lpr']}\n";
+            $tgSummary .= "• Контакт: {$qb['contact']}\n\n";
+        }
+        $tgSummary .= "<i>Питчи и аудит загружены в раздел Холодный аутрич CRM.</i>";
+
+        $notifOk = notifyAdminTG($tgSummary, $config);
+        if ($notifOk) {
+            echo "[" . date('Y-m-d H:i:s') . "] Уведомление со сводкой ({$newLeadsCount} лидов) успешно отправлено админу в Telegram.\n";
+        } else {
+            echo "[" . date('Y-m-d H:i:s') . "] Уведомление в Telegram: не доставлено (нажмите /start в боте @AntiDesigner_Core_bot).\n";
         }
     }
 

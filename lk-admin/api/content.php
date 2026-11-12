@@ -256,63 +256,56 @@ try {
         $config = file_exists($configFile) ? require $configFile : [];
 
         $botToken = trim((string)($config['telegram_bot_token'] ?? ''));
-        $chatId = trim((string)($config['admin_telegram_id'] ?? ''));
+        $channelId = trim((string)($config['telegram_channel_id'] ?? '@AntidesignerAI'));
+        if ($channelId === '') {
+            $channelId = '@AntidesignerAI';
+        }
+        if (!str_starts_with($channelId, '@') && !str_starts_with($channelId, '-100') && !is_numeric($channelId)) {
+            $channelId = '@' . $channelId;
+        }
 
-        if ($botToken === '' || $chatId === '') {
+        if ($botToken === '') {
             http_response_code(400);
             echo json_encode([
                 'status'  => 'error',
-                'message' => 'Для публикации в Telegram укажите telegram_bot_token и admin_telegram_id в файле core-data/config.php'
+                'message' => 'Для публикации в Telegram укажите telegram_bot_token в core-data/config.local.php'
             ], JSON_UNESCAPED_UNICODE);
             exit;
         }
 
-        // Отправка в Telegram Bot API
-        $tgUrl = "https://api.telegram.org/bot{$botToken}/sendMessage";
-        $tgPayload = [
-            'chat_id'                  => $chatId,
-            'text'                     => $textToPublish,
-            'disable_web_page_preview' => false
-        ];
+        // Подключаем инструмент tg_notify.php
+        require_once dirname(__DIR__, 2) . '/core-data/tools/tg_notify.php';
 
-        $ch = curl_init();
-        curl_setopt_array($ch, [
-            CURLOPT_URL            => $tgUrl,
-            CURLOPT_POST           => true,
-            CURLOPT_POSTFIELDS     => http_build_query($tgPayload),
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT        => 20,
-            CURLOPT_SSL_VERIFYPEER => true
-        ]);
+        $tgRes = sendTelegramChannelPost($textToPublish, $channelId, $config);
 
-        $tgRes = curl_exec($ch);
-        $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlErr = curl_error($ch);
-        curl_close($ch);
-
-        if ($curlErr !== '') {
-            throw new RuntimeException("Сетевая ошибка при отправке в Telegram: {$curlErr}");
+        if ($tgRes['status'] !== 'success') {
+            http_response_code(502);
+            echo json_encode([
+                'status'  => 'error',
+                'message' => $tgRes['message'] ?? 'Ошибка отправки в канал Telegram',
+                'details' => $tgRes
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
         }
 
-        $tgDecoded = json_decode((string)$tgRes, true);
-        if ($httpCode !== 200 || !($tgDecoded['ok'] ?? false)) {
-            $desc = $tgDecoded['description'] ?? "HTTP {$httpCode}";
-            throw new RuntimeException("Ошибка Telegram API: {$desc}");
-        }
+        $publishedUrl = $tgRes['published_url'] ?? ('https://t.me/' . ltrim($channelId, '@'));
 
         // Обновляем статус в БД
         if ($contentId > 0) {
             $stmtUpd = $pdo->prepare("UPDATE content_items SET status = 'published', published_url = :url WHERE id = :id");
             $stmtUpd->execute([
-                ':url' => 'https://t.me/' . ltrim($chatId, '@'),
+                ':url' => $publishedUrl,
                 ':id'  => $contentId
             ]);
         }
 
         echo json_encode([
-            'status'  => 'success',
-            'message' => 'Материал успешно опубликован в Telegram',
-            'telegram_response' => $tgDecoded['result'] ?? null
+            'status'            => 'success',
+            'message'           => 'Материал успешно опубликован в Telegram-канале ' . $channelId,
+            'channel'           => $channelId,
+            'published_url'     => $publishedUrl,
+            'message_id'        => $tgRes['message_id'] ?? null,
+            'telegram_response' => $tgRes
         ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
         exit;
     }

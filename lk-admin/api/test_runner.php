@@ -353,6 +353,64 @@ try {
         exit;
     }
 
+    // =========================================================================
+    // 6. action = test_telegram (Тест Telegram-бота и личных уведомлений)
+    // =========================================================================
+    if ($action === 'test_telegram') {
+        require_once dirname(__DIR__, 2) . '/core-data/tools/tg_notify.php';
+
+        $botToken = trim((string)($config['telegram_bot_token'] ?? ''));
+        $adminId = trim((string)($config['admin_telegram_id'] ?? ''));
+        $channelId = trim((string)($config['telegram_channel_id'] ?? '@AntidesignerAI'));
+
+        $logLines = [];
+        $timestamp = date('Y-m-d H:i:s');
+        $logLines[] = "[{$timestamp}] Запуск теста Telegram Bot API (Zero AI Protocol)...";
+        $logLines[] = "[{$timestamp}] Бот токен: " . (strlen($botToken) > 10 ? substr($botToken, 0, 8) . '...' . substr($botToken, -4) : 'НЕ ЗАДАН');
+        $logLines[] = "[{$timestamp}] Admin ID: " . ($adminId ?: 'НЕ ЗАДАН');
+        $logLines[] = "[{$timestamp}] Целевой канал: " . ($channelId ?: 'НЕ ЗАДАН');
+
+        if ($botToken === '' || $adminId === '') {
+            $logLines[] = "[{$timestamp}] ОШИБКА: telegram_bot_token или admin_telegram_id не заполнены в config.local.php";
+            echo json_encode([
+                'status'  => 'error',
+                'message' => 'Не заполнены telegram_bot_token или admin_telegram_id',
+                'log'     => implode("\n", $logLines)
+            ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+            exit;
+        }
+
+        $testMsg = "✅ <b>AntiDesigner Core</b>: связь с Telegram работает!\n\n" .
+                   "• Сервер: " . ($_SERVER['SERVER_NAME'] ?? 'localhost') . "\n" .
+                   "• Время: " . date('d.m.Y H:i:s') . "\n" .
+                   "• Канал автопубликации: <code>{$channelId}</code>\n" .
+                   "• Личные уведомления: <b>АКТИВНЫ</b>";
+
+        $t0 = microtime(true);
+        $delivered = notifyAdminTG($testMsg, $config);
+        $elapsedMs = (int)round((microtime(true) - $t0) * 1000);
+
+        if ($delivered) {
+            $logLines[] = "[{$timestamp}] Сообщение успешно доставлено админу ({$adminId}) за {$elapsedMs} мс.";
+            $logLines[] = "[{$timestamp}] Текст: «✅ AntiDesigner Core: связь с Telegram работает!»";
+            $logLines[] = "[{$timestamp}] Статус Telegram Bot API: OK (200)";
+        } else {
+            $logLines[] = "[{$timestamp}] ВНИМАНИЕ: Не удалось доставить сообщение на admin_telegram_id ({$adminId}) за {$elapsedMs} мс.";
+            $logLines[] = "[{$timestamp}] Подсказка: Пользователь должен один раз нажать /start в боте @AntiDesigner_Core_bot, чтобы открыть диалог с ботом.";
+        }
+
+        echo json_encode([
+            'status'     => $delivered ? 'success' : 'warning',
+            'delivered'  => $delivered,
+            'elapsed_ms' => $elapsedMs,
+            'admin_id'   => $adminId,
+            'channel_id' => $channelId,
+            'message'    => $delivered ? 'Сообщение успешно доставлено админу' : 'Чат с ботом еще не начат (нажмите /start в @AntiDesigner_Core_bot)',
+            'log'        => implode("\n", $logLines)
+        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        exit;
+    }
+
     echo json_encode([
         'status'  => 'error',
         'message' => "Неизвестное действие: {$action}"
