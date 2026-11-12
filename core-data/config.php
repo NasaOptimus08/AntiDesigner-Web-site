@@ -44,6 +44,7 @@ $config = [
     // Telegram
     'telegram_bot_token'   => getenv('TELEGRAM_BOT_TOKEN') ?: '',
     'admin_telegram_id'    => getenv('ADMIN_TELEGRAM_ID') ?: '',
+    'allowed_telegram_ids' => ['1914924124', '9096678180'],
     'telegram_channel_id'  => getenv('TELEGRAM_CHANNEL_ID') ?: '@AntidesignerAI',
 
     // Внешние парсеры и поисковики

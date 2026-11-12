@@ -49,7 +49,27 @@ try {
         exit;
     }
 
-    $tgUserId = (string)($from['id'] ?? $chatId);
+    $incomingChatId = (string)$chatId;
+    $incomingFromId = (string)($from['id'] ?? $chatId);
+
+    // Whitelist-фильтр: бот работает строго для разрешенных аккаунтов администратора
+    $allowedIds = $config['allowed_telegram_ids'] ?? [];
+    if (!is_array($allowedIds) || empty($allowedIds)) {
+        $fallbackAdmin = trim((string)($config['admin_telegram_id'] ?? '1914924124'));
+        $allowedIds = $fallbackAdmin !== '' ? [$fallbackAdmin] : ['1914924124', '9096678180'];
+    }
+    $allowedStrIds = array_map('strval', $allowedIds);
+
+    $isAllowed = in_array($incomingChatId, $allowedStrIds, true) || in_array($incomingFromId, $allowedStrIds, true);
+
+    if (!$isAllowed) {
+        // Молча игнорируем всех остальных: HTTP 200 OK без записи в базу и без вызова Gemini
+        http_response_code(200);
+        echo json_encode(['status' => 'ok', 'message' => 'Ignored: sender not in allowed whitelist']);
+        exit;
+    }
+
+    $tgUserId = $incomingFromId;
     $username = (string)($from['username'] ?? '');
     $firstName = (string)($from['first_name'] ?? '');
     $lastName = (string)($from['last_name'] ?? '');

@@ -285,3 +285,4 @@ if (!function_exists('splitTelegramText')) {
         return $chunks;
     }
 }
+
