@@ -229,6 +229,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const skillUpdatedTimestampEl = document.getElementById('skillUpdatedTimestamp');
   const skillFileInput = document.getElementById('skillFileInput');
 
+  // Модульные под-промпты скилла (.md цепочки и стили)
+  const skillSubPromptsList = document.getElementById('skillSubPromptsList');
+  const btnAddSubPromptBtn = document.getElementById('btnAddSubPromptBtn');
+  const inputUploadSubPrompts = document.getElementById('inputUploadSubPrompts');
+  const modalSubPrompt = document.getElementById('modalSubPrompt');
+  const modalSubPromptTitleText = document.getElementById('modalSubPromptTitleText');
+  const modalSubPromptId = document.getElementById('modalSubPromptId');
+  const modalSubPromptSkillCode = document.getElementById('modalSubPromptSkillCode');
+  const modalSubPromptName = document.getElementById('modalSubPromptName');
+  const modalSubPromptType = document.getElementById('modalSubPromptType');
+  const modalSubPromptOrder = document.getElementById('modalSubPromptOrder');
+  const modalSubPromptContent = document.getElementById('modalSubPromptContent');
+  const btnCloseSubPromptModal = document.getElementById('btnCloseSubPromptModal');
+  const btnCancelSubPromptModal = document.getElementById('btnCancelSubPromptModal');
+  const btnSaveSubPromptModal = document.getElementById('btnSaveSubPromptModal');
+  let activeSubPrompts = [];
+
   async function initSkillsTab() {
     if (isSkillsLoaded) return;
     await loadSkills();
@@ -337,6 +354,9 @@ document.addEventListener('DOMContentLoaded', () => {
       skillUpdatedTimestampEl.textContent = skill.updated_at ? `Обновлено: ${skill.updated_at}` : 'Синхронизировано';
     }
     if (skillSaveStatusEl) skillSaveStatusEl.textContent = '';
+
+    // Загрузка модульных под-промптов выбранного скилла
+    loadSkillSubPrompts(skill.code);
   }
 
   // Фильтр категорий скиллов
@@ -463,6 +483,278 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (saveSkillBtn) {
     saveSkillBtn.addEventListener('click', saveActiveSkill);
+  }
+
+  // ---------------------------------------------------------------------------
+  // 5.1. УПРАВЛЕНИЕ МОДУЛЬНЫМИ ПОД-ПРОМПТАМИ И СТИЛЯМИ (.MD)
+  // ---------------------------------------------------------------------------
+  async function loadSkillSubPrompts(skillCode) {
+    if (!skillSubPromptsList) return;
+    if (!skillCode) {
+      skillSubPromptsList.innerHTML = '<div class="tech-hint" style="text-align: center; padding: 12px;">Скилл не выбран</div>';
+      return;
+    }
+
+    skillSubPromptsList.innerHTML = '<div class="tech-hint" style="text-align: center; padding: 12px;">Загрузка под-промптов...</div>';
+
+    try {
+      const res = await fetch(`api/skills.php?action=list_prompts&skill_code=${encodeURIComponent(skillCode)}&t=${Date.now()}`, {
+        cache: 'no-store'
+      });
+      const data = await res.json();
+      if (!res.ok || data.status !== 'success') {
+        throw new Error(data.message || 'Ошибка загрузки под-промптов');
+      }
+
+      activeSubPrompts = Array.isArray(data.prompts) ? data.prompts : [];
+      renderSkillSubPrompts(skillCode);
+    } catch (err) {
+      skillSubPromptsList.innerHTML = `<div class="tech-hint" style="color:var(--danger-red); text-align: center; padding: 12px;">Ошибка: ${escapeHtml(err.message)}</div>`;
+    }
+  }
+
+  function renderSkillSubPrompts(skillCode) {
+    if (!skillSubPromptsList) return;
+    skillSubPromptsList.innerHTML = '';
+
+    if (activeSubPrompts.length === 0) {
+      skillSubPromptsList.innerHTML = `
+        <div class="tech-hint" style="text-align: center; padding: 16px;">
+          Нет дополнительных под-промптов для скилла <code>${escapeHtml(skillCode)}</code>.<br>
+          Нажмите «+ Добавить промпт» или загрузите .md файлы пакетом.
+        </div>
+      `;
+      return;
+    }
+
+    activeSubPrompts.forEach(sp => {
+      const card = document.createElement('div');
+      card.className = `subprompt-card ${sp.is_active ? '' : 'inactive'}`;
+      card.setAttribute('data-id', sp.id);
+
+      const typeLabel = sp.prompt_type === 'style' ? 'Стиль' : (sp.prompt_type === 'rule' ? 'Правило' : 'Этап');
+      const typeBadgeClass = sp.prompt_type === 'style' ? 'badge-style' : (sp.prompt_type === 'rule' ? 'badge-rule' : 'badge-step');
+      const snippet = (sp.content_markdown || '').slice(0, 110) + ((sp.content_markdown || '').length > 110 ? '...' : '');
+
+      card.innerHTML = `
+        <div class="subprompt-header">
+          <div class="subprompt-title-row">
+            <span class="subprompt-order-badge">#${sp.step_order}</span>
+            <span class="subprompt-title-text" title="${escapeHtml(sp.title)}">${escapeHtml(sp.title)}</span>
+            <span class="subprompt-type-badge ${typeBadgeClass}">${typeLabel}</span>
+          </div>
+          <div class="subprompt-ctrls">
+            <label class="switch-toggle" title="${sp.is_active ? 'Активен' : 'Отключен'}">
+              <input type="checkbox" class="subprompt-active-toggle" ${sp.is_active ? 'checked' : ''} data-id="${sp.id}">
+              <span class="slider round"></span>
+            </label>
+            <button type="button" class="btn-tech-outline btn-edit-subprompt" data-id="${sp.id}" title="Редактировать промпт" style="padding: 2px 7px; font-size: 11px;">
+              ✏️
+            </button>
+            <button type="button" class="btn-tech-outline btn-del-subprompt" data-id="${sp.id}" title="Удалить промпт" style="padding: 2px 7px; font-size: 11px; color: var(--danger-red);">
+              ✕
+            </button>
+          </div>
+        </div>
+        <div class="subprompt-snippet">${escapeHtml(snippet)}</div>
+      `;
+
+      // Переключатель активности (is_active)
+      const toggleInput = card.querySelector('.subprompt-active-toggle');
+      if (toggleInput) {
+        toggleInput.addEventListener('change', async (e) => {
+          const newActive = e.target.checked ? 1 : 0;
+          try {
+            const tRes = await fetch('api/skills.php?action=toggle_prompt', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: sp.id, is_active: newActive })
+            });
+            const tData = await tRes.json();
+            if (!tRes.ok || tData.status !== 'success') {
+              throw new Error(tData.message || 'Ошибка обновления статуса');
+            }
+            sp.is_active = newActive;
+            if (newActive) {
+              card.classList.remove('inactive');
+            } else {
+              card.classList.add('inactive');
+            }
+            showToast(newActive ? `«${sp.title}» активирован` : `«${sp.title}» отключен`, 'info', 2000);
+          } catch (err) {
+            e.target.checked = !newActive;
+            showToast(`Ошибка: ${err.message}`, 'error');
+          }
+        });
+      }
+
+      // Кнопка редактирования
+      const editBtn = card.querySelector('.btn-edit-subprompt');
+      if (editBtn) {
+        editBtn.addEventListener('click', () => {
+          openSubPromptModal(sp, skillCode);
+        });
+      }
+
+      // Кнопка удаления
+      const delBtn = card.querySelector('.btn-del-subprompt');
+      if (delBtn) {
+        delBtn.addEventListener('click', async () => {
+          if (!confirm(`Удалить промпт «${sp.title}»?`)) return;
+          try {
+            const dRes = await fetch('api/skills.php?action=delete_prompt', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: sp.id })
+            });
+            const dData = await dRes.json();
+            if (!dRes.ok || dData.status !== 'success') {
+              throw new Error(dData.message || 'Ошибка удаления');
+            }
+            showToast(`Промпт «${sp.title}» удален`, 'info');
+            loadSkillSubPrompts(skillCode);
+          } catch (err) {
+            showToast(`Ошибка удаления: ${err.message}`, 'error');
+          }
+        });
+      }
+
+      skillSubPromptsList.appendChild(card);
+    });
+  }
+
+  function openSubPromptModal(sp = null, skillCode = '') {
+    if (!modalSubPrompt) return;
+    const currentSkill = skillsData.find(s => s.id === activeSkillId);
+    const code = skillCode || (currentSkill ? currentSkill.code : 'reels_hook');
+
+    if (modalSubPromptTitleText) {
+      modalSubPromptTitleText.textContent = sp ? 'Редактировать модульный промпт' : 'Добавить модульный промпт / стиль';
+    }
+    if (modalSubPromptId) modalSubPromptId.value = sp ? sp.id : '0';
+    if (modalSubPromptSkillCode) modalSubPromptSkillCode.value = code;
+    if (modalSubPromptName) modalSubPromptName.value = sp ? sp.title : '';
+    if (modalSubPromptType) modalSubPromptType.value = sp ? (sp.prompt_type || 'step') : 'step';
+    if (modalSubPromptOrder) modalSubPromptOrder.value = sp ? (sp.step_order || 1) : (activeSubPrompts.length + 1);
+    if (modalSubPromptContent) modalSubPromptContent.value = sp ? (sp.content_markdown || '') : '';
+
+    modalSubPrompt.style.display = 'flex';
+  }
+
+  function closeSubPromptModal() {
+    if (modalSubPrompt) modalSubPrompt.style.display = 'none';
+  }
+
+  if (btnAddSubPromptBtn) {
+    btnAddSubPromptBtn.addEventListener('click', () => {
+      const currentSkill = skillsData.find(s => s.id === activeSkillId);
+      openSubPromptModal(null, currentSkill ? currentSkill.code : '');
+    });
+  }
+
+  if (btnCloseSubPromptModal) btnCloseSubPromptModal.addEventListener('click', closeSubPromptModal);
+  if (btnCancelSubPromptModal) btnCancelSubPromptModal.addEventListener('click', closeSubPromptModal);
+
+  if (btnSaveSubPromptModal) {
+    btnSaveSubPromptModal.addEventListener('click', async () => {
+      const id = parseInt(modalSubPromptId ? modalSubPromptId.value : '0', 10) || 0;
+      const code = (modalSubPromptSkillCode ? modalSubPromptSkillCode.value : '').trim();
+      const title = (modalSubPromptName ? modalSubPromptName.value : '').trim();
+      const type = (modalSubPromptType ? modalSubPromptType.value : 'step').trim();
+      const order = parseInt(modalSubPromptOrder ? modalSubPromptOrder.value : '1', 10) || 1;
+      const content = (modalSubPromptContent ? modalSubPromptContent.value : '').trim();
+
+      if (!title) {
+        showToast('Укажите название промпта', 'error');
+        if (modalSubPromptName) modalSubPromptName.focus();
+        return;
+      }
+      if (!content) {
+        showToast('Текст промпта не может быть пустым', 'error');
+        if (modalSubPromptContent) modalSubPromptContent.focus();
+        return;
+      }
+
+      btnSaveSubPromptModal.disabled = true;
+      btnSaveSubPromptModal.textContent = 'Сохранение...';
+
+      try {
+        const action = id > 0 ? 'update_prompt' : 'create_prompt';
+        const payload = {
+          id: id,
+          skill_code: code,
+          title: title,
+          prompt_type: type,
+          step_order: order,
+          content_markdown: content
+        };
+
+        const res = await fetch(`api/skills.php?action=${action}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok || data.status !== 'success') {
+          throw new Error(data.message || 'Ошибка сохранения');
+        }
+
+        closeSubPromptModal();
+        showToast(id > 0 ? 'Промпт обновлен!' : 'Промпт добавлен!', 'success');
+        loadSkillSubPrompts(code);
+      } catch (err) {
+        showToast(`Ошибка сохранения: ${err.message}`, 'error');
+      } finally {
+        btnSaveSubPromptModal.disabled = false;
+        btnSaveSubPromptModal.textContent = 'Сохранить промпт';
+      }
+    });
+  }
+
+  // Пакетная загрузка .md файлов для под-промптов скилла
+  if (inputUploadSubPrompts) {
+    inputUploadSubPrompts.addEventListener('change', async (e) => {
+      const files = Array.from(e.target.files || []);
+      if (files.length === 0) return;
+
+      const currentSkill = skillsData.find(s => s.id === activeSkillId);
+      const code = currentSkill ? currentSkill.code : 'reels_hook';
+
+      showToast(`Загрузка ${files.length} .md файлов...`, 'info', 3000);
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('target', 'skill_prompt');
+        formData.append('skill_code', code);
+
+        try {
+          const res = await fetch('api/upload.php', {
+            method: 'POST',
+            body: formData
+          });
+          const data = await res.json();
+          if (res.ok && data.status === 'success') {
+            successCount++;
+          } else {
+            errorCount++;
+          }
+        } catch {
+          errorCount++;
+        }
+      }
+
+      inputUploadSubPrompts.value = '';
+      if (successCount > 0) {
+        showToast(`Успешно импортировано ${successCount} промптов!`, 'success');
+        loadSkillSubPrompts(code);
+      }
+      if (errorCount > 0) {
+        showToast(`Ошибок при импорте: ${errorCount}`, 'error');
+      }
+    });
   }
 
   // ===========================================================================
@@ -711,6 +1003,25 @@ document.addEventListener('DOMContentLoaded', () => {
   const factoryPublishTgBtn = document.getElementById('factoryPublishTgBtn');
   const factoryActionStatus = document.getElementById('factoryActionStatus');
 
+  // Расширенная Студия Драфта Видео и Motion
+  const factoryTextEditorWrapper = document.getElementById('factoryTextEditorWrapper');
+  const factoryDraftStudioBox = document.getElementById('factoryDraftStudioBox');
+  const factoryVideoScriptTextarea = document.getElementById('factoryVideoScriptTextarea');
+  const motionPreviewIframe = document.getElementById('motionPreviewIframe');
+  const btnReloadMotion = document.getElementById('btnReloadMotion');
+  const btnDownloadMotionHtml = document.getElementById('btnDownloadMotionHtml');
+  const motionStyleSelect = document.getElementById('motionStyleSelect');
+  const btnGenerateMotionHtml = document.getElementById('btnGenerateMotionHtml');
+  const motionSourceCodeTextarea = document.getElementById('motionSourceCodeTextarea');
+  const voiceoverScriptTextarea = document.getElementById('voiceoverScriptTextarea');
+  const btnGeneratePolzaTts = document.getElementById('btnGeneratePolzaTts');
+  const inputCustomAudio = document.getElementById('inputCustomAudio');
+  const voiceoverStatusHint = document.getElementById('voiceoverStatusHint');
+  const draftAudioPlayerCard = document.getElementById('draftAudioPlayerCard');
+  const audioFileNameBadge = document.getElementById('audioFileNameBadge');
+  const draftAudioPlayer = document.getElementById('draftAudioPlayer');
+  const btnCleanupDrafts = document.getElementById('btnCleanupDrafts');
+
   function initFactoryTab() {
     updateCharCounter();
   }
@@ -722,8 +1033,45 @@ document.addEventListener('DOMContentLoaded', () => {
     factoryCharCounter.textContent = `${len} символов · ${words} слов`;
   }
 
+  function updateVideoCharCounter() {
+    if (!factoryCharCounter || !factoryVideoScriptTextarea) return;
+    const len = factoryVideoScriptTextarea.value.length;
+    const words = factoryVideoScriptTextarea.value.trim() ? factoryVideoScriptTextarea.value.trim().split(/\s+/).length : 0;
+    factoryCharCounter.textContent = `${len} символов · ${words} слов (видео-сценарий)`;
+  }
+
   if (factoryContentTextarea) {
     factoryContentTextarea.addEventListener('input', updateCharCounter);
+  }
+
+  if (factoryVideoScriptTextarea) {
+    factoryVideoScriptTextarea.addEventListener('input', () => {
+      const currentItem = generatedBatch[activeGeneratedIndex];
+      if (currentItem) {
+        currentItem.content = factoryVideoScriptTextarea.value;
+      }
+      updateVideoCharCounter();
+    });
+  }
+
+  // Переключение вкладок Студии Драфта Видео (Раскадровка, Motion 9:16, Голос)
+  const draftStudioNavButtons = document.querySelectorAll('.draft-studio-tab-btn');
+  const draftTabStoryboard = document.getElementById('draftTabStoryboard');
+  const draftTabMotion = document.getElementById('draftTabMotion');
+  const draftTabVoiceover = document.getElementById('draftTabVoiceover');
+
+  if (draftStudioNavButtons) {
+    draftStudioNavButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        draftStudioNavButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const tab = btn.getAttribute('data-draft-tab');
+
+        if (draftTabStoryboard) draftTabStoryboard.classList.toggle('active', tab === 'storyboard');
+        if (draftTabMotion) draftTabMotion.classList.toggle('active', tab === 'motion');
+        if (draftTabVoiceover) draftTabVoiceover.classList.toggle('active', tab === 'voiceover');
+      });
+    });
   }
 
   // Переключение режима генерации
@@ -893,9 +1241,43 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    if (factoryContentTextarea) {
-      factoryContentTextarea.value = currentItem.content || '';
-      updateCharCounter();
+    const isVideoFormat = ['reels_hook', 'reels', 'ig_carousel'].includes(currentItem.format);
+
+    if (isVideoFormat) {
+      if (factoryTextEditorWrapper) factoryTextEditorWrapper.style.display = 'none';
+      if (factoryDraftStudioBox) factoryDraftStudioBox.style.display = 'block';
+
+      if (factoryVideoScriptTextarea) {
+        factoryVideoScriptTextarea.value = currentItem.content || '';
+      }
+      if (voiceoverScriptTextarea && (!voiceoverScriptTextarea.value || voiceoverScriptTextarea.value === '')) {
+        voiceoverScriptTextarea.value = currentItem.content || '';
+      }
+      if (motionSourceCodeTextarea) {
+        motionSourceCodeTextarea.value = currentItem.motion_html || '';
+      }
+      if (motionPreviewIframe) {
+        motionPreviewIframe.srcdoc = currentItem.motion_html || '';
+      }
+
+      if (currentItem.audio_url) {
+        if (draftAudioPlayer) draftAudioPlayer.src = currentItem.audio_url;
+        if (draftAudioPlayerCard) draftAudioPlayerCard.style.display = 'flex';
+        if (audioFileNameBadge) audioFileNameBadge.textContent = currentItem.audio_url.split('/').pop();
+      } else {
+        if (draftAudioPlayerCard) draftAudioPlayerCard.style.display = 'none';
+        if (draftAudioPlayer) draftAudioPlayer.removeAttribute('src');
+      }
+
+      updateVideoCharCounter();
+    } else {
+      if (factoryDraftStudioBox) factoryDraftStudioBox.style.display = 'none';
+      if (factoryTextEditorWrapper) factoryTextEditorWrapper.style.display = 'block';
+
+      if (factoryContentTextarea) {
+        factoryContentTextarea.value = currentItem.content || '';
+        updateCharCounter();
+      }
     }
 
     // Кнопка публикации в TG активна преимущественно для постов
@@ -914,9 +1296,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function saveDraftContent() {
     const currentItem = generatedBatch[activeGeneratedIndex];
-    if (!currentItem || !factorySaveDraftBtn || !factoryContentTextarea) return;
+    if (!currentItem || !factorySaveDraftBtn) return;
 
-    const newText = factoryContentTextarea.value.trim();
+    const isVideo = ['reels_hook', 'reels', 'ig_carousel'].includes(currentItem.format);
+    const newText = isVideo
+      ? (factoryVideoScriptTextarea ? factoryVideoScriptTextarea.value.trim() : '')
+      : (factoryContentTextarea ? factoryContentTextarea.value.trim() : '');
+
     if (!newText) {
       showToast('Текст материала не может быть пустым', 'error');
       return;
@@ -926,16 +1312,21 @@ document.addEventListener('DOMContentLoaded', () => {
     factorySaveDraftBtn.innerHTML = '<span class="btn-icon">↺</span> Сохранение...';
 
     try {
+      const payload = {
+        id: currentItem.id,
+        content_markdown: newText
+      };
+      if (isVideo && motionSourceCodeTextarea && motionSourceCodeTextarea.value.trim()) {
+        payload.motion_html = motionSourceCodeTextarea.value.trim();
+      }
+
       const res = await fetch('api/content.php?action=update', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        body: JSON.stringify({
-          id: currentItem.id,
-          content_markdown: newText
-        })
+        body: JSON.stringify(payload)
       });
 
       const data = await res.json();
@@ -944,6 +1335,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       currentItem.content = newText;
+      if (payload.motion_html) currentItem.motion_html = payload.motion_html;
+
       showToast('Черновик успешно обновлен в базе!', 'success');
       if (factoryActionStatus) factoryActionStatus.textContent = '✓ Черновик сохранен в базе';
     } catch (err) {
@@ -955,8 +1348,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function copyCurrentContent() {
-    if (!factoryContentTextarea) return;
-    const text = factoryContentTextarea.value;
+    const currentItem = generatedBatch[activeGeneratedIndex];
+    const isVideo = currentItem && ['reels_hook', 'reels', 'ig_carousel'].includes(currentItem.format);
+    const text = isVideo
+      ? (factoryVideoScriptTextarea ? factoryVideoScriptTextarea.value : '')
+      : (factoryContentTextarea ? factoryContentTextarea.value : '');
+
     if (!text) {
       showToast('Нет текста для копирования', 'info');
       return;
@@ -966,7 +1363,11 @@ document.addEventListener('DOMContentLoaded', () => {
       await navigator.clipboard.writeText(text);
       showToast('Текст скопирован в буфер обмена!', 'info');
     } catch {
-      factoryContentTextarea.select();
+      if (isVideo && factoryVideoScriptTextarea) {
+        factoryVideoScriptTextarea.select();
+      } else if (factoryContentTextarea) {
+        factoryContentTextarea.select();
+      }
       document.execCommand('copy');
       showToast('Текст скопирован!', 'info');
     }
@@ -974,9 +1375,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function publishToTelegram() {
     const currentItem = generatedBatch[activeGeneratedIndex];
-    if (!currentItem || !factoryPublishTgBtn || !factoryContentTextarea) return;
+    if (!currentItem || !factoryPublishTgBtn) return;
 
-    const textToPublish = factoryContentTextarea.value.trim();
+    const isVideo = ['reels_hook', 'reels', 'ig_carousel'].includes(currentItem.format);
+    const textToPublish = isVideo
+      ? (factoryVideoScriptTextarea ? factoryVideoScriptTextarea.value.trim() : '')
+      : (factoryContentTextarea ? factoryContentTextarea.value.trim() : '');
+
     if (!textToPublish) {
       showToast('Текст для публикации пуст', 'error');
       return;
@@ -1019,6 +1424,208 @@ document.addEventListener('DOMContentLoaded', () => {
       factoryPublishTgBtn.disabled = false;
       factoryPublishTgBtn.innerHTML = '<span class="btn-icon">✈️</span> Опубликовать в Telegram';
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // 7.1. КОДОВАЯ MOTION-АНИМАЦИЯ (HTML5/CANVAS 9:16)
+  // ---------------------------------------------------------------------------
+  if (btnGenerateMotionHtml) {
+    btnGenerateMotionHtml.addEventListener('click', async () => {
+      const currentItem = generatedBatch[activeGeneratedIndex];
+      const scriptText = factoryVideoScriptTextarea ? factoryVideoScriptTextarea.value.trim() : '';
+      if (!scriptText) {
+        showToast('Сначала составьте или сгенерируйте сценарий видео', 'error');
+        return;
+      }
+
+      btnGenerateMotionHtml.disabled = true;
+      btnGenerateMotionHtml.innerHTML = '<span class="btn-icon">↺</span> Генерация Motion (MODEL_HEAVY)...';
+
+      try {
+        const styleCode = motionStyleSelect ? motionStyleSelect.value : 'dark_tech';
+        const res = await fetch('api/content.php?action=generate_motion', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content_id: currentItem ? currentItem.id : 0,
+            script_text: scriptText,
+            style_code: styleCode,
+            topic: (currentItem && currentItem.topic) || (factoryTopicInputEl ? factoryTopicInputEl.value : '')
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok || data.status !== 'success') {
+          throw new Error(data.message || 'Ошибка генерации анимации');
+        }
+
+        const html = data.motion_html || '';
+        if (motionSourceCodeTextarea) motionSourceCodeTextarea.value = html;
+        if (motionPreviewIframe) motionPreviewIframe.srcdoc = html;
+        if (currentItem) currentItem.motion_html = html;
+
+        showToast('Motion-анимация сгенерирована!', 'success');
+      } catch (err) {
+        showToast(`Ошибка генерации: ${err.message}`, 'error');
+      } finally {
+        btnGenerateMotionHtml.disabled = false;
+        btnGenerateMotionHtml.innerHTML = '<span>⚡</span> Сгенерировать Motion-анимацию (MODEL_HEAVY)';
+      }
+    });
+  }
+
+  if (btnReloadMotion) {
+    btnReloadMotion.addEventListener('click', () => {
+      if (!motionPreviewIframe || !motionSourceCodeTextarea) return;
+      motionPreviewIframe.srcdoc = motionSourceCodeTextarea.value;
+      showToast('Плеер перезапущен', 'info', 1500);
+    });
+  }
+
+  if (motionSourceCodeTextarea) {
+    motionSourceCodeTextarea.addEventListener('input', () => {
+      if (motionPreviewIframe) {
+        motionPreviewIframe.srcdoc = motionSourceCodeTextarea.value;
+      }
+    });
+  }
+
+  if (btnDownloadMotionHtml) {
+    btnDownloadMotionHtml.addEventListener('click', () => {
+      if (!motionSourceCodeTextarea || !motionSourceCodeTextarea.value.trim()) {
+        showToast('Нет кода анимации для скачивания', 'info');
+        return;
+      }
+      const currentItem = generatedBatch[activeGeneratedIndex];
+      const blob = new Blob([motionSourceCodeTextarea.value], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `motion_reel_${(currentItem && currentItem.id) || 'draft'}.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('HTML5 файл скачан!', 'success');
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // 7.2. ЗАКАДРОВЫЙ ГОЛОС (POLZA.AI / GEMINI TTS) И ПРИКРЕПЛЕНИЕ АУДИО
+  // ---------------------------------------------------------------------------
+  if (btnGeneratePolzaTts) {
+    btnGeneratePolzaTts.addEventListener('click', async () => {
+      const currentItem = generatedBatch[activeGeneratedIndex];
+      const textToVoice = (voiceoverScriptTextarea && voiceoverScriptTextarea.value.trim()) ||
+                          (factoryVideoScriptTextarea && factoryVideoScriptTextarea.value.trim()) || '';
+
+      if (!textToVoice) {
+        showToast('Укажите текст для озвучки', 'error');
+        return;
+      }
+
+      btnGeneratePolzaTts.disabled = true;
+      btnGeneratePolzaTts.innerHTML = '<span class="btn-icon">↺</span> Синтез речи (Polza.ai)...';
+      if (voiceoverStatusHint) voiceoverStatusHint.textContent = 'Синтез аудио через Polza.ai API...';
+
+      try {
+        const res = await fetch('api/content.php?action=generate_tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content_id: currentItem ? currentItem.id : 0,
+            text: textToVoice
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok || data.status !== 'success') {
+          throw new Error(data.message || 'Ошибка синтеза речи');
+        }
+
+        const audioUrl = data.audio_url;
+        if (draftAudioPlayer) draftAudioPlayer.src = audioUrl;
+        if (draftAudioPlayerCard) draftAudioPlayerCard.style.display = 'flex';
+        if (audioFileNameBadge) audioFileNameBadge.textContent = audioUrl.split('/').pop();
+        if (currentItem) currentItem.audio_url = audioUrl;
+        if (voiceoverStatusHint) voiceoverStatusHint.textContent = '✓ Озвучка готова';
+
+        showToast('Озвучка успешно создана!', 'success');
+      } catch (err) {
+        if (voiceoverStatusHint) voiceoverStatusHint.textContent = 'Ошибка озвучки';
+        showToast(`Ошибка TTS: ${err.message}`, 'error');
+      } finally {
+        btnGeneratePolzaTts.disabled = false;
+        btnGeneratePolzaTts.innerHTML = '<span>🔊</span> Озвучить через API (Polza / Gemini TTS)';
+      }
+    });
+  }
+
+  if (inputCustomAudio) {
+    inputCustomAudio.addEventListener('change', async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+
+      const currentItem = generatedBatch[activeGeneratedIndex];
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('target', 'audio');
+      if (currentItem && currentItem.id) {
+        formData.append('content_id', String(currentItem.id));
+      }
+
+      showToast(`Загрузка аудио: ${file.name}...`, 'info');
+      try {
+        const res = await fetch('api/upload.php', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        if (!res.ok || data.status !== 'success') {
+          throw new Error(data.message || 'Ошибка загрузки аудио');
+        }
+
+        const audioUrl = data.audio_url;
+        if (draftAudioPlayer) draftAudioPlayer.src = audioUrl;
+        if (draftAudioPlayerCard) draftAudioPlayerCard.style.display = 'flex';
+        if (audioFileNameBadge) audioFileNameBadge.textContent = file.name;
+        if (currentItem) currentItem.audio_url = audioUrl;
+
+        showToast('Аудиодорожка прикреплена!', 'success');
+      } catch (err) {
+        showToast(`Ошибка загрузки аудио: ${err.message}`, 'error');
+      } finally {
+        inputCustomAudio.value = '';
+      }
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // 7.3. ОЧИСТКА ВРЕМЕННЫХ МЕДИАФАЙЛОВ ОПУБЛИКОВАННЫХ ДРАФТОВ
+  // ---------------------------------------------------------------------------
+  if (btnCleanupDrafts) {
+    btnCleanupDrafts.addEventListener('click', async () => {
+      btnCleanupDrafts.disabled = true;
+      btnCleanupDrafts.textContent = '⏳ Очистка...';
+
+      try {
+        const res = await fetch('api/content.php?action=cleanup_published_drafts', {
+          method: 'POST',
+          headers: { 'Accept': 'application/json' }
+        });
+        const data = await res.json();
+        if (!res.ok || data.status !== 'success') {
+          throw new Error(data.message || 'Ошибка очистки');
+        }
+
+        showToast(data.message || 'Опубликованные черновики очищены!', 'success', 5000);
+      } catch (err) {
+        showToast(`Ошибка очистки: ${err.message}`, 'error');
+      } finally {
+        btnCleanupDrafts.disabled = false;
+        btnCleanupDrafts.innerHTML = '<span>🧹</span> Очистить опубликованные драфты';
+      }
+    });
   }
 
   if (generateBtn) {

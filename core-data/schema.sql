@@ -208,6 +208,18 @@ CREATE TABLE IF NOT EXISTS rubrics (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 18. Модульные под-промпты и стили для скиллов (.md файлы)
+CREATE TABLE IF NOT EXISTS skill_prompts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    skill_code TEXT NOT NULL,          -- Привязка к основному скиллу ('reels_hook', 'tg_post', 'vc_ru' и т.д.)
+    title TEXT NOT NULL,               -- Название промпта/стиля ('Шаг 1: Усиление идеи', 'Стиль: Bauhaus Poster')
+    prompt_type TEXT DEFAULT 'step',   -- 'step' (этап цепочки), 'style' (стиль анимации), 'rule' (доп. правило)
+    step_order INTEGER DEFAULT 1,      -- Порядок выполнения в цепочке
+    content_markdown TEXT NOT NULL,    -- Полный текст .md файла
+    is_active INTEGER DEFAULT 1,       -- Включен по умолчанию или выбирается под задачу
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Индексы для оптимизации поиска и фильтрации
 CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
 CREATE INDEX IF NOT EXISTS idx_content_status ON content_items(status);
@@ -219,5 +231,7 @@ CREATE INDEX IF NOT EXISTS idx_bot_messages_lead ON bot_messages(lead_id);
 CREATE INDEX IF NOT EXISTS idx_publication_platform ON publication_analytics(platform);
 CREATE INDEX IF NOT EXISTS idx_link_clicks_slug ON link_clicks(slug);
 CREATE INDEX IF NOT EXISTS idx_rubrics_title ON rubrics(title);
+CREATE INDEX IF NOT EXISTS idx_skill_prompts_code ON skill_prompts(skill_code);
+CREATE INDEX IF NOT EXISTS idx_skill_prompts_active ON skill_prompts(is_active);
 
 

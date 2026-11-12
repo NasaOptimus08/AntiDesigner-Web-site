@@ -149,6 +149,12 @@ try {
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
 
+        // Если статус переведен в 'published', запускаем автоматическую очистку мусора драфтов
+        if (($input['status'] ?? '') === 'published') {
+            require_once dirname(__DIR__, 2) . '/core-data/tools/cleanup_tool.php';
+            cleanupPublishedDraftGarbage($pdo, $id);
+        }
+
         echo json_encode([
             'status'  => 'success',
             'message' => 'Строка контент-плана успешно сохранена'

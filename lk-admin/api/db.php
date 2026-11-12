@@ -47,6 +47,42 @@ function getDatabaseConnection(): PDO
         }
     }
 
+    // Автоматические миграции структуры для существующих БД
+    try {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS skill_prompts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                skill_code TEXT NOT NULL,
+                title TEXT NOT NULL,
+                prompt_type TEXT DEFAULT 'step',
+                step_order INTEGER DEFAULT 1,
+                content_markdown TEXT NOT NULL,
+                is_active INTEGER DEFAULT 1,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE INDEX IF NOT EXISTS idx_skill_prompts_code ON skill_prompts(skill_code);
+            CREATE INDEX IF NOT EXISTS idx_skill_prompts_active ON skill_prompts(is_active);
+        ");
+
+        // Проверяем и добавляем расширенные поля в content_items
+        $contentCols = $pdo->query("PRAGMA table_info(content_items)")->fetchAll(PDO::FETCH_COLUMN, 1);
+        $neededCols = [
+            'plan_id'         => 'INTEGER DEFAULT NULL',
+            'storyboard_json' => 'TEXT DEFAULT NULL',
+            'media_files'     => 'TEXT DEFAULT NULL',
+            'chat_history'    => 'TEXT DEFAULT NULL',
+            'audio_url'       => 'TEXT DEFAULT NULL',
+            'motion_html'     => 'TEXT DEFAULT NULL'
+        ];
+        foreach ($neededCols as $colName => $colDef) {
+            if (!in_array($colName, $contentCols, true)) {
+                $pdo->exec("ALTER TABLE content_items ADD COLUMN {$colName} {$colDef}");
+            }
+        }
+    } catch (Throwable $e) {
+        // Фоллбэк логирования миграций без блокировки приложения
+    }
+
     return $pdo;
 }
 

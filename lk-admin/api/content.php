@@ -26,6 +26,7 @@ try {
     require_once __DIR__ . '/db.php';
     require_once __DIR__ . '/gemini.php';
     require_once dirname(__DIR__, 2) . '/core-data/ai_router.php';
+    require_once dirname(__DIR__, 2) . '/core-data/tools/cleanup_tool.php';
     /** @var PDO $pdo */
 
     $rawInput = file_get_contents('php://input');
@@ -164,14 +165,44 @@ try {
                 $skill = $aiRouter->loadSkill($fmtCode);
             }
 
+            // Подтягиваем активные модульные под-промпты из skill_prompts
+            $subPromptsInstruction = '';
+            $stmtSubPrompts = $pdo->prepare("SELECT title, prompt_type, step_order, content_markdown FROM skill_prompts WHERE skill_code = :code AND is_active = 1 ORDER BY step_order ASC, id ASC");
+            $stmtSubPrompts->execute([':code' => $fmtCode]);
+            $activeSubPrompts = $stmtSubPrompts->fetchAll(PDO::FETCH_ASSOC);
+
+            if (!empty($activeSubPrompts)) {
+                $subPromptsInstruction = "\n\n### ЦЕПОЧКА МОДУЛЬНЫХ ПРОМПТОВ И СТИЛЕЙ (.MD):\n";
+                foreach ($activeSubPrompts as $sp) {
+                    $subPromptsInstruction .= "\n---\n#### {$sp['title']} (Тип: {$sp['prompt_type']}, Шаг {$sp['step_order']}):\n{$sp['content_markdown']}\n";
+                }
+            }
+
             $systemInstruction = $skill['system_prompt'] . "\n\n" .
                 "TONE OF VOICE:\n" . ($skill['tone_of_voice'] ?: 'Dark Tech, лаконичный, экспертный, фактологический') . "\n\n" .
-                $knowledgeContext;
+                $knowledgeContext .
+                $subPromptsInstruction;
 
-            $userPrompt = "ТЕМА МАТЕРИАЛА: {$topic}\n\n" .
-                "ЗАДАЧА: Сгенерируй полноценный, готовый к публикации материал для формата «{$skill['title']}» (код: {$fmtCode}). " .
-                "Опирайся на контекст компании AntiDesigner, приводи реальные цифры и преимущества чистого кода перед конструкторами. " .
-                "Отдай только готовый текст без лишних вступительных реплик. Без длинных тире (символ —).";
+            if (in_array($fmtCode, ['reels_hook', 'reels', 'instagram'], true)) {
+                $userPrompt = "ТЕМА ВИДЕО: {$topic}\n\n" .
+                    "ЗАДАЧА: Сгенерируй профессиональный пакет для короткого видео (Reels / Shorts) строго по 6-фазной дуге удержания (5-6 сцен): Hook (0-3c) -> Problem (4-12c) -> Reveal (13-25c) -> Escalation (26-38c) -> Payoff (39-48c) -> CTA (49-60c).\n\n" .
+                    "ДЛЯ КАЖДОЙ СЦЕНЫ СФОРМИРУЙ:\n" .
+                    "1. Действие и визуал в кадре\n" .
+                    "2. Текст субтитров (коротко, 4-8 слов)\n" .
+                    "3. Роль в удержании аудитории (Retention Hook)\n" .
+                    "4. Единый стиль, свет, ракурс камеры (Cinematic 35mm, Dark Tech)\n" .
+                    "5. Image Prompt (Flux / Midjourney, 9:16)\n" .
+                    "6. Video Prompt (Runway / Kling / Luma, 9:16)\n\n" .
+                    "В КОНЦЕ ДОБАВЬ БЛОК ЗАКАДРОВОГО ГОЛОСА:\n" .
+                    "• Дикторский скрипт озвучки (60-90 слов) с разметкой пауз [пауза 0.5с] и ударений (**слово**)\n" .
+                    "• Voice Direction Prompt (тембр, темп, интонация для Gemini 3.8 Flash Audio / TTS).\n\n" .
+                    "Отдай готовый материал в четко структурированном Markdown. Без длинных тире (—).";
+            } else {
+                $userPrompt = "ТЕМА МАТЕРИАЛА: {$topic}\n\n" .
+                    "ЗАДАЧА: Сгенерируй полноценный, готовый к публикации материал для формата «{$skill['title']}» (код: {$fmtCode}). " .
+                    "Опирайся на контекст компании AntiDesigner, приводи реальные цифры и преимущества чистого кода перед конструкторами. " .
+                    "Отдай только готовый текст без лишних вступительных реплик. Без длинных тире (символ —).";
+            }
 
             try {
                 // Все чистовые материалы Контент-фабрики генерирует MODEL_HEAVY (Gemini Flash 3.8, ключ pza...)
@@ -297,6 +328,9 @@ try {
                 ':url' => $publishedUrl,
                 ':id'  => $contentId
             ]);
+
+            // Автоматическая очистка временных медиа и тяжелых полей драфта после публикации
+            cleanupPublishedDraftGarbage($pdo, $contentId);
         }
 
         echo json_encode([
@@ -307,6 +341,230 @@ try {
             'message_id'        => $tgRes['message_id'] ?? null,
             'telegram_response' => $tgRes
         ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        exit;
+    }
+
+    // -------------------------------------------------------------------------
+    // 4.1. ПРИНУДИТЕЛЬНАЯ ОЧИСТКА ОПУБЛИКОВАННЫХ ДРАФТОВ (action=cleanup_published_drafts)
+    // -------------------------------------------------------------------------
+    if ($action === 'cleanup_published_drafts') {
+        $stats = cleanupPublishedDraftGarbage($pdo, 0);
+
+        echo json_encode([
+            'status'  => 'success',
+            'message' => "Очистка завершена: освобождено {$stats['freed_kb']} КБ, удалено файлов: {$stats['deleted_files']}, очищено драфтов: {$stats['updated_items']}",
+            'stats'   => $stats
+        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        exit;
+    }
+
+    // -------------------------------------------------------------------------
+    // 4.2. ПОЛУЧЕНИЕ ПОЛНЫХ ДАННЫХ ДРАФТА (action=get_draft)
+    // -------------------------------------------------------------------------
+    if ($action === 'get_draft') {
+        $id = (int)($_GET['id'] ?? $input['id'] ?? 0);
+        if ($id <= 0) {
+            http_response_code(400);
+            echo json_encode(['status' => 'error', 'message' => 'Не указан ID драфта'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $stmt = $pdo->prepare("SELECT * FROM content_items WHERE id = :id LIMIT 1");
+        $stmt->execute([':id' => $id]);
+        $draft = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$draft) {
+            http_response_code(404);
+            echo json_encode(['status' => 'error', 'message' => 'Черновик не найден'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        echo json_encode([
+            'status' => 'success',
+            'draft'  => $draft
+        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        exit;
+    }
+
+    // -------------------------------------------------------------------------
+    // 4.3. ГЕНЕРАЦИЯ HTML5/CANVAS MOTION-АНИМАЦИИ (action=generate_motion)
+    // -------------------------------------------------------------------------
+    if ($action === 'generate_motion') {
+        $contentId = (int)($input['content_id'] ?? 0);
+        $styleCode = trim((string)($input['style_code'] ?? ''));
+        $scriptText = trim((string)($input['script_text'] ?? ''));
+        $topic = trim((string)($input['topic'] ?? ''));
+
+        if ($contentId > 0 && $scriptText === '') {
+            $stmtD = $pdo->prepare("SELECT topic, content_markdown FROM content_items WHERE id = :id");
+            $stmtD->execute([':id' => $contentId]);
+            $dRow = $stmtD->fetch();
+            if ($dRow) {
+                $scriptText = (string)$dRow['content_markdown'];
+                $topic = $topic ?: (string)$dRow['topic'];
+            }
+        }
+
+        // Подтягиваем описание стиля из skill_prompts
+        $stylePrompt = '';
+        if ($styleCode !== '') {
+            $stmtSt = $pdo->prepare("SELECT content_markdown FROM skill_prompts WHERE skill_code = 'reels_hook' AND (title LIKE :t OR prompt_type = 'style') LIMIT 1");
+            $stmtSt->execute([':t' => "%{$styleCode}%"]);
+            $stylePrompt = (string)$stmtSt->fetchColumn();
+        }
+        if ($stylePrompt === '') {
+            $stylePrompt = "Эстетика: Dark Tech Minimalist (HTML5/Canvas 9:16). Глубокий темный фон (#08090c), неоновый изумруд (#10b981), титановые рамки, плавная 60fps кинетическая типографика и динамический счетчик скорости.";
+        }
+
+        $sysPrompt = "Ты - Senior Creative Technologist и мастер генеративного моушн-дизайна (HTML5/CSS3/Canvas). "
+            . "Твоя задача: сгенерировать самодостаточный, полностью рабочий вертикальный рекламный ролик (соотношение 9:16, 1080x1920 viewBox) на чистом HTML5, CSS3 и Canvas JS без внешних библиотек и CDN.\n\n"
+            . "СТИЛЬ И ГРАФИКА:\n{$stylePrompt}\n\n"
+            . "СТРОГИЕ ТРЕБОВАНИЯ К КОДУ:\n"
+            . "1. Полный монолитный HTML-документ: <!DOCTYPE html><html><head><style>...</style></head><body><div class='viewport'><canvas id='c'></canvas><div class='overlay'>...</div></div><script>...</script></body></html>\n"
+            . "2. Пропорции вертикальные 9:16, контейнер центрирован в окне браузера с черным фоном вокруг.\n"
+            . "3. Плавная циклическая 60fps анимация (requestAnimationFrame): появление хука, поочередная смена 5-6 смысловых фраз сценария (по 3-4 секунды на слайд), анимированный счетчик миллисекунд и круговой прогресс-бар PageSpeed 100/100, нижний таймлайн ролика.\n"
+            . "4. Запрещены любые внешние CDN (шрифты и иконки - системные sans-serif/monospace, SVG или рисуются на canvas).\n"
+            . "5. Отдай СТРОГО чистый исходный код HTML без markdown-оберток.";
+
+        $userPrompt = "ТЕМА РОЛИКА: {$topic}\nСЦЕНАРИЙ И ТЕЗИСЫ:\n{$scriptText}\n\nСгенерируй код самодостаточного вертикального 9:16 HTML5 моушн-ролика прямо сейчас.";
+
+        $configFile = dirname(__DIR__, 2) . '/core-data/config.php';
+        $config = file_exists($configFile) ? require $configFile : [];
+        $aiRouter = new AIRouter($config);
+        $aiRouter->setPDO($pdo);
+
+        $htmlMotion = $aiRouter->call($userPrompt, $sysPrompt, AIRouter::MODEL_HEAVY, 0.4);
+
+        // Очистка от возможных markdown тегов
+        $cleanHtml = trim($htmlMotion);
+        $cleanHtml = preg_replace('/^```(?:html)?\s*/i', '', $cleanHtml);
+        $cleanHtml = preg_replace('/\s*```$/i', '', $cleanHtml);
+
+        if ($contentId > 0) {
+            $stmtUpd = $pdo->prepare("UPDATE content_items SET motion_html = :html WHERE id = :id");
+            $stmtUpd->execute([':html' => $cleanHtml, ':id' => $contentId]);
+        }
+
+        echo json_encode([
+            'status'      => 'success',
+            'motion_html' => $cleanHtml,
+            'message'     => 'Моушн-анимация успешно сгенерирована'
+        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        exit;
+    }
+
+    // -------------------------------------------------------------------------
+    // 4.4. СИНТЕЗ ОЗВУЧКИ ЧЕРЕЗ POLZA.AI / GEMINI TTS (action=generate_tts)
+    // -------------------------------------------------------------------------
+    if ($action === 'generate_tts') {
+        $contentId = (int)($input['content_id'] ?? 0);
+        $text = trim((string)($input['text'] ?? ''));
+
+        if ($text === '') {
+            http_response_code(400);
+            echo json_encode(['status' => 'error', 'message' => 'Текст для озвучки пуст'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $configFile = dirname(__DIR__, 2) . '/core-data/config.php';
+        $config = file_exists($configFile) ? require $configFile : [];
+
+        $polzaKey = trim((string)($config['polza_api_key'] ?? $config['gemini_heavy_api_key'] ?? ''));
+        $ttsModel = trim((string)($config['polza_tts_model'] ?? 'openai/tts-1')) ?: 'openai/tts-1';
+
+        if ($polzaKey === '') {
+            echo json_encode([
+                'status'  => 'error',
+                'message' => 'polza_api_key не настроен в config.local.php. Укажите ключ или прикрепите готовый аудиофайл.'
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        // Очищаем текст от меток пауз и режиссуры для TTS движка
+        $cleanVoiceText = preg_replace('/\[пауза\s*[\d\.\,]*\s*с(?:ек)?\]/iu', '', $text);
+        $cleanVoiceText = preg_replace('/[#*`_~]/', '', $cleanVoiceText);
+        $cleanVoiceText = trim($cleanVoiceText);
+
+        $payload = json_encode([
+            'model' => $ttsModel,
+            'input' => $cleanVoiceText,
+            'voice' => 'onyx'
+        ], JSON_UNESCAPED_UNICODE);
+
+        $ch = curl_init('https://polza.ai/api/v1/audio/speech');
+        curl_setopt_array($ch, [
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => $payload,
+            CURLOPT_HTTPHEADER     => [
+                'Authorization: Bearer ' . $polzaKey,
+                'Content-Type: application/json'
+            ],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 30,
+            CURLOPT_SSL_VERIFYPEER => false
+        ]);
+        $audioRaw = curl_exec($ch);
+        $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode === 200 && is_string($audioRaw) && strlen($audioRaw) > 500) {
+            $uploadsDir = dirname(__DIR__, 2) . '/core-data/uploads';
+            if (!is_dir($uploadsDir)) {
+                mkdir($uploadsDir, 0755, true);
+            }
+            $audioFileName = 'tts_' . ($contentId ?: rand(100, 999)) . '_' . time() . '.mp3';
+            $audioFilePath = $uploadsDir . '/' . $audioFileName;
+            file_put_contents($audioFilePath, $audioRaw);
+
+            $relativeAudioUrl = '../core-data/uploads/' . $audioFileName;
+
+            if ($contentId > 0) {
+                $stmtUpd = $pdo->prepare("UPDATE content_items SET audio_url = :url WHERE id = :id");
+                $stmtUpd->execute([':url' => $relativeAudioUrl, ':id' => $contentId]);
+            }
+
+            echo json_encode([
+                'status'    => 'success',
+                'audio_url' => $relativeAudioUrl,
+                'message'   => 'Озвучка успешно сгенерирована через Polza.ai'
+            ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+            exit;
+        }
+
+        $errMsg = 'Ошибка синтеза речи через Polza.ai API (HTTP ' . $httpCode . ')';
+        $errData = json_decode((string)$audioRaw, true);
+        if (isset($errData['error']['message'])) {
+            $errMsg .= ': ' . $errData['error']['message'];
+        }
+
+        echo json_encode([
+            'status'  => 'error',
+            'message' => $errMsg
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    // -------------------------------------------------------------------------
+    // 4.5. ПРИКРЕПЛЕНИЕ АУДИОДОРОЖКИ К ДРАФТУ (action=attach_audio)
+    // -------------------------------------------------------------------------
+    if ($action === 'attach_audio') {
+        $contentId = (int)($input['content_id'] ?? 0);
+        $audioUrl = trim((string)($input['audio_url'] ?? ''));
+
+        if ($contentId <= 0 || $audioUrl === '') {
+            http_response_code(400);
+            echo json_encode(['status' => 'error', 'message' => 'Не указан content_id или audio_url'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $stmt = $pdo->prepare("UPDATE content_items SET audio_url = :url WHERE id = :id");
+        $stmt->execute([':url' => $audioUrl, ':id' => $contentId]);
+
+        echo json_encode([
+            'status'    => 'success',
+            'message'   => 'Аудиодорожка успешно прикреплена к драфту',
+            'audio_url' => $audioUrl
+        ], JSON_UNESCAPED_UNICODE);
         exit;
     }
 

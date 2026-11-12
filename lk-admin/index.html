@@ -152,7 +152,12 @@
                 <span class="module-kicker">OMNICHANNEL ENGINE 5-IN-1</span>
                 <h2>Контент-фабрика</h2>
               </div>
-              <span class="badge-accent">AGENT-IN-THE-LOOP</span>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <button type="button" id="btnCleanupDrafts" class="btn-tech-outline" style="font-size: 11.5px; padding: 6px 12px;" title="Очистить временные медиафайлы и освободить диск VPS">
+                  <span class="btn-icon">🧹</span> Очистить опубликованные драфты
+                </button>
+                <span class="badge-accent">AGENT-IN-THE-LOOP</span>
+              </div>
             </div>
             <p class="module-desc">
               Генерация готового пакета из 5 материалов из 1 инфоповода: лонгрид для VC.ru/Habr, GEO-статья для
@@ -306,7 +311,107 @@
                     </div>
                   </div>
 
-                  <textarea id="factoryContentTextarea" class="tech-textarea code-font" rows="16" placeholder="Текст сгенерированного материала..."></textarea>
+                  <!-- Стандартный редактор для текстовых форматов (TG, VC, Habr, SEO, LeadMagnet) -->
+                  <div id="factoryTextEditorWrapper">
+                    <textarea id="factoryContentTextarea" class="tech-textarea code-font" rows="16" placeholder="Текст сгенерированного материала..."></textarea>
+                  </div>
+
+                  <!-- Расширенная Студия Драфта Видео (Reels / Shorts / Carousels) -->
+                  <div id="factoryDraftStudioBox" class="draft-studio-box" style="display: none;">
+                    <div class="draft-studio-nav">
+                      <button type="button" class="draft-studio-tab-btn active" data-draft-tab="storyboard">
+                        <span>🎬</span> Сценарий и Раскадровка (5-6 сцен)
+                      </button>
+                      <button type="button" class="draft-studio-tab-btn" data-draft-tab="motion">
+                        <span>⚡</span> Кодовая Motion-Анимация (HTML5 9:16)
+                      </button>
+                      <button type="button" class="draft-studio-tab-btn" data-draft-tab="voiceover">
+                        <span>🎙</span> Закадровый голос (Voiceover)
+                      </button>
+                    </div>
+
+                    <!-- Вкладка А: Сценарий и Посценовая Раскадровка -->
+                    <div class="draft-tab-pane active" id="draftTabStoryboard">
+                      <textarea id="factoryVideoScriptTextarea" class="tech-textarea code-font" rows="18" placeholder="Посценовая раскадровка и сценарий видео..."></textarea>
+                    </div>
+
+                    <!-- Вкладка Б: Кодовая Motion-Анимация (HTML5/Canvas 9:16) -->
+                    <div class="draft-tab-pane" id="draftTabMotion">
+                      <div class="motion-studio-layout">
+                        <!-- Вертикальный плеер 9:16 -->
+                        <div class="phone-mockup-wrapper">
+                          <div class="phone-screen-frame">
+                            <iframe id="motionPreviewIframe" class="phone-screen-iframe" sandbox="allow-scripts"></iframe>
+                          </div>
+                          <div style="display: flex; gap: 8px; width: 270px;">
+                            <button type="button" id="btnReloadMotion" class="btn-tech-outline" style="flex: 1; font-size: 11px; padding: 4px 8px;">
+                              <span>🔄</span> Рестарт
+                            </button>
+                            <button type="button" id="btnDownloadMotionHtml" class="btn-tech-primary" style="flex: 1.5; font-size: 11px; padding: 4px 8px;">
+                              <span>📥</span> Скачать .html
+                            </button>
+                          </div>
+                        </div>
+
+                        <!-- Настройки и генератор стиля анимации -->
+                        <div class="motion-controls-panel">
+                          <div class="form-group">
+                            <label class="tech-label" for="motionStyleSelect">Визуальный стиль Motion-анимации (.md)</label>
+                            <select id="motionStyleSelect" class="tech-input">
+                              <option value="dark_tech">Dark Tech Minimalist (HTML5/Canvas 9:16)</option>
+                              <option value="swiss_grid">Kinetic Typography & Swiss Grid (HTML5 9:16)</option>
+                              <option value="cyberpunk_hud">Cyberpunk Neon HUD & Scanlines (Canvas 9:16)</option>
+                            </select>
+                            <span class="tech-hint" style="font-size: 11px; margin-top: 4px; display: block;">Стили синхронизируются с разделом ⚙️ Скиллы. Модель сгенерирует самодостаточный ролик на базе сценария.</span>
+                          </div>
+
+                          <button type="button" id="btnGenerateMotionHtml" class="btn-tech-primary" style="padding: 10px 16px;">
+                            <span>⚡</span> Сгенерировать Motion-анимацию (MODEL_HEAVY)
+                          </button>
+
+                          <div class="form-group" style="margin-top: 8px;">
+                            <label class="tech-label">Исходный код анимации HTML5 / Canvas</label>
+                            <textarea id="motionSourceCodeTextarea" class="tech-textarea code-font" rows="8" placeholder="Код <!DOCTYPE html> появится здесь..." style="font-size: 11px;"></textarea>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Вкладка В: Закадровый голос и аудио-озвучка -->
+                    <div class="draft-tab-pane" id="draftTabVoiceover">
+                      <div class="voiceover-studio-panel">
+                        <div class="form-group">
+                          <label class="tech-label" for="voiceoverScriptTextarea">Текст для диктора с разметкой пауз и ударений</label>
+                          <textarea id="voiceoverScriptTextarea" class="tech-textarea code-font" rows="6" placeholder="Дикторский текст: [пауза 0.5с] Твой сайт на Тильде ворует клиентов..."></textarea>
+                        </div>
+
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                          <button type="button" id="btnGeneratePolzaTts" class="btn-tech-primary">
+                            <span>🔊</span> Озвучить через API (Polza / Gemini TTS)
+                          </button>
+                          
+                          <label class="btn-tech-outline upload-btn-label" style="cursor: pointer;">
+                            <span>📎</span> Прикрепить свою аудиодорожку
+                            <input type="file" id="inputCustomAudio" accept="audio/*" style="display: none;">
+                          </label>
+                          
+                          <span id="voiceoverStatusHint" class="action-status-hint"></span>
+                        </div>
+
+                        <!-- Аудиоплеер драфта -->
+                        <div class="audio-player-card" id="draftAudioPlayerCard" style="display: none;">
+                          <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 18px;">🎵</span>
+                            <div>
+                              <div style="font-size: 12px; font-weight: 700; color: #e6edf3;">Аудиодорожка ролика</div>
+                              <div id="audioFileNameBadge" style="font-size: 10.5px; color: #7c8896;">tts_preview.mp3</div>
+                            </div>
+                          </div>
+                          <audio id="draftAudioPlayer" controls></audio>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                   
                   <div class="result-footer">
                     <span id="factoryActionStatus" class="action-status-hint">Готов к публикации или правкам.</span>
@@ -1430,6 +1535,30 @@
                     <label class="tech-label" for="skillPromptInput">Системный промпт для Gemini API (System Instruction)</label>
                     <textarea id="skillPromptInput" class="tech-textarea code-font" rows="15" placeholder="Введите системную инструкцию для роли..."></textarea>
                   </div>
+
+                  <!-- Блок модульных под-промптов и стилей (.md) -->
+                  <div class="skill-subprompts-section">
+                    <div class="subprompts-header">
+                      <div class="subprompts-title">
+                        <span>📚</span> Дополнительные модульные промпты и стили (.md)
+                        <span class="skills-count-pill" id="subPromptsCountBadge">0</span>
+                      </div>
+                      <div class="subprompts-actions">
+                        <button type="button" id="btnAddSubPromptBtn" class="btn-tech-outline" style="font-size: 11.5px; padding: 4px 10px;">
+                          <span>+</span> Добавить промпт
+                        </button>
+                        <label class="btn-tech-outline upload-btn-label" style="font-size: 11.5px; padding: 4px 10px; cursor: pointer;" title="Загрузить неограниченно .md файлов">
+                          <span>📎</span> Загрузить .md файлы
+                          <input type="file" id="inputUploadSubPrompts" accept=".md,.txt" multiple style="display: none;">
+                        </label>
+                      </div>
+                    </div>
+
+                    <div class="subprompts-list" id="skillSubPromptsList">
+                      <!-- Заполняется динамически -->
+                      <div class="tech-hint" style="text-align: center; padding: 12px;">Загрузка под-промптов...</div>
+                    </div>
+                  </div>
                 </div>
 
                 <div class="skill-editor-footer">
@@ -1666,6 +1795,47 @@
 
       </div>
     </main>
+  </div>
+
+  <!-- Модальное окно: Редактирование / Добавление модульного под-промпта (.md) -->
+  <div id="modalSubPrompt" class="tech-modal-backdrop" style="display: none;">
+    <div class="tech-modal-card" style="max-width: 680px; width: 95%;">
+      <div class="tech-modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px;">
+        <h3 id="modalSubPromptTitleText" style="font-size: 15px; font-weight: 700; color: #e6edf3;">Модульный промпт / стиль</h3>
+        <button type="button" id="btnCloseSubPromptModal" class="btn-tech-outline" style="padding: 2px 8px; font-size: 14px;">✕</button>
+      </div>
+      <div class="tech-modal-body" style="display: flex; flex-direction: column; gap: 12px; padding: 16px 0;">
+        <input type="hidden" id="modalSubPromptId" value="0">
+        <input type="hidden" id="modalSubPromptSkillCode" value="">
+        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px;">
+          <div>
+            <label class="tech-label" for="modalSubPromptName">Название промпта / этапа</label>
+            <input type="text" id="modalSubPromptName" class="tech-input" placeholder="Например: Шаг 1: Усиление идеи">
+          </div>
+          <div>
+            <label class="tech-label" for="modalSubPromptType">Тип</label>
+            <select id="modalSubPromptType" class="tech-input">
+              <option value="step">Этап цепочки (step)</option>
+              <option value="style">Стиль анимации (style)</option>
+              <option value="rule">Доп. правило (rule)</option>
+            </select>
+          </div>
+          <div>
+            <label class="tech-label" for="modalSubPromptOrder">Порядок</label>
+            <input type="number" id="modalSubPromptOrder" class="tech-input" value="1" min="1" max="99">
+          </div>
+        </div>
+
+        <div>
+          <label class="tech-label" for="modalSubPromptContent">Текст Markdown (.md)</label>
+          <textarea id="modalSubPromptContent" class="tech-textarea code-font" rows="14" placeholder="# ИНСТРУКЦИЯ ЭТАПА..."></textarea>
+        </div>
+      </div>
+      <div class="tech-modal-footer" style="display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px;">
+        <button type="button" id="btnCancelSubPromptModal" class="btn-tech-outline">Отмена</button>
+        <button type="button" id="btnSaveSubPromptModal" class="btn-tech-primary">Сохранить промпт</button>
+      </div>
+    </div>
   </div>
 
   <!-- Всплывающие уведомления (Toast Notifications) -->

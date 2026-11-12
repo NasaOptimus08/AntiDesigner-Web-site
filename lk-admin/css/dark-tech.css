@@ -4650,4 +4650,302 @@ html, body {
   line-height: 1.4;
 }
 
+/* ==========================================================================
+   10. МОДУЛЬНЫЕ ПОД-ПРОМПТЫ СКИЛЛОВ (.MD) & ВИДЕО МОУШН-СТУДИЯ (9:16)
+   ========================================================================== */
+
+.skill-subprompts-section {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.subprompts-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.subprompts-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #e6edf3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.subprompts-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.subprompts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.subprompt-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(15, 20, 26, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 6px;
+  padding: 10px 14px;
+  transition: all 0.2s ease;
+  gap: 12px;
+}
+
+.subprompt-card:hover {
+  background: rgba(22, 28, 36, 0.9);
+  border-color: rgba(0, 255, 136, 0.3);
+}
+
+.subprompt-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.subprompt-step-order {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: #7c8896;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.subprompt-type-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.subprompt-type-badge.step {
+  background: rgba(99, 102, 241, 0.15);
+  color: #818cf8;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.subprompt-type-badge.style {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.subprompt-type-badge.rule {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.subprompt-title-text {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #c9d1d9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.subprompt-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Переключатель активности */
+.switch-toggle {
+  position: relative;
+  display: inline-block;
+  width: 34px;
+  height: 18px;
+}
+
+.switch-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.switch-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #2b323c;
+  transition: .3s;
+  border-radius: 18px;
+}
+
+.switch-slider:before {
+  position: absolute;
+  content: "";
+  height: 12px;
+  width: 12px;
+  left: 3px;
+  bottom: 3px;
+  background-color: #8b949e;
+  transition: .3s;
+  border-radius: 50%;
+}
+
+.switch-toggle input:checked + .switch-slider {
+  background-color: #10b981;
+}
+
+.switch-toggle input:checked + .switch-slider:before {
+  transform: translateX(16px);
+  background-color: #ffffff;
+}
+
+/* Студия драфта видео в Контент-фабрике (3 вкладки) */
+.draft-studio-box {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.draft-studio-nav {
+  display: flex;
+  background: rgba(10, 14, 18, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.draft-studio-tab-btn {
+  flex: 1;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  color: #7c8896;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.draft-studio-tab-btn:hover {
+  color: #e6edf3;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.draft-studio-tab-btn.active {
+  background: #1c2330;
+  color: #00ff88;
+  border: 1px solid rgba(0, 255, 136, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.draft-tab-pane {
+  display: none;
+}
+
+.draft-tab-pane.active {
+  display: block;
+}
+
+/* Вкладка Б: Вертикальный HTML5 Motion плеер 9:16 */
+.motion-studio-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 20px;
+  background: rgba(13, 17, 23, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+@media (max-width: 900px) {
+  .motion-studio-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.phone-mockup-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.phone-screen-frame {
+  width: 270px;
+  height: 480px; /* 9:16 */
+  background: #000000;
+  border: 2px solid #2d333b;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 20px rgba(0, 255, 136, 0.1);
+  position: relative;
+}
+
+.phone-screen-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: #08090c;
+}
+
+.motion-controls-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Вкладка В: Студия закадрового голоса */
+.voiceover-studio-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: rgba(13, 17, 23, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.audio-player-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(22, 27, 34, 0.8);
+  border: 1px solid rgba(0, 255, 136, 0.25);
+  border-radius: 8px;
+  padding: 12px 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.audio-player-card audio {
+  flex: 1;
+  min-width: 250px;
+  height: 36px;
+}
+
+
 

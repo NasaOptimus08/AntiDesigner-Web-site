@@ -53,7 +53,7 @@ try {
     $origName = (string)($file['name'] ?? 'document.txt');
     $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
 
-    $allowedExts = ['pdf', 'docx', 'md', 'txt', 'json', 'py', 'js', 'html', 'css', 'sql'];
+    $allowedExts = ['pdf', 'docx', 'md', 'txt', 'json', 'py', 'js', 'html', 'css', 'sql', 'mp3', 'wav', 'm4a', 'ogg', 'aac'];
     if (!in_array($ext, $allowedExts, true)) {
         http_response_code(400);
         echo json_encode(['status' => 'error', 'message' => "Неподдерживаемый формат: .{$ext}. Разрешены: " . implode(', ', $allowedExts)], JSON_UNESCAPED_UNICODE);
@@ -78,6 +78,27 @@ try {
 
     if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
         throw new RuntimeException('Не удалось сохранить файл в директорию загрузок');
+    }
+
+    $target = trim((string)($_POST['target'] ?? 'knowledge'));
+
+    // -------------------------------------------------------------------------
+    // 0. ЦЕЛЕВОЙ МОДУЛЬ: АУДИОФАЙЛЫ ДРАФТА (target=audio)
+    // -------------------------------------------------------------------------
+    if ($target === 'audio') {
+        $contentId = isset($_POST['content_id']) ? (int)$_POST['content_id'] : 0;
+        $relativeAudioUrl = '../core-data/uploads/' . $storedFileName;
+        if ($contentId > 0) {
+            $stmtUpd = $pdo->prepare("UPDATE content_items SET audio_url = :url WHERE id = :id");
+            $stmtUpd->execute([':url' => $relativeAudioUrl, ':id' => $contentId]);
+        }
+        echo json_encode([
+            'status'    => 'success',
+            'message'   => 'Аудиодорожка успешно прикреплена к черновику',
+            'filename'  => $origName,
+            'audio_url' => $relativeAudioUrl
+        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        exit;
     }
 
     // -------------------------------------------------------------------------
@@ -189,6 +210,52 @@ try {
             'filename'       => $origName,
             'prompt_text'    => $extractedText,
             'skill_id'       => $skillId
+        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        exit;
+    }
+
+    // -------------------------------------------------------------------------
+    // 3. ЦЕЛЕВОЙ МОДУЛЬ: МОДУЛЬНЫЕ ПОД-ПРОМПТЫ СКИЛЛА (.md файлы)
+    // -------------------------------------------------------------------------
+    if ($target === 'skill_prompt' || $target === 'skill_prompts') {
+        $skillCode = trim((string)($_POST['skill_code'] ?? ''));
+        if ($skillCode === '') {
+            http_response_code(400);
+            echo json_encode(['status' => 'error', 'message' => 'Не указан skill_code для под-промпта'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $promptType = trim((string)($_POST['prompt_type'] ?? 'step'));
+        $title = trim((string)($_POST['title'] ?? ''));
+        if ($title === '') {
+            $rawTitle = pathinfo($origName, PATHINFO_FILENAME);
+            $title = ucwords(str_replace(['_', '-'], ' ', $rawTitle));
+        }
+
+        // Определяем следующий порядковый номер
+        $maxOrder = (int)$pdo->query("SELECT MAX(step_order) FROM skill_prompts WHERE skill_code = " . $pdo->quote($skillCode))->fetchColumn();
+        $nextOrder = $maxOrder + 1;
+
+        $stmtIns = $pdo->prepare("
+            INSERT INTO skill_prompts (skill_code, title, prompt_type, step_order, content_markdown, is_active, created_at)
+            VALUES (:code, :title, :type, :order, :content, 1, CURRENT_TIMESTAMP)
+        ");
+        $stmtIns->execute([
+            ':code'    => $skillCode,
+            ':title'   => str_replace(['—', '–'], '-', $title),
+            ':type'    => $promptType,
+            ':order'   => $nextOrder,
+            ':content' => str_replace(['—', '–'], '-', $extractedText)
+        ]);
+
+        $newId = (int)$pdo->lastInsertId();
+
+        echo json_encode([
+            'status'     => 'success',
+            'message'    => "Файл {$origName} успешно прикреплен к скиллу {$skillCode}",
+            'id'         => $newId,
+            'title'      => $title,
+            'skill_code' => $skillCode
         ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
         exit;
     }

@@ -265,6 +265,87 @@ PROMPT
         }
     };
 
+    // Функция засеивания модульных под-промптов (.md) для reels_hook
+    $seedDefaultSkillPrompts = static function (PDO $pdo): void {
+        $count = (int)$pdo->query("SELECT COUNT(*) FROM skill_prompts WHERE skill_code = 'reels_hook'")->fetchColumn();
+        if ($count > 0) {
+            return;
+        }
+
+        $prompts = [
+            [
+                'skill_code' => 'reels_hook',
+                'title'      => 'Шаг 1: Анализ и усиление идеи (Hook -> Problem -> Reveal -> Escalation -> Payoff -> CTA)',
+                'prompt_type'=> 'step',
+                'step_order' => 1,
+                'content_markdown' => "# ЭТАП 1: АНАЛИЗ И СТРУКТУРНОЕ УСИЛЕНИЕ ИДЕИ REELS / SHORTS\n\nТы - Senior видео-продюсер и драматург вирусных коротких видео для личного бренда AntiDesigner (Евгений Антипин).\nЦель: превратить тему в драматургическую пружину по классической 6-фазной дуге удержания:\n1. **HOOK (0-3 сек)**: Прерывание паттерна (Pattern Interrupt), визуальный парадокс или шокирующее заявление о скорости/конструкторах.\n2. **PROBLEM (4-12 сек)**: Локализация боли клиента (медленный сайт, слив бюджета на рекламу, зависание в 4G, шаблонный дизайн).\n3. **REVEAL (13-25 сек)**: Неожиданное открытие или контринтуитивный факт (почему чистый код опережает платформы в 10 раз).\n4. **ESCALATION (26-38 сек)**: Нарастание напряжения, разбор цифр и бенчмарков (замеры PageSpeed 100/100, FCP 0.3с, реальные потери заявок).\n5. **PAYOFF (39-48 сек)**: Разрешение конфликта и демонстрация готового результата независимого разработчика.\n6. **CTA (49-60 сек)**: Финальный триггер для перехода в личные сообщения или Telegram-бота за бесплатным аудитом."
+            ],
+            [
+                'skill_code' => 'reels_hook',
+                'title'      => 'Шаг 2: Проработка сценария (60-90 слов под субтитры)',
+                'prompt_type'=> 'step',
+                'step_order' => 2,
+                'content_markdown' => "# ЭТАП 2: ПРОРАБОТКА ДИНАМИЧНОГО СЦЕНАРИЯ ПОД СУБТИТРЫ (60-90 СЛОВ)\n\nТы - мастер лаконичного копирайтинга для Reels с дикторским темпом 130-150 слов в минуту.\nПравила:\n- Суммарный объем текста: ровно 60-90 слов (хронометраж 35-50 секунд без провисаний).\n- Каждая фраза длиной 4-8 слов, идеально ложится в одну строчку субтитров на экране.\n- Категорически запрещены вводные слова, канцелярщина и длинные тире (-).\n- Позиционирование: строго от первого лица («Я независимый разработчик Евгений Антипин»)."
+            ],
+            [
+                'skill_code' => 'reels_hook',
+                'title'      => 'Шаг 3: Усиление ритма и удержания',
+                'prompt_type'=> 'step',
+                'step_order' => 3,
+                'content_markdown' => "# ЭТАП 3: РИТМИЧЕСКИЙ РАЗГОН И ПЕРЕКЛЮЧЕНИЯ ВНИМАНИЯ (RETENTION HOOKS)\n\nТы - специалист по удержанию аудитории (Watch Time & Retention Rate).\nПравила удержания:\n- Смена визуального стимула каждые 2.0-2.5 секунды (зум, переход, смена ракурса, текст).\n- Открытые петли любопытства (Open Loops): вопрос или обещание разгадки в начале сцены, раскрытие в следующей.\n- Звуковые маркеры (Whoosh, Pop, Click, Glitch) на каждом ключевом тезисе."
+            ],
+            [
+                'skill_code' => 'reels_hook',
+                'title'      => 'Шаг 4: Разбиение на 5-6 сцен + Единый визуальный стиль/свет/камера',
+                'prompt_type'=> 'step',
+                'step_order' => 4,
+                'content_markdown' => "# ЭТАП 4: ПОСЦЕНОВАЯ РАСКАДРОВКА И ЕДИНЫЙ VISUAL STYLE GUIDE (5-6 СЦЕН)\n\nРазбей ролик ровно на 5-6 сцен:\n- Сцена 1: Hook (0-3c)\n- Сцена 2: Problem (4-12c)\n- Сцена 3: Reveal (13-25c)\n- Сцена 4: Escalation (26-38c)\n- Сцена 5: Payoff (39-48c)\n- Сцена 6: CTA (49-60c)\n\nВ каждой сцене укажи:\n1. Время и действие в кадре.\n2. Текст субтитров (крупно по центру).\n3. Психологическая роль в удержании.\n4. Светотень, объектив, угол камеры и движение (Cinematic 35mm, Dark Tech lighting, cold neon accents)."
+            ],
+            [
+                'skill_code' => 'reels_hook',
+                'title'      => 'Шаг 5: Генерация подробных Image & Video Prompts (Realistic, Cinematic, 9:16)',
+                'prompt_type'=> 'step',
+                'step_order' => 5,
+                'content_markdown' => "# ЭТАП 5: ПРОМПТЫ ДЛЯ НЕЙРОСЕТЕЙ (FLUX / MIDJOURNEY / KLING / RUNWAY, 9:16)\n\nДля каждой из сцен сформируй:\n- Image Prompt (Flux / Midjourney v6): Photorealistic cinematic vertical 9:16 shot, anamorphic lens, shallow depth of field, 8k resolution, raw style, Dark Tech aesthetic, emerald green and dark titanium accents, dramatic key light.\n- Video Prompt (Kling / Runway Gen-3 / Luma): Slow subtle camera push-in, micro motion, volumetric lighting, 60fps cinematic movement, vertical 9:16."
+            ],
+            [
+                'skill_code' => 'reels_hook',
+                'title'      => 'Шаг 6: Генерация HTML5/Canvas Motion-анимации и Voiceover-промпта для озвучки',
+                'prompt_type'=> 'step',
+                'step_order' => 6,
+                'content_markdown' => "# ЭТАП 6: HTML5/CANVAS MOTION RENDER & VOICEOVER PROMPT\n\n1. Voiceover Direction:\n- Точный хронометраж и разметка пауз [пауза 0.4с], интонационные ударения (**акцент**).\n- Режиссура голоса: уверенный, спокойный, глубокий тембр Senior-инженера, без фальшивого радио-энтузиазма.\n\n2. HTML5 Motion Engine:\n- Генерация самодостаточного HTML5 файла (включая встроенный CSS3 и Canvas JS).\n- Формат: вертикальный холст 9:16 (1080x1920 CSS viewBox), 60fps requestAnimationFrame.\n- Плавная типографика, кинетические субтитры, визуализатор аудио-волны или графиков скорости."
+            ],
+            [
+                'skill_code' => 'reels_hook',
+                'title'      => 'Стиль: Dark Tech Minimalist (HTML5/Canvas 9:16)',
+                'prompt_type'=> 'style',
+                'step_order' => 7,
+                'content_markdown' => "# СТИЛЬ: DARK TECH MINIMALIST (HTML5 / CANVAS 9:16)\n\nЭстетика: Deep Charcoal (#08090c), титановый бордер (#1e222d), акцентный изумруд (#10b981) и ультра-фиолет (#6366f1).\nТипографика: JetBrains Mono / Inter, чистые геометрические пропорции.\nАнимация: CSS transform + requestAnimationFrame, плавное появление карточек, счетчик миллисекунд загрузки сайта, индикатор PageSpeed 100/100 с круговым прогресс-баром."
+            ],
+            [
+                'skill_code' => 'reels_hook',
+                'title'      => 'Стиль: Kinetic Typography & Swiss Grid (HTML5 9:16)',
+                'prompt_type'=> 'style',
+                'step_order' => 8,
+                'content_markdown' => "# СТИЛЬ: KINETIC TYPOGRAPHY & SWISS GRID (HTML5 9:16)\n\nЭстетика: Черно-белый контраст с одним акцентным маркером (Safety Orange / Electric Green), модульная сетка швейцарской типографики.\nАнимация: Крупные кинетические текстовые хуки, пословное появление субтитров (word-by-word reveal), диагональные сдвиги, перечеркивание медленных цифр (5.8 сек -> 0.35 сек)."
+            ]
+        ];
+
+        $stmt = $pdo->prepare("
+            INSERT INTO skill_prompts (skill_code, title, prompt_type, step_order, content_markdown, is_active, created_at)
+            VALUES (:code, :title, :type, :order, :content, 1, CURRENT_TIMESTAMP)
+        ");
+        foreach ($prompts as $p) {
+            $stmt->execute([
+                ':code'    => $p['skill_code'],
+                ':title'   => $p['title'],
+                ':type'    => $p['prompt_type'],
+                ':order'   => $p['step_order'],
+                ':content' => $p['content_markdown']
+            ]);
+        }
+    };
+
     // Убедимся, что колонка category существует в SQLite
     $cols = $pdo->query('PRAGMA table_info(skills)')->fetchAll(PDO::FETCH_COLUMN, 1);
     if (!in_array('category', $cols, true)) {
@@ -275,6 +356,180 @@ PROMPT
     $skillsCount = (int)$pdo->query('SELECT COUNT(*) FROM skills')->fetchColumn();
     if ($skillsCount === 0) {
         $seedDefaultSkills($pdo);
+    }
+
+    // Инициализируем под-промпты для reels_hook
+    $seedDefaultSkillPrompts($pdo);
+
+    $rawInput = file_get_contents('php://input');
+    $input = json_decode($rawInput, true);
+    if (!is_array($input)) {
+        $input = $_POST;
+    }
+
+    $action = trim((string)($_GET['action'] ?? $input['action'] ?? ''));
+
+    // -------------------------------------------------------------------------
+    // ОПЕРАЦИИ С МОДУЛЬНЫМИ ПОД-ПРОМПТАМИ (SKILL_PROMPTS)
+    // -------------------------------------------------------------------------
+
+    // 1. Получение под-промптов для выбранного скилла
+    if ($action === 'list_prompts') {
+        $skillCode = trim((string)($_GET['skill_code'] ?? $input['skill_code'] ?? ''));
+        if ($skillCode === '') {
+            http_response_code(400);
+            echo json_encode(['status' => 'error', 'message' => 'Не указан skill_code'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $stmt = $pdo->prepare('SELECT * FROM skill_prompts WHERE skill_code = :code ORDER BY step_order ASC, id ASC');
+        $stmt->execute([':code' => $skillCode]);
+        $prompts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            'status'     => 'success',
+            'skill_code' => $skillCode,
+            'count'      => count($prompts),
+            'prompts'    => $prompts
+        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        exit;
+    }
+
+    // 2. Создание нового модульного под-промпта
+    if ($action === 'create_prompt') {
+        $skillCode = trim((string)($input['skill_code'] ?? ''));
+        $title = trim((string)($input['title'] ?? 'Новый под-промпт'));
+        $promptType = trim((string)($input['prompt_type'] ?? 'step'));
+        $stepOrder = (int)($input['step_order'] ?? 1);
+        $contentMarkdown = trim((string)($input['content_markdown'] ?? ''));
+        $isActive = isset($input['is_active']) ? (int)$input['is_active'] : 1;
+
+        if ($skillCode === '' || $contentMarkdown === '') {
+            http_response_code(400);
+            echo json_encode(['status' => 'error', 'message' => 'Укажите skill_code и текст content_markdown'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $contentMarkdown = str_replace(['—', '–'], '-', $contentMarkdown);
+
+        $stmt = $pdo->prepare("
+            INSERT INTO skill_prompts (skill_code, title, prompt_type, step_order, content_markdown, is_active, created_at)
+            VALUES (:code, :title, :type, :order, :content, :active, CURRENT_TIMESTAMP)
+        ");
+        $stmt->execute([
+            ':code'    => $skillCode,
+            ':title'   => str_replace(['—', '–'], '-', $title),
+            ':type'    => $promptType,
+            ':order'   => $stepOrder,
+            ':content' => $contentMarkdown,
+            ':active'  => $isActive
+        ]);
+
+        $newId = (int)$pdo->lastInsertId();
+
+        echo json_encode([
+            'status'  => 'success',
+            'message' => 'Модульный под-промпт успешно создан',
+            'id'      => $newId
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    // 3. Редактирование модульного под-промпта
+    if ($action === 'update_prompt') {
+        $id = (int)($input['id'] ?? 0);
+        if ($id <= 0) {
+            http_response_code(400);
+            echo json_encode(['status' => 'error', 'message' => 'Некорректный ID промпта'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $fields = [];
+        $params = [':id' => $id];
+
+        if (isset($input['title'])) {
+            $fields[] = 'title = :title';
+            $params[':title'] = str_replace(['—', '–'], '-', trim((string)$input['title']));
+        }
+        if (isset($input['prompt_type'])) {
+            $fields[] = 'prompt_type = :prompt_type';
+            $params[':prompt_type'] = trim((string)$input['prompt_type']);
+        }
+        if (isset($input['step_order'])) {
+            $fields[] = 'step_order = :step_order';
+            $params[':step_order'] = (int)$input['step_order'];
+        }
+        if (isset($input['content_markdown'])) {
+            $fields[] = 'content_markdown = :content_markdown';
+            $params[':content_markdown'] = str_replace(['—', '–'], '-', trim((string)$input['content_markdown']));
+        }
+        if (isset($input['is_active'])) {
+            $fields[] = 'is_active = :is_active';
+            $params[':is_active'] = (int)$input['is_active'];
+        }
+
+        if (empty($fields)) {
+            echo json_encode(['status' => 'success', 'message' => 'Нет полей для обновления'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $sql = "UPDATE skill_prompts SET " . implode(', ', $fields) . " WHERE id = :id";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+
+        echo json_encode([
+            'status'  => 'success',
+            'message' => 'Модульный под-промпт успешно обновлен'
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    // 4. Переключение активности под-промпта (toggle)
+    if ($action === 'toggle_prompt') {
+        $id = (int)($input['id'] ?? 0);
+        $isActive = isset($input['is_active']) ? (int)$input['is_active'] : null;
+
+        if ($id <= 0) {
+            http_response_code(400);
+            echo json_encode(['status' => 'error', 'message' => 'Некорректный ID'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        if ($isActive === null) {
+            $stmt = $pdo->prepare('UPDATE skill_prompts SET is_active = CASE WHEN is_active = 1 THEN 0 ELSE 1 END WHERE id = :id');
+            $stmt->execute([':id' => $id]);
+        } else {
+            $stmt = $pdo->prepare('UPDATE skill_prompts SET is_active = :active WHERE id = :id');
+            $stmt->execute([':active' => $isActive ? 1 : 0, ':id' => $id]);
+        }
+
+        $newActive = (int)$pdo->query("SELECT is_active FROM skill_prompts WHERE id = {$id}")->fetchColumn();
+
+        echo json_encode([
+            'status'    => 'success',
+            'id'        => $id,
+            'is_active' => $newActive
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    // 5. Удаление модульного под-промпта
+    if ($action === 'delete_prompt') {
+        $id = (int)($input['id'] ?? 0);
+        if ($id <= 0) {
+            http_response_code(400);
+            echo json_encode(['status' => 'error', 'message' => 'Некорректный ID'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $stmt = $pdo->prepare('DELETE FROM skill_prompts WHERE id = :id');
+        $stmt->execute([':id' => $id]);
+
+        echo json_encode([
+            'status'  => 'success',
+            'message' => 'Модульный под-промпт удален'
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
     }
 
     // -------------------------------------------------------------------------

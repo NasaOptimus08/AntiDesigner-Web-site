@@ -38,8 +38,11 @@ $config = [
     // Универсальный фоллбэк
     'gemini_api_key'       => getenv('GEMINI_API_KEY') ?: '',
 
-    // Провайдер Polza.ai (для Heavy модели)
+    // Провайдер Polza.ai (для Heavy модели и генерации медиа)
     'polza_api_url'        => getenv('POLZA_API_URL') ?: 'https://polza.ai/api/v1',
+    'polza_api_key'        => getenv('POLZA_API_KEY') ?: '',
+    'polza_tts_model'      => getenv('POLZA_TTS_MODEL') ?: 'openai/tts-1',
+    'polza_image_model'    => getenv('POLZA_IMAGE_MODEL') ?: 'black-forest-labs/flux-schnell',
 
     // Telegram
     'telegram_bot_token'   => getenv('TELEGRAM_BOT_TOKEN') ?: '',
