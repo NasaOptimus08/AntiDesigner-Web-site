@@ -33,14 +33,18 @@ class ScoutEngine
     }
 
     /**
-     * Search business candidates by niche and city using Lead Scout tool
+     * Search business candidates by niche and city using Lead Scout tool (Serper.dev)
      *
      * @param string $niche
      * @param string $city
+     * @param int $limit
      * @return array
      */
-    public function searchLeads(string $niche, string $city): array
+    public function searchLeads(string $niche, string $city, int $limit = 15): array
     {
+        if (function_exists('discoverBusinessLeads')) {
+            return discoverBusinessLeads($niche, $city, $limit, $this->config);
+        }
         return scrapeBusinessDirectory($niche, $city, $this->config);
     }
 
