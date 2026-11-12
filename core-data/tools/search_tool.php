@@ -191,3 +191,77 @@ if (!function_exists('saveTrendsToDatabase')) {
     }
 }
 
+if (!function_exists('callTavilyMCP')) {
+    /**
+     * Вызов инструментов Tavily через remote MCP сервер (Streamable HTTP / SSE)
+     *
+     * @param string $toolName 'tavily_search', 'tavily_extract', 'tavily_map', 'tavily_crawl', 'tavily_research'
+     * @param array<string, mixed> $arguments Аргументы инструмента
+     * @param array<string, mixed> $config Конфигурация
+     * @return array
+     */
+    function callTavilyMCP(string $toolName, array $arguments, array $config = []): array
+    {
+        if (empty($config)) {
+            $configFile = dirname(__DIR__) . '/config.php';
+            if (file_exists($configFile)) {
+                $config = require $configFile;
+            }
+        }
+
+        $mcpUrl = trim((string)($config['tavily_mcp_url'] ?? ''));
+        $apiKey = trim((string)($config['tavily_api_key'] ?? ''));
+
+        if ($mcpUrl === '' && $apiKey !== '') {
+            $mcpUrl = 'https://mcp.tavily.com/mcp/?tavilyApiKey=' . urlencode($apiKey);
+        }
+
+        if ($mcpUrl === '') {
+            return ['status' => 'error', 'message' => 'Tavily MCP URL не настроен'];
+        }
+
+        $payload = [
+            'jsonrpc' => '2.0',
+            'id'      => time(),
+            'method'  => 'tools/call',
+            'params'  => [
+                'name'      => $toolName,
+                'arguments' => $arguments
+            ]
+        ];
+
+        $ch = curl_init($mcpUrl);
+        curl_setopt_array($ch, [
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => json_encode($payload, JSON_UNESCAPED_UNICODE),
+            CURLOPT_HTTPHEADER     => [
+                'Content-Type: application/json',
+                'Accept: application/json, text/event-stream',
+                'Authorization: Bearer ' . $apiKey
+            ],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 15,
+            CURLOPT_SSL_VERIFYPEER => false
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($response && ($httpCode === 200 || $httpCode === 202)) {
+            $data = json_decode((string)$response, true);
+            if (is_array($data)) {
+                return ['status' => 'success', 'data' => $data['result'] ?? $data];
+            }
+        }
+
+        // Авто-фоллбэк на REST API для tavily_search
+        if ($toolName === 'tavily_search') {
+            return searchWebTrends($arguments['query'] ?? '', $config);
+        }
+
+        return ['status' => 'error', 'http_code' => $httpCode, 'raw' => $response];
+    }
+}
+
+

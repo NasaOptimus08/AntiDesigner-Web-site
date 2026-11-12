@@ -47,6 +47,7 @@ $config = [
 
     // Внешние парсеры и поисковики
     'tavily_api_key'       => getenv('TAVILY_API_KEY') ?: '',
+    'tavily_mcp_url'       => getenv('TAVILY_MCP_URL') ?: 'https://mcp.tavily.com/mcp/?tavilyApiKey=tvly-1x4fsB-nkx8vXKPd2fwHXxdm4638zmsExakAUBuB7lTrGi5G7',
     'pagespeed_api_key'    => getenv('PAGESPEED_API_KEY') ?: ''
 ];
 

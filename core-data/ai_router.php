@@ -89,6 +89,8 @@ PROMPT;
     private string $heavyApiKey;
     private string $fallbackApiKey;
     private string $polzaBaseUrl;
+    private string $tavilyApiKey = '';
+    private string $tavilyMcpUrl = '';
     private ?PDO $pdo = null;
 
     /**
@@ -108,6 +110,8 @@ PROMPT;
             $this->fastApiKey     = trim((string)($config['gemini_fast_api_key'] ?? '')) ?: $this->fallbackApiKey;
             $this->heavyApiKey    = trim((string)($config['gemini_heavy_api_key'] ?? '')) ?: $this->fallbackApiKey;
             $this->polzaBaseUrl   = rtrim((string)($config['polza_api_url'] ?? 'https://polza.ai/api/v1'), '/');
+            $this->tavilyApiKey   = trim((string)($config['tavily_api_key'] ?? ''));
+            $this->tavilyMcpUrl   = trim((string)($config['tavily_mcp_url'] ?? ''));
         } else {
             $this->fastApiKey     = trim($configOrFastKey);
             $this->heavyApiKey    = trim($heavyKey) ?: $this->fastApiKey;
@@ -532,5 +536,27 @@ PROMPT;
     public function getHeavyModelName(): string
     {
         return self::MODEL_HEAVY;
+    }
+
+    public function getTavilyApiKey(): string
+    {
+        return $this->tavilyApiKey;
+    }
+
+    public function getTavilyMcpUrl(): string
+    {
+        return $this->tavilyMcpUrl;
+    }
+
+    /**
+     * Вызов инструментов Tavily MCP для модели MODEL_FAST
+     */
+    public function executeFastWithTavily(string $toolName, array $args = []): array
+    {
+        require_once __DIR__ . '/tools/search_tool.php';
+        return callTavilyMCP($toolName, $args, [
+            'tavily_api_key' => $this->tavilyApiKey,
+            'tavily_mcp_url' => $this->tavilyMcpUrl
+        ]);
     }
 }
