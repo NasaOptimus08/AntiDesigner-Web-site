@@ -1745,6 +1745,30 @@
                 <span class="btn-icon">📨</span> Тест Telegram-бота
               </button>
             </div>
+
+            <!-- Карточка 6: Демо-рилс (Тест плеера и экспорта за 0 ₽) -->
+            <div class="testlab-card" style="border-color: rgba(0, 255, 136, 0.35);">
+              <div class="testlab-card-header">
+                <div class="card-icon-badge" style="background: rgba(0, 255, 136, 0.15); color: #00ff88;">🎬</div>
+                <div>
+                  <h4 class="card-title">Демо-рилс (Плеер и Экспорт)</h4>
+                  <span class="card-meta">5 сек Canvas + WAV-звук (0 ₽ расходов)</span>
+                </div>
+              </div>
+              <p class="card-desc">Создает тестовый драфт ролика с рабочей 5-секундной Canvas-анимацией и локальным звуковым файлом для проверки синхронизации и всех 3 кнопок скачивания.</p>
+              <div class="card-metric-hint">
+                <span>Холст: <code>1080x1920</code></span>
+                <span>Статус: <code id="badgeDemoReelStatus">ГОТОВ К ТЕСТУ</code></span>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                <button id="btnCreateDemoReel" class="btn btn-primary btn-block">
+                  <span class="btn-icon">🎬</span> Создать демо-рилс для проверки плеера (0 ₽)
+                </button>
+                <button id="btnOpenDemoInStudio" class="btn btn-secondary btn-block" style="display: none; background: rgba(0, 255, 136, 0.15); color: #00ff88; border-color: #00ff88;">
+                  <span class="btn-icon">⚡</span> Открыть в Видео-студии
+                </button>
+              </div>
+            </div>
           </div>
 
           <!-- БЛОК 2: [Темная консоль вывода (Live Terminal)] -->

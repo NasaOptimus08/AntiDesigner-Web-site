@@ -46,6 +46,9 @@ $config = [
     'polza_image_alt_model' => getenv('POLZA_IMAGE_ALT_MODEL') ?: 'bytedance/seedream-4',
     'polza_video_model'     => getenv('POLZA_VIDEO_MODEL') ?: 'bytedance/seedance-2-mini',
 
+    // Режим бесплатного тестирования медиа без платных запросов (0 ₽)
+    'media_mock_mode'       => (bool)(getenv('MEDIA_MOCK_MODE') ?: true),
+
     // Telegram
     'telegram_bot_token'   => getenv('TELEGRAM_BOT_TOKEN') ?: '',
     'admin_telegram_id'    => getenv('ADMIN_TELEGRAM_ID') ?: '',

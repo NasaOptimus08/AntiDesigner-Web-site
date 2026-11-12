@@ -27,6 +27,7 @@ try {
     require_once __DIR__ . '/gemini.php';
     require_once dirname(__DIR__, 2) . '/core-data/ai_router.php';
     require_once dirname(__DIR__, 2) . '/core-data/tools/cleanup_tool.php';
+    require_once dirname(__DIR__, 2) . '/core-data/tools/mock_media_tool.php';
     /** @var PDO $pdo */
 
     $rawInput = file_get_contents('php://input');
@@ -926,6 +927,44 @@ window.addEventListener("load", () => {
         $configFile = dirname(__DIR__, 2) . '/core-data/config.php';
         $config = file_exists($configFile) ? require $configFile : [];
 
+        // БЕСПЛАТНЫЙ РЕЖИМ ТЕСТИРОВАНИЯ (media_mock_mode: 0 ₽)
+        if (!empty($config['media_mock_mode'])) {
+            $uploadsDir = dirname(__DIR__, 2) . '/core-data/uploads';
+            if (!is_dir($uploadsDir)) {
+                mkdir($uploadsDir, 0755, true);
+            }
+            $mockWavName = 'mock_voice_' . ($contentId ?: rand(100, 999)) . '.wav';
+            $mockWavPath = $uploadsDir . '/' . $mockWavName;
+            generateMockWavFile($mockWavPath, 3.0);
+            $relativeAudioUrl = '../core-data/uploads/' . $mockWavName;
+
+            if ($contentId > 0) {
+                $pdo->prepare("UPDATE content_items SET audio_url = :url, media_files = :url WHERE id = :id")
+                    ->execute([':url' => $relativeAudioUrl, ':id' => $contentId]);
+
+                $stmtGetSb = $pdo->prepare("SELECT storyboard_json FROM content_items WHERE id = :id");
+                $stmtGetSb->execute([':id' => $contentId]);
+                $sbRaw = $stmtGetSb->fetchColumn();
+                if ($sbRaw) {
+                    $sb = json_decode((string)$sbRaw, true);
+                    if (is_array($sb)) {
+                        $sb['audio_url'] = $relativeAudioUrl;
+                        $pdo->prepare("UPDATE content_items SET storyboard_json = :sb WHERE id = :id")
+                            ->execute([':sb' => json_encode($sb, JSON_UNESCAPED_UNICODE), ':id' => $contentId]);
+                    }
+                }
+            }
+
+            echo json_encode([
+                'status'    => 'success',
+                'audio_url' => $relativeAudioUrl,
+                'model'     => 'mock (0 ₽)',
+                'mock_mode' => true,
+                'message'   => '[MOCK MODE: 0 ₽] Тестовая озвучка сгенерирована локально без вызова Polza.ai'
+            ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+            exit;
+        }
+
         $polzaKey = trim((string)($config['polza_api_key'] ?? $config['gemini_heavy_api_key'] ?? ''));
         $ttsModel = trim((string)($config['polza_tts_model'] ?? 'google/gemini-3.8-flash-lite-tts')) ?: 'google/gemini-3.8-flash-lite-tts';
 
@@ -1245,6 +1284,50 @@ window.addEventListener("load", () => {
 
         $configFile = dirname(__DIR__, 2) . '/core-data/config.php';
         $config = file_exists($configFile) ? require $configFile : [];
+
+        // БЕСПЛАТНЫЙ РЕЖИМ ТЕСТИРОВАНИЯ (media_mock_mode: 0 ₽)
+        if (!empty($config['media_mock_mode'])) {
+            $uploadsDir = dirname(__DIR__, 2) . '/core-data/uploads';
+            if (!is_dir($uploadsDir)) {
+                mkdir($uploadsDir, 0755, true);
+            }
+            $mockSvgName = "mock_scene_{$contentId}_{$sceneNum}.svg";
+            $mockSvgPath = $uploadsDir . '/' . $mockSvgName;
+            generateMockSvgFile($mockSvgPath, $sceneNum);
+            $mockMediaUrl = '../core-data/uploads/' . $mockSvgName;
+
+            if ($contentId > 0) {
+                $stmtSb = $pdo->prepare("SELECT storyboard_json FROM content_items WHERE id = :id");
+                $stmtSb->execute([':id' => $contentId]);
+                $sbRaw = $stmtSb->fetchColumn();
+                if ($sbRaw) {
+                    $sb = json_decode((string)$sbRaw, true);
+                    if (isset($sb['scenes']) && is_array($sb['scenes'])) {
+                        foreach ($sb['scenes'] as &$sc) {
+                            if ((int)($sc['scene_num'] ?? 0) === $sceneNum) {
+                                $sc['media_url'] = $mockMediaUrl;
+                                $sc['media_type'] = $mediaType;
+                                break;
+                            }
+                        }
+                        unset($sc);
+                        $pdo->prepare("UPDATE content_items SET storyboard_json = :sb WHERE id = :id")
+                            ->execute([':sb' => json_encode($sb, JSON_UNESCAPED_UNICODE), ':id' => $contentId]);
+                    }
+                }
+            }
+
+            echo json_encode([
+                'status'    => 'success',
+                'scene_num' => $sceneNum,
+                'media_url' => $mockMediaUrl,
+                'model'     => 'mock (0 ₽)',
+                'mock_mode' => true,
+                'message'   => '[MOCK MODE: 0 ₽] Тестовый B-roll визуал создан локально без вызова Polza.ai'
+            ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+            exit;
+        }
+
         $polzaKey = trim((string)($config['polza_api_key'] ?? $config['gemini_heavy_api_key'] ?? ''));
 
         if ($polzaKey === '') {

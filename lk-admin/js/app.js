@@ -4626,6 +4626,71 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
+    // Кнопка 6: Создание демо-рилса (0 ₽)
+    const btnCreateDemoReel = document.getElementById('btnCreateDemoReel');
+    const btnOpenDemoInStudio = document.getElementById('btnOpenDemoInStudio');
+    const badgeDemoReelStatus = document.getElementById('badgeDemoReelStatus');
+    let lastCreatedDemoDraft = null;
+
+    if (btnCreateDemoReel) {
+      btnCreateDemoReel.addEventListener('click', async () => {
+        btnCreateDemoReel.disabled = true;
+        const originalText = btnCreateDemoReel.innerHTML;
+        btnCreateDemoReel.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Создание демо (0 ₽)...';
+        appendTerminalLog(`\n[${new Date().toLocaleTimeString()}] Запуск сборки тестового демо-рилса (Zero AI Protocol, 0 ₽)...`);
+
+        try {
+          const resp = await fetch('api/test_runner.php?action=create_demo_reel');
+          const data = await resp.json();
+
+          if (data.log) {
+            appendTerminalLog(data.log);
+          }
+
+          if (data.status === 'success') {
+            lastCreatedDemoDraft = data.draft;
+            if (badgeDemoReelStatus) {
+              badgeDemoReelStatus.style.color = '#00ff88';
+              badgeDemoReelStatus.textContent = `ID #${data.id} СОЗДАН`;
+            }
+            if (btnOpenDemoInStudio) {
+              btnOpenDemoInStudio.style.display = 'block';
+            }
+            showToast('Демо-рилс успешно создан (0 ₽)! Нажмите «Открыть в Видео-студии»', 'success', 4000);
+          } else {
+            showToast(data.message || 'Ошибка создания демо-рилса', 'error');
+          }
+        } catch (e) {
+          appendTerminalLog(`[ERROR] Сетевая ошибка: ${e.message}`);
+          showToast(e.message, 'error');
+        } finally {
+          btnCreateDemoReel.disabled = false;
+          btnCreateDemoReel.innerHTML = originalText;
+        }
+      });
+    }
+
+    if (btnOpenDemoInStudio) {
+      btnOpenDemoInStudio.addEventListener('click', () => {
+        if (!lastCreatedDemoDraft) return;
+
+        // Переключаемся на вкладку Контент-фабрики (#factory)
+        const factoryNav = document.querySelector('a[data-tab="factory"]');
+        if (factoryNav) factoryNav.click();
+
+        // Показываем контейнер результатов и окно Студии ролика
+        if (factoryResults) factoryResults.style.display = 'block';
+        if (factoryTopicInputEl) factoryTopicInputEl.value = lastCreatedDemoDraft.topic;
+
+        // Помещаем демо-драфт в batch и рендерим
+        generatedBatch = [lastCreatedDemoDraft];
+        renderGeneratedTabs();
+        selectGeneratedTab(0);
+
+        showToast('Демо-рилс открыт в One-Window Reels Studio! Готов к тесту плеера и скачивания', 'success');
+      });
+    }
+
     // Кнопка очистки терминала
     if (btnClearTerminal) {
       btnClearTerminal.addEventListener('click', () => {

@@ -411,6 +411,140 @@ try {
         exit;
     }
 
+    // =========================================================================
+    // 7. action = create_demo_reel (Создание демо-рилса для проверки плеера 0 ₽)
+    // =========================================================================
+    if ($action === 'create_demo_reel') {
+        require_once dirname(__DIR__, 2) . '/core-data/tools/mock_media_tool.php';
+
+        $timestamp = date('Y-m-d H:i:s');
+        $logLines = [];
+        $logLines[] = "[{$timestamp}] Инициализация демо-рилса (Zero AI Protocol, 0 ₽)...";
+
+        // 1. Генерируем 2.5-секундный локальный тестовый WAV-звук
+        $uploadsDir = dirname(__DIR__, 2) . '/core-data/uploads';
+        if (!is_dir($uploadsDir)) {
+            mkdir($uploadsDir, 0755, true);
+        }
+        $wavFileName = 'demo_audio_' . time() . '.wav';
+        $wavFilePath = $uploadsDir . '/' . $wavFileName;
+        generateMockWavFile($wavFilePath, 2.5);
+        $relativeAudioUrl = '../core-data/uploads/' . $wavFileName;
+        $logLines[] = "[{$timestamp}] Сгенерирован 2.5с WAV аудио-сигнал: {$relativeAudioUrl} (чистый PHP, 22.05 кГц 16-бит)";
+
+        // 2. Готовим 5-секундную 60fps Dark Tech анимацию
+        $motionHtml = generateDemoReelCanvasHtml(5000);
+        $logLines[] = "[{$timestamp}] Скомпонован 5-секундный холст <canvas id=\"reel-canvas\" width=\"1080\" height=\"1920\"> (window.REEL_DURATION_MS = 5000)";
+
+        // 3. Формируем 5 сцен раскадровки
+        $scenes = [
+            [
+                'scene_num'    => 1,
+                'title'        => 'Hook (0-1 сек)',
+                'time_range'   => '0-1 сек',
+                'subtitles'    => 'Секунда 1: Мгновенный хук внимания',
+                'action'       => 'Появление неонового логотипа AntiDesigner и разгон счетчика',
+                'retention'    => 'Pattern Interrupt',
+                'image_prompt' => 'Photorealistic cinematic vertical 9:16 shot, Dark Tech studio, glowing emerald neon, anamorphic 8k',
+                'video_prompt' => 'Slow cinematic push-in 60fps vertical 9:16'
+            ],
+            [
+                'scene_num'    => 2,
+                'title'        => 'Problem (1-2 сек)',
+                'time_range'   => '1-2 сек',
+                'subtitles'    => 'Секунда 2: Чистый код без конструкторов',
+                'action'       => 'Сравнение скорости загрузки и отклика интерфейса',
+                'retention'    => 'Pain Agitation',
+                'image_prompt' => 'Macro code editor screen with ultra clean lightweight HTML5 and CSS3, titanium frame',
+                'video_prompt' => 'Subtle pan across fast rendering webpage'
+            ],
+            [
+                'scene_num'    => 3,
+                'title'        => 'Reveal (2-3 сек)',
+                'time_range'   => '2-3 сек',
+                'subtitles'    => 'Секунда 3: Замер скорости PageSpeed',
+                'action'       => 'Зеленый круг 100/100 и мгновенный отклик 0.35 секунды',
+                'retention'    => 'Pattern Shift',
+                'image_prompt' => 'Futuristic dashboard with glowing 100/100 benchmark metric and 0.35s indicator',
+                'video_prompt' => 'Speedometer arc closing to 100 with emerald sparks'
+            ],
+            [
+                'scene_num'    => 4,
+                'title'        => 'Proof (3-4 сек)',
+                'time_range'   => '3-4 сек',
+                'subtitles'    => 'Секунда 4: 0% нагрузки на процессор',
+                'action'       => 'Клиентский Web MediaRecorder захватывает холст без нагрузки на хостинг',
+                'retention'    => 'Proof Benchmark',
+                'image_prompt' => 'High tech server rack showing minimal 0.0% CPU usage gauge in green LED',
+                'video_prompt' => 'Camera drift over sleek hardware surface'
+            ],
+            [
+                'scene_num'    => 5,
+                'title'        => 'Payoff & Sync (4-5 сек)',
+                'time_range'   => '4-5 сек',
+                'subtitles'    => 'Секунда 5: Ролик и звук синхронизированы!',
+                'action'       => 'Финальный кадр готов к экспорту в браузере',
+                'retention'    => 'Direct Value',
+                'image_prompt' => 'Smartphone mockup in hand showing successful export ready badge',
+                'video_prompt' => 'Subtle bounce and smooth finish of timeline'
+            ]
+        ];
+
+        $topic = 'Демо-ролик: Тест скорости 0.35с против Тильды (0 ₽)';
+        $voiceScript = 'Сайт на чистом коде открывается за ноль тридцать пять секунды, пока конструктор еще грузит скрипты. Замерьте сами.';
+
+        $storyboardData = [
+            'topic'             => $topic,
+            'format'            => 'reels',
+            'scenario'          => "ДЕМО-СЦЕНАРИЙ ДЛЯ ПРОВЕРКИ ПЛЕЕРА REELS STUDIO (0 ₽)\n\n" . $voiceScript,
+            'scenes'            => $scenes,
+            'voice_script'      => $voiceScript,
+            'voice_prompt'      => 'Уверенный разговорный тембр Senior-разработчика (Евгений Антипин), акцент на скорости 0.35с.',
+            'estimated_seconds' => 5,
+            'motion_html'       => $motionHtml,
+            'audio_url'         => $relativeAudioUrl
+        ];
+
+        // 4. Записываем в content_items
+        $stmtInsert = $pdo->prepare("
+            INSERT INTO content_items (topic, format, status, content_markdown, motion_html, storyboard_json, audio_url, media_files, created_at)
+            VALUES (:topic, :format, 'draft', :content, :motion, :sb, :audio, :audio, CURRENT_TIMESTAMP)
+        ");
+        $stmtInsert->execute([
+            ':topic'   => $topic,
+            ':format'  => 'reels',
+            ':content' => $voiceScript,
+            ':motion'  => $motionHtml,
+            ':sb'      => json_encode($storyboardData, JSON_UNESCAPED_UNICODE),
+            ':audio'   => $relativeAudioUrl
+        ]);
+
+        $newId = (int)$pdo->lastInsertId();
+        $logLines[] = "[{$timestamp}] Запись сохранена в content_items (ID #{$newId}, format='reels', status='draft')";
+        $logLines[] = "[{$timestamp}] УСПЕХ: Демо-ролик полностью готов к проверке плеера, звука и всех 3 кнопок экспорта!";
+
+        echo json_encode([
+            'status'     => 'success',
+            'id'         => $newId,
+            'topic'      => $topic,
+            'format'     => 'reels',
+            'audio_url'  => $relativeAudioUrl,
+            'message'    => 'Демо-рилс успешно создан без вызовов к ИИ (0 ₽)',
+            'draft'      => [
+                'id'              => $newId,
+                'topic'           => $topic,
+                'format'          => 'reels',
+                'status'          => 'draft',
+                'content'         => $voiceScript,
+                'motion_html'     => $motionHtml,
+                'audio_url'       => $relativeAudioUrl,
+                'storyboard'      => $storyboardData
+            ],
+            'log'        => implode("\n", $logLines)
+        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        exit;
+    }
+
     echo json_encode([
         'status'  => 'error',
         'message' => "Неизвестное действие: {$action}"
