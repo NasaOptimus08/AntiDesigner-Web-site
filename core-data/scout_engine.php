@@ -15,9 +15,9 @@ declare(strict_types=1);
  * =============================================================================
  */
 
-require_once dirname(__DIR__) . '/core/tools/pagespeed_tool.php';
-require_once dirname(__DIR__) . '/core/tools/contact_extractor.php';
-require_once dirname(__DIR__) . '/core/tools/lead_scout_tool.php';
+require_once __DIR__ . '/tools/pagespeed_tool.php';
+require_once __DIR__ . '/tools/contact_extractor.php';
+require_once __DIR__ . '/tools/lead_scout_tool.php';
 
 class ScoutEngine
 {

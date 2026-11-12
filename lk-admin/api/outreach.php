@@ -117,7 +117,7 @@ try {
     // -------------------------------------------------------------------------
     if ($action === 'extract_contacts') {
         $targetUrl = trim((string)($input['url'] ?? $_GET['url'] ?? ''));
-        require_once dirname(__DIR__, 2) . '/core/tools/contact_extractor.php';
+        require_once dirname(__DIR__, 2) . '/core-data/tools/contact_extractor.php';
         $res = extractLPRContacts($targetUrl, $config);
         echo json_encode($res, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
         exit;
@@ -128,7 +128,7 @@ try {
     // -------------------------------------------------------------------------
     if ($action === 'audit_pagespeed') {
         $targetUrl = trim((string)($input['url'] ?? $_GET['url'] ?? ''));
-        require_once dirname(__DIR__, 2) . '/core/tools/pagespeed_tool.php';
+        require_once dirname(__DIR__, 2) . '/core-data/tools/pagespeed_tool.php';
         $res = auditPageSpeed($targetUrl, $config['pagespeed_api_key'] ?? '', $config);
         echo json_encode($res, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
         exit;
@@ -140,7 +140,7 @@ try {
     if ($action === 'collect_metrics') {
         $platform = trim((string)($input['platform'] ?? $_GET['platform'] ?? 'vc_ru'));
         $postUrl = trim((string)($input['post_url'] ?? $_GET['post_url'] ?? ''));
-        require_once dirname(__DIR__, 2) . '/core/tools/analytics_collector.php';
+        require_once dirname(__DIR__, 2) . '/core-data/tools/analytics_collector.php';
         $res = fetchPostMetrics($platform, $postUrl, $pdo);
         echo json_encode($res, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
         exit;

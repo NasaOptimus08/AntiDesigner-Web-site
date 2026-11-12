@@ -28,7 +28,7 @@ if (!$lockFp || !flock($lockFp, LOCK_EX | LOCK_NB)) {
 
 try {
     require_once dirname(__DIR__) . '/lk-admin/api/db.php';
-    require_once dirname(__DIR__) . '/core/tools/search_tool.php';
+    require_once $coreDataDir . '/tools/search_tool.php';
     require_once $coreDataDir . '/ai_router.php';
     /** @var PDO $pdo */
 

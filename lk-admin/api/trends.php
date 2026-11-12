@@ -29,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 try {
     require_once __DIR__ . '/db.php';
-    require_once dirname(__DIR__, 2) . '/core/tools/search_tool.php';
+    require_once dirname(__DIR__, 2) . '/core-data/tools/search_tool.php';
     require_once dirname(__DIR__, 2) . '/core-data/config.php';
     /** @var PDO $pdo */
 
